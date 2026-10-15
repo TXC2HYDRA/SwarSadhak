@@ -1,14 +1,15 @@
 {
-  "name": "buildathon-project",
+  "name": "swar-sadhak",
   "version": "0.1.0",
   "private": true,
-  "description": "Topic-neutral starter scaffold for the Frontier Buildathon.",
+  "description": "SwarSadhak multilingual vocal practice studio.",
   "type": "module",
-  "engines": {
-    "node": "22.19.0"
-  },
+  "engines": { "node": "22.19.0" },
+  "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "start": "node src/index.js",
+    "dev": "npm run dev --workspace @swarsadhak/web",
+    "build": "npm run build --workspace @swarsadhak/web",
+    "start": "npm run preview --workspace @swarsadhak/web",
     "test": "node --test"
   }
 }
