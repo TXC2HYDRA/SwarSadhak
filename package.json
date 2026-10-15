@@ -5,9 +5,10 @@
   "description": "Topic-neutral starter scaffold for the Frontier Buildathon.",
   "type": "module",
   "engines": {
-    "node": ">=22.19.0"
+    "node": "22.19.0"
   },
   "scripts": {
+    "start": "node src/index.js",
     "test": "node --test"
   }
 }
