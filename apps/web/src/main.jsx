@@ -10,6 +10,7 @@ import { EXERCISES, getExercise } from '@swarsadhak/exercises';
 import { STARTER_ROUTINES, createRoutine, normalizeRoutine, routineItems, totalRoutineSeconds, nextRoutineIndex } from '@swarsadhak/routines';
 import { deriveRewards, deriveAchievements, getLevel, getStreak, ACHIEVEMENTS } from '@swarsadhak/gamification';
 import './styles.css';
+import './optionalSync.js';
 
 const store = createStorage(); const KEYS = { sessions:'swar-practice-sessions-v1', routines:'swar-routines-v1', rewards:'swar-reward-events-v1', streak:'swar-streak-preferences-v1' }; const TONICS = [{value:261.63,label:'C · 261.63 Hz'},{value:293.66,label:'D · 293.66 Hz'},{value:329.63,label:'E · 329.63 Hz'}];
 const textAt = (t,key) => key.split('.').reduce((v,p)=>v?.[p],t)||key;
