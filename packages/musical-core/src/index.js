@@ -14,6 +14,10 @@ export function frequencyToNote(frequencyHz, tonicHz, options = {}) {
 export const classifyFrequency = frequencyToNote;
 export function targetFrequency(swara = 'Sa', tonicHz = 261.63) { const target = NOTE_TARGETS.find((note) => note.swara === swara); return target && Number.isFinite(tonicHz) && tonicHz > 0 ? tonicHz * target.ratio : null; }
 export function centsBetween(frequencyHz, targetHz) { return Number.isFinite(frequencyHz) && Number.isFinite(targetHz) && frequencyHz > 0 && targetHz > 0 ? 1200 * Math.log2(frequencyHz / targetHz) : null; }
+export function noteToMidi(note) { const match = /^([A-G])([#b]?)(-?\d+)$/.exec(note ?? ''); if (!match) return null; const offsets = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }; const accidental = match[2] === '#' ? 1 : match[2] === 'b' ? -1 : 0; return (Number(match[3]) + 1) * 12 + offsets[match[1]] + accidental; }
+export function midiToNote(midi) { if (!Number.isFinite(midi)) return null; const names = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']; return `${names[Math.round(midi) % 12]}${Math.floor(Math.round(midi) / 12) - 1}`; }
+export function noteToFrequency(note) { const midi = noteToMidi(note); return midi == null ? null : 440 * 2 ** ((midi - 69) / 12); }
+export function evaluatePitch(frequencyHz, targetHz, toleranceCents = 50) { if (!Number.isFinite(frequencyHz)) return { status: 'silent', cents: null }; const cents = centsBetween(frequencyHz, targetHz); return { status: Math.abs(cents) <= toleranceCents ? 'in-tune' : cents < 0 ? 'flat' : 'sharp', cents }; }
 export function frameToObservation(frame, tonicHz, options = {}) {
   if (!frame || frame.voiced !== true || !Number.isFinite(frame.frequencyHz)) return { ...frame, centsError: null, targetFrequencyHz: targetFrequency(options.targetNote, tonicHz), targetNote: options.targetNote ?? 'Sa', voiced: false };
   const targetFrequencyHz = options.targetFrequencyHz ?? targetFrequency(options.targetNote ?? 'Sa', tonicHz);

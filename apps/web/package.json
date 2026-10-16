@@ -9,6 +9,10 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "@swarsadhak/audio-engine": "0.1.0",
+    "@swarsadhak/musical-core": "0.1.0",
+    "@swarsadhak/exercises": "0.1.0",
+    "@swarsadhak/localization": "0.1.0",
     "@vitejs/plugin-react": "latest",
     "vite": "latest",
     "typescript": "latest",

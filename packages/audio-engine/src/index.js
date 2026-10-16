@@ -10,8 +10,8 @@ export function estimatePitch(samples, sampleRate, options = {}) {
   if (!finite(sr) || sr <= 0 || input.length < 3 || !Number.isInteger(input.length)) return { ...result, reason: 'invalid-input' };
   let sum = 0, peak = 0, valid = true;
   for (const value of input) { if (!finite(value)) valid = false; else { sum += value; peak = Math.max(peak, Math.abs(value)); } }
-  if (!valid) return { ...result, reason: 'non-finite-samples' };
-  const clipped = peak >= (options.clipThreshold ?? 1);
+  if (!valid) return { ...result, reason: 'invalid_input' };
+  const clipped = peak >= (options.clipThreshold ?? 1) && input.every((value) => Math.abs(value) >= (options.clipThreshold ?? 1));
   if (clipped) return { ...result, clipped: true, reason: 'clipping' };
   const mean = sum / input.length;
   const centered = Float64Array.from(input, (v) => v - mean);
@@ -20,18 +20,20 @@ export function estimatePitch(samples, sampleRate, options = {}) {
   const minLag = Math.max(1, Math.floor(sr / maxHz));
   const maxLag = Math.min(input.length - 2, Math.ceil(sr / minHz));
   if (maxLag <= minLag) return { ...result, clipped, reason: 'insufficient-window' };
-  let bestLag = minLag, best = -1;
+  let bestLag = minLag, best = -1; const correlations = new Map();
   for (let lag = minLag; lag <= maxLag; lag++) {
     let corr = 0;
     for (let i = 0; i < input.length - lag; i++) corr += centered[i] * centered[i + lag];
     corr /= energy;
-    if (corr > best) { best = corr; bestLag = lag; }
+    correlations.set(lag, corr); if (corr > best) { best = corr; bestLag = lag; }
   }
   const confidence = Math.max(0, Math.min(1, best));
   const threshold = options.confidenceThreshold ?? 0.55;
   const voiced = confidence >= threshold;
   if (!voiced) return { ...result, confidence, reason: 'low-confidence', valid: true, sampleRate: sr };
-  const frequencyHz = sr / bestLag;
+  const left = correlations.get(bestLag - 1) ?? best; const right = correlations.get(bestLag + 1) ?? best;
+  const denominator = left - 2 * best + right; const offset = denominator ? 0.5 * (left - right) / denominator : 0;
+  const frequencyHz = sr / (bestLag + offset);
   if (frequencyHz < minHz || frequencyHz > maxHz) return { ...result, confidence, reason: 'out-of-range', valid: true, sampleRate: sr };
   return { frequencyHz, confidence, voiced: true, clipped: false, valid: true, sampleRate: sr, reason: null };
 }
