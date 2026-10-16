@@ -1,0 +1,8 @@
+[project]
+name = "swar-sadhak-api"
+version = "0.1.0"
+requires-python = ">=3.11,<3.13"
+dependencies = ["fastapi==0.115.6", "uvicorn[standard]==0.34.0"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

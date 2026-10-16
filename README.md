@@ -2,7 +2,7 @@
 
 SwarSadhak is a multilingual vocal practice studio for Hindustani classical and general singing. The project is being built as a local-first, deterministic-first application for the Frontier Buildathon 2026.
 
-## Phase 1, Phase 2, and Phase 3 status
+## Phase 1–4 status
 
 The repository now contains:
 
@@ -17,6 +17,8 @@ The repository now contains:
 - Results, exercise-filtered local progress, and deterministic recommendations
 - Buildable Docker image
 - Node.js 22.19.0 pin and npm lockfile
+- Optional FastAPI + SQLite backend with development authentication, derived-summary sync, routines, and teacher/student assignments
+- Frontend API client that preserves local-first behavior when the backend is disabled or unavailable
 
 Phase 1 and Phase 2 are implemented as a browser-local, deterministic flow. Microphone permission must be granted for real measurements. The practice lifecycle supports start, pause, resume, manual completion, and automatic completion at the exercise duration; active duration excludes paused time. Tonic selection is persisted with each session. If no reliable frames are collected, no normal completed session is persisted and the user receives retry guidance rather than a fabricated score.
 
@@ -28,7 +30,7 @@ Use the Routine planner to select a starter routine or create a custom routine, 
 
 ### Local persistence and privacy
 
-Only versioned, derived session summaries are stored in browser `localStorage` under `swar-practice-sessions-v1`. Raw microphone audio and PCM samples are never stored. The Progress screen shows only sessions genuinely saved in this browser, grouped by exercise; with no comparable sessions it shows an empty state. Use **Clear local practice history** on Progress to delete all summaries after confirmation. Clearing site data also removes history. There is no account, cloud sync, upload, paid API, LLM, or recording feature.
+Only versioned, derived session summaries are stored in browser `localStorage` under `swar-practice-sessions-v1`. Raw microphone audio and PCM samples are never stored. The optional backend stores only derived summaries, routines, users, and explicit assignments. The frontend remains usable without an account, network, paid service, or cloud database.
 
 Small sample sizes are intentionally not presented as statistically meaningful trends, and no overall singing score, voice-type inference, health claim, or ranking is shown.
 
@@ -37,6 +39,7 @@ Small sample sizes are intentionally not presented as statistically meaningful t
 - Node.js 22.19.0
 - npm
 - Docker, for container verification
+- Python 3.11 or 3.12, only for the optional API
 
 ## Setup
 
@@ -46,6 +49,17 @@ npm ci
 ```
 
 No paid API or external AI service is required.
+
+### Optional API
+
+```bash
+python3.11 -m venv .venv
+. .venv/bin/activate
+pip install -r apps/api/requirements.txt
+uvicorn app.main:app --reload --app-dir apps/api
+```
+
+The API runs at `http://localhost:8000`; health is `GET /api/health`. Set `VITE_API_URL=http://localhost:8000` to enable the frontend client, or leave it empty for offline/local-only use. Run API tests with `python -m pytest apps/api/tests`. Authentication is development-only local username/password with signed short-lived tokens; production OAuth, recovery, rate limiting, cloud databases, and deployment are deferred.
 
 ## Development
 
@@ -79,6 +93,8 @@ docker run --rm -p 4173:4173 swar-sadhak
 
 The container serves the built web app. Microphone access still requires a supported browser secure context, normally localhost or HTTPS.
 
+The Dockerfile remains frontend-only. Docker is not required for the offline flow; run the API directly for local development.
+
 ## Repository layout
 
 ```text
@@ -90,4 +106,4 @@ research_notes            Existing buildathon research notes
 
 ## Privacy and AI direction
 
-Audio analysis is browser-side and no recording upload is required. No authentication, backend, cloud sync, paid API, LLM, RAG, or raw recording exists. Site-data clearing removes local session summaries. Real microphone behavior was not exercised in automated Node tests; browser permission and hardware behavior remain manual-test limitations...
+Audio analysis is browser-side and no recording upload is required. See `docs/backend-and-collaboration.md` and `docs/privacy.md` for backend storage, permissions, authentication limits, and sync failure behavior. Browser microphone, accessibility, and deployment behavior remain manual-test limitations.

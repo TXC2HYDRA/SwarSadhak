@@ -27,7 +27,8 @@
     ,"@swarsadhak/musical-core": "*"
      ,"@swarsadhak/exercises": "*"
      ,"@swarsadhak/routines": "*"
-     ,"@swarsadhak/gamification": "*"
+      ,"@swarsadhak/gamification": "*"
+      ,"@swarsadhak/api-client": "*"
   },
   "devDependencies": {}
 }
