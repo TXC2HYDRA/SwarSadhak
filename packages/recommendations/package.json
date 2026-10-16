@@ -1,0 +1,6 @@
+{
+  "name": "@swarsadhak/recommendations",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.js"
+}

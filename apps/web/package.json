@@ -18,7 +18,16 @@
     "typescript": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "lucide-react": "latest"
+    "lucide-react": "latest",
+    "@swarsadhak/localization": "*",
+    "@swarsadhak/practice-domain": "*",
+    "@swarsadhak/recommendations": "*",
+    "@swarsadhak/persistence": "*"
+    ,"@swarsadhak/audio-engine": "*"
+    ,"@swarsadhak/musical-core": "*"
+     ,"@swarsadhak/exercises": "*"
+     ,"@swarsadhak/routines": "*"
+     ,"@swarsadhak/gamification": "*"
   },
   "devDependencies": {}
 }

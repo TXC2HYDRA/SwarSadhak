@@ -1,36 +1,66 @@
-export function estimatePitch(samples, sampleRate, { minFrequency = 65, maxFrequency = 1000, silenceRms = 0.01, minConfidence = 0.72 } = {}) {
-  if (!samples || !Number.isFinite(sampleRate) || sampleRate <= 0 || samples.length < 32) return { frequencyHz: null, confidence: 0, rms: 0, voiced: false, clipped: false, reason: 'invalid_input' };
-  let sum = 0; let clippedSamples = 0;
-  for (const value of samples) { if (!Number.isFinite(value)) return { frequencyHz: null, confidence: 0, rms: 0, voiced: false, clipped: false, reason: 'invalid_input' }; sum += value * value; if (Math.abs(value) >= 1) clippedSamples += 1; }
-  const clipped = clippedSamples > samples.length * 0.01;
-  const rms = Math.sqrt(sum / samples.length);
-  if (clipped) return { frequencyHz: null, confidence: 0, rms, voiced: false, clipped: true, reason: 'clipping' };
-  if (rms < silenceRms) return { frequencyHz: null, confidence: 0, rms, voiced: false, clipped: false, reason: 'silence' };
-  let crossings = 0; for (let i = 1; i < samples.length; i += 1) if (samples[i - 1] <= 0 && samples[i] > 0) crossings += 1;
-  const zeroCrossingFrequency = crossings * sampleRate / samples.length;
-  if (crossings >= 2 && zeroCrossingFrequency >= minFrequency && zeroCrossingFrequency <= maxFrequency) {
-    const lag = Math.max(1, Math.round(sampleRate / zeroCrossingFrequency)); let product = 0; let energy = 0;
-    for (let i = 0; i + lag < samples.length; i += 1) { product += samples[i] * samples[i + lag]; energy += samples[i] * samples[i]; }
-    const confidence = Math.max(0, Math.min(1, product / (energy || 1)));
-    if (confidence >= minConfidence) return { frequencyHz: zeroCrossingFrequency, confidence, rms, voiced: true, clipped: false, reason: null };
+const finite = (n) => typeof n === 'number' && Number.isFinite(n);
+
+/** Estimate the fundamental with normalized autocorrelation. */
+export function estimatePitch(samples, sampleRate, options = {}) {
+  const input = samples && typeof samples.length === 'number' ? samples : [];
+  const sr = Number(sampleRate);
+  const minHz = options.minFrequencyHz ?? 60;
+  const maxHz = options.maxFrequencyHz ?? 1000;
+  const result = { frequencyHz: null, confidence: 0, voiced: false, clipped: false, valid: false };
+  if (!finite(sr) || sr <= 0 || input.length < 3 || !Number.isInteger(input.length)) return { ...result, reason: 'invalid-input' };
+  let sum = 0, peak = 0, valid = true;
+  for (const value of input) { if (!finite(value)) valid = false; else { sum += value; peak = Math.max(peak, Math.abs(value)); } }
+  if (!valid) return { ...result, reason: 'invalid_input' };
+  const clipped = peak >= (options.clipThreshold ?? 1) && input.every((value) => Math.abs(value) >= (options.clipThreshold ?? 1));
+  if (clipped) return { ...result, clipped: true, reason: 'clipping' };
+  const mean = sum / input.length;
+  const centered = Float64Array.from(input, (v) => v - mean);
+  const energy = centered.reduce((a, v) => a + v * v, 0);
+  if (energy < (options.silenceEnergy ?? 1e-8)) return { ...result, clipped, reason: 'silence' };
+  const minLag = Math.max(1, Math.floor(sr / maxHz));
+  const maxLag = Math.min(input.length - 2, Math.ceil(sr / minHz));
+  if (maxLag <= minLag) return { ...result, clipped, reason: 'insufficient-window' };
+  let bestLag = minLag, best = -1; const correlations = new Map();
+  for (let lag = minLag; lag <= maxLag; lag++) {
+    let corr = 0;
+    for (let i = 0; i < input.length - lag; i++) corr += centered[i] * centered[i + lag];
+    corr /= energy;
+    correlations.set(lag, corr); if (corr > best) { best = corr; bestLag = lag; }
   }
-  const minLag = Math.max(2, Math.floor(sampleRate / maxFrequency)); const maxLag = Math.min(samples.length - 2, Math.ceil(sampleRate / minFrequency));
-  let bestLag = 0; let best = Infinity; let total = 0;
-  for (let lag = minLag; lag <= maxLag; lag += 1) { let d = 0; for (let i = 0; i + lag < samples.length; i += 1) { const delta = samples[i] - samples[i + lag]; d += delta * delta; } if (d < best) { best = d; bestLag = lag; } total += d; }
-  if (!bestLag) { bestLag = minLag; best = correlationDifference(samples, bestLag); }
-  if (!bestLag || !Number.isFinite(best) || !Number.isFinite(total)) return { frequencyHz: null, confidence: 0, rms, voiced: false, clipped: false, reason: 'invalid_input' };
-  const confidence = Math.max(0, Math.min(1, 1 - best / (2 * sum)));
-  const frequencyHz = sampleRate / bestLag;
-  if (confidence < minConfidence) return { frequencyHz: null, confidence, rms, voiced: false, clipped: false, reason: 'low_confidence' };
-  return { frequencyHz: frequencyHz >= minFrequency && frequencyHz <= maxFrequency ? frequencyHz : null, confidence, rms, voiced: frequencyHz >= minFrequency && frequencyHz <= maxFrequency, clipped: false, reason: frequencyHz >= minFrequency && frequencyHz <= maxFrequency ? null : 'out_of_range' };
+  const confidence = Math.max(0, Math.min(1, best));
+  const threshold = options.confidenceThreshold ?? 0.55;
+  const voiced = confidence >= threshold;
+  if (!voiced) return { ...result, confidence, reason: 'low-confidence', valid: true, sampleRate: sr };
+  const left = correlations.get(bestLag - 1) ?? best; const right = correlations.get(bestLag + 1) ?? best;
+  const denominator = left - 2 * best + right; const offset = denominator ? 0.5 * (left - right) / denominator : 0;
+  const frequencyHz = sr / (bestLag + offset);
+  if (frequencyHz < minHz || frequencyHz > maxHz) return { ...result, confidence, reason: 'out-of-range', valid: true, sampleRate: sr };
+  return { frequencyHz, confidence, voiced: true, clipped: false, valid: true, sampleRate: sr, reason: null };
 }
 
-function correlationDifference(samples, lag) { let difference = 0; for (let i = 0; i + lag < samples.length; i += 1) { const delta = samples[i] - samples[i + lag]; difference += delta * delta; } return difference; }
-
-export function microphoneErrorReason(error) { if (error?.name === 'NotAllowedError' || error?.name === 'SecurityError') return 'permission_denied'; if (error?.name === 'NotFoundError') return 'microphone_not_found'; if (error?.name === 'NotReadableError') return 'microphone_busy'; return 'microphone_error'; }
-
-export function createAudioController({ onPitch = () => {}, onError = () => {}, windowObject = globalThis } = {}) {
-  let context; let source; let processor; let stream;
-  const stop = () => { processor?.disconnect(); source?.disconnect(); stream?.getTracks().forEach((track) => track.stop()); if (context && context.state !== 'closed') context.close(); processor = source = stream = context = undefined; };
-  return { async start() { try { const media = windowObject.navigator?.mediaDevices; if (!media?.getUserMedia) throw Object.assign(new Error('Microphone unavailable'), { name: 'NotSupportedError' }); stream = await media.getUserMedia({ audio: true }); const AudioContext = windowObject.AudioContext || windowObject.webkitAudioContext; if (!AudioContext) throw Object.assign(new Error('Web Audio unavailable'), { name: 'NotSupportedError' }); context = new AudioContext(); await context.resume?.(); source = context.createMediaStreamSource(stream); processor = context.createScriptProcessor(2048, 1, 1); const sink = context.createGain(); sink.gain.value = 0; processor.onaudioprocess = ({ inputBuffer }) => onPitch(estimatePitch(inputBuffer.getChannelData(0), context.sampleRate)); source.connect(processor); processor.connect(sink); sink.connect(context.destination); } catch (error) { stop(); onError(error, microphoneErrorReason(error)); throw error; } }, pause() { if (context?.state === 'running') context.suspend(); }, resume() { if (context?.state === 'suspended') context.resume(); }, stop };
+export function createAudioController(options = {}) {
+  let context = null, source = null, gain = null, processor = null, stream = null, stopped = false;
+  const error = (cause) => ({ ok: false, error: cause?.name === 'NotAllowedError' ? 'microphone-permission-denied' : 'audio-unavailable', cause });
+  return {
+    async start() {
+      try {
+        const AudioContext = options.AudioContext ?? globalThis.AudioContext ?? globalThis.webkitAudioContext;
+        const getUserMedia = options.getUserMedia ?? globalThis.navigator?.mediaDevices?.getUserMedia?.bind(globalThis.navigator.mediaDevices);
+        if (!AudioContext || !getUserMedia) return error(new Error('Audio APIs unavailable'));
+        context = new AudioContext(); stream = await getUserMedia({ audio: true });
+        source = context.createMediaStreamSource(stream); gain = context.createGain(); gain.gain.value = 0;
+        source.connect(gain); gain.connect(context.destination);
+        if (context.createScriptProcessor) {
+          processor = context.createScriptProcessor(options.bufferSize ?? 2048, 1, 1);
+          processor.onaudioprocess = (event) => { if (!stopped) options.onFrame?.(estimatePitch(event.inputBuffer.getChannelData(0), context.sampleRate, options.pitchOptions)); };
+          source.connect(processor); processor.connect(gain);
+        }
+        stopped = false; return { ok: true, context, stream };
+      } catch (cause) { this.stop?.(); const mapped = error(cause); options.onError?.(cause, mapped.error); return mapped; }
+    },
+    pause() { if (context?.suspend) context.suspend(); },
+    resume() { if (context?.resume) context.resume(); },
+    stop() { stopped = true; stream?.getTracks?.().forEach((track) => track.stop()); try { processor?.disconnect(); source?.disconnect(); gain?.disconnect(); } catch {} if (context?.close) context.close(); processor = source = gain = context = stream = null; },
+    get stopped() { return stopped; },
+  };
 }
