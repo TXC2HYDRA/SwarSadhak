@@ -2,7 +2,7 @@
 
 SwarSadhak is a multilingual vocal practice studio for Hindustani classical and general singing. The project is being built as a local-first, deterministic-first application for the Frontier Buildathon 2026.
 
-## Phase 0 status
+## Phase 1 status
 
 The repository now contains the first monorepo foundation:
 
@@ -14,7 +14,7 @@ The repository now contains the first monorepo foundation:
 - Buildable Docker image
 - Node.js 22.19.0 pin and npm lockfile
 
-Phase 0 deliberately does **not** claim microphone capture or pitch analysis yet. Those begin in Phase 1.
+Phase 1 now includes a local-only browser practice loop: microphone permission, live pitch estimation, configurable tonic, deterministic cents feedback, exercise selection, and cleanup on stop/unmount. It does not claim perfect singer accuracy or replace a teacher.
 
 ## Requirements
 
@@ -29,7 +29,7 @@ cp .env.example .env
 npm ci
 ```
 
-No paid API or external AI service is required for the Phase 0 shell.
+No paid API, backend, external AI service, upload, recording storage, or LLM is required.
 
 ## Development
 
@@ -52,7 +52,7 @@ npm start
 npm test
 ```
 
-The current tests verify the pinned monorepo manifest and the declared localization foundation. Audio, exercise, and browser-flow tests will be added with their corresponding phases.
+Tests cover synthetic pitch fixtures, silence/noise/clipping/invalid input, musical calculations, exercises, coaching boundaries, and localization contracts. Browser permission flows are mocked unit/integration tests; they are not a substitute for testing a real microphone.
 
 ## Docker
 
@@ -61,7 +61,15 @@ docker build -t swar-sadhak .
 docker run --rm -p 4173:4173 swar-sadhak
 ```
 
-The Phase 0 container serves the built web shell. Browser microphone permissions and audio processing are intentionally not part of this foundation milestone.
+The container serves the built web app. Docker and real browser microphone behavior require separate verification; microphone permission depends on the browser and secure context.
+
+## Running the Phase 1 studio
+
+Run `npm run dev`, open the printed URL in a supported browser, choose Practice studio, allow microphone access, and start a session. Audio is analysed in memory in the browser and raw samples are never uploaded or persisted. If permission is denied, use the browser's site permissions and retry.
+
+### Known limitations
+
+The detector is a lightweight normalized autocorrelation implementation. Background noise, room acoustics, consonants, harmonics, clipping, and very quiet signals can reduce confidence. Equal-tempered note conversion is an engineering approximation; Hindustani performance can intentionally use intonation that differs from equal temperament. Synthetic fixtures do not represent every real voice or device.
 
 ## Repository layout
 
