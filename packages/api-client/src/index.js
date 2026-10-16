@@ -11,6 +11,14 @@ export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || ''
     request,
     auth: { register: (body) => request('/api/auth/register', { method: 'POST', body: JSON.stringify(body) }), login: (body) => request('/api/auth/login', { method: 'POST', body: JSON.stringify(body) }), me: () => request('/api/me') },
     practice: { list: () => request('/api/practice-sessions'), create: (summary) => { const safe = { ...summary }; delete safe.audio; delete safe.rawAudio; delete safe.audioData; return request('/api/practice-sessions', { method: 'POST', body: JSON.stringify(safe) }); }, remove: (id) => request(`/api/practice-sessions/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
+    coach: { explain: (summary, locale = 'en') => {
+      const metrics = summary?.metrics || {};
+      const verifiedMetrics = ['reliableFrameCount', 'totalFrameCount', 'reliablePitchMatchPercent', 'medianAbsoluteCents', 'pitchStabilityCents', 'clippedFrameCount']
+        .filter((key) => Object.prototype.hasOwnProperty.call(metrics, key))
+        .reduce((out, key) => { out[key] = metrics[key]; return out; }, {});
+      const payload = { exerciseId: summary?.exerciseId, locale, metrics: verifiedMetrics };
+      return request('/api/coach', { method: 'POST', body: JSON.stringify(payload) });
+    } },
     routines: { list: () => request('/api/routines'), create: (routine) => request('/api/routines', { method: 'POST', body: JSON.stringify(routine) }), get: (id) => request(`/api/routines/${encodeURIComponent(id)}`), update: (id, routine) => request(`/api/routines/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(routine) }), remove: (id) => request(`/api/routines/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
     assignments: { list: () => request('/api/assignments'), create: (assignment) => request('/api/assignments', { method: 'POST', body: JSON.stringify(assignment) }), update: (id, update) => request(`/api/assignments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(update) }), remove: (id) => request(`/api/assignments/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
   };

@@ -2,7 +2,7 @@
 
 SwarSadhak is a multilingual vocal practice studio for Hindustani classical and general singing. The project is being built as a local-first, deterministic-first application for the Frontier Buildathon 2026.
 
-## Phase 1–4 status
+## Phase 1–5 status
 
 The repository now contains:
 
@@ -19,6 +19,8 @@ The repository now contains:
 - Node.js 22.19.0 pin and npm lockfile
 - Optional FastAPI + SQLite backend with development authentication, derived-summary sync, routines, and teacher/student assignments
 - Frontend API client that preserves local-first behavior when the backend is disabled or unavailable
+- Provider-neutral deterministic coaching and bounded acoustic summaries in `packages/ai-coach` and `packages/acoustic-analysis`
+- Results-screen coaching that shows the measured evidence and an explicit offline/deterministic status
 
 Phase 1 and Phase 2 are implemented as a browser-local, deterministic flow. Microphone permission must be granted for real measurements. The practice lifecycle supports start, pause, resume, manual completion, and automatic completion at the exercise duration; active duration excludes paused time. Tonic selection is persisted with each session. If no reliable frames are collected, no normal completed session is persisted and the user receives retry guidance rather than a fabricated score.
 
@@ -49,6 +51,12 @@ npm ci
 ```
 
 No paid API or external AI service is required.
+
+### Optional AI and privacy
+
+Phase 5 is deterministic-first and works offline. `AI_PROVIDER=disabled` is the default. Optional provider configuration is server-side only and may receive verified structured metrics, never raw microphone audio, PCM, browser local storage, or secrets. Invalid, unavailable, or timed-out providers fall back to deterministic coaching. See `docs/ai-strategy.md`, `docs/ai-model-evaluation.md`, `docs/acoustic-analysis.md`, and `docs/privacy.md`. No model was downloaded or externally tested for this phase; RAG and paid providers are intentionally deferred.
+
+The optional Gemini adapter uses model `gemini-2.5-flash-lite` and is disabled unless `AI_PROVIDER=gemini` is explicitly configured in the backend environment. No Gemini request is made by offline automated tests. The previously exposed key is treated as revoked and must not be reused.
 
 ### Optional API
 

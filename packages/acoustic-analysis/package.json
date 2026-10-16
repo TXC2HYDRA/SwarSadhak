@@ -1,0 +1,6 @@
+{
+  "name": "@swarsadhak/acoustic-analysis",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.js"
+}

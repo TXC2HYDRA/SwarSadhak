@@ -1,4 +1,5 @@
 import { createApiClient, syncState } from '@swarsadhak/api-client';
+import { getTranslations } from '@swarsadhak/localization';
 
 const SESSION_KEY = 'swar-practice-sessions-v1';
 const ROUTINE_KEY = 'swar-routines-v1';
@@ -24,22 +25,23 @@ export function startOptionalSync() {
   const baseUrl = import.meta.env.VITE_API_URL || '';
   const token = localStorage.getItem(TOKEN_KEY);
   const element = statusElement();
+  const t = getTranslations(localStorage.getItem('swar-locale') || 'en');
   if (!baseUrl || !token) {
-    element.textContent = 'Practice data: local-only (optional sync disabled)';
+    element.textContent = t.syncLocalOnly;
     return () => {};
   }
   const client = createApiClient({ baseUrl, token });
   let stopped = false;
   const sync = async () => {
     if (stopped) return;
-    element.textContent = 'Practice data: sync pending';
+    element.textContent = t.syncPending;
     const sessions = read(SESSION_KEY, []);
     const routines = read(ROUTINE_KEY, []);
     const sessionResults = await Promise.all(sessions.map((session) => client.practice.create(session)));
     const routineResults = await Promise.all(routines.map((routine) => client.routines.create({ id: routine.id, name: routine.nameKey || routine.name || routine.id, description: routine.descriptionKey || '', routine })));
     const assignmentsResult = await client.assignments.list();
     const failed = [...sessionResults, ...routineResults].find((result) => !result.ok);
-    element.textContent = `Practice data: ${syncState(failed || assignmentsResult)}${assignmentsResult.ok ? ` · assignments: ${assignmentsResult.data?.length || 0}` : ''}`;
+    element.textContent = `${t.syncPrefix}: ${syncState(failed || assignmentsResult)}${assignmentsResult.ok ? ` · ${t.assignments}: ${assignmentsResult.data?.length || 0}` : ''}`;
   };
   sync();
   const timer = window.setInterval(sync, 15000);
