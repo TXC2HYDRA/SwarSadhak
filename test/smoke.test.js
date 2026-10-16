@@ -7,7 +7,7 @@ test('the SwarSadhak workspace has a pinned project manifest', async () => {
 
   assert.equal(packageJson.name, 'swar-sadhak');
   assert.equal(packageJson.engines.node, '22.19.0');
-  assert.equal(packageJson.workspaces.length, 2);
+  assert.ok(packageJson.workspaces.includes('packages/*'));
   assert.equal(packageJson.scripts.build, 'npm run build --workspace @swarsadhak/web');
   assert.equal(packageJson.scripts.test, 'node --test');
 });
