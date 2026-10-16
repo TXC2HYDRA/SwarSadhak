@@ -3,9 +3,10 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from .config import API_VERSION, CORS_ORIGINS
+from .ai_coach import coach as ai_coach
 from .db import connect, init_db
 from .dependencies import current_user, require_role
-from .schemas import UserCreate, Login, Practice, Routine, AssignmentCreate, AssignmentUpdate
+from .schemas import UserCreate, Login, Practice, Routine, AssignmentCreate, AssignmentUpdate, CoachPayload
 from .security import hash_password, verify_password, issue_token
 
 app = FastAPI(title="SwarSadhak API", version=API_VERSION)
@@ -18,6 +19,9 @@ def public_user(u): return {"id":u["id"],"username":u["username"],"display_name"
 
 @app.get("/api/health")
 def health(): return {"status":"ok", "version":API_VERSION, "service":"swar-sadhak-api"}
+@app.post("/api/coach")
+async def coach_endpoint(payload: CoachPayload, user=Depends(current_user)):
+    return await ai_coach(payload)
 @app.post("/api/auth/register", status_code=201)
 def register(data: UserCreate):
     uid = str(uuid.uuid4()); stamp=now()

@@ -15,3 +15,9 @@ test('API client covers routine and assignment mutations', async () => {
   await client.routines.update('r1', {}); await client.routines.remove('r1'); await client.assignments.update('a1', { status: 'completed' }); await client.assignments.remove('a1');
   assert.deepEqual(calls, [['http://api.test/api/routines/r1', 'PATCH'], ['http://api.test/api/routines/r1', 'DELETE'], ['http://api.test/api/assignments/a1', 'PATCH'], ['http://api.test/api/assignments/a1', 'DELETE']]);
 });
+test('coach explain sends verified summary metrics only', async () => {
+  let payload;
+  const client = createApiClient({ baseUrl: 'http://api.test', token: 'secret', fetchImpl: async (_url, options) => { payload = JSON.parse(options.body); return new Response(JSON.stringify({ messageKey: 'recommendations.stablePerformance', source: 'gemini' }), { status: 200 }); } });
+  await client.coach.explain({ exerciseId: 'sa-sustain', metrics: { reliableFrameCount: 4, totalFrameCount: 5, medianAbsoluteCents: 2 }, quality: { raw: 'omit' }, recommendation: 'omit', audio: 'never' }, 'mr');
+  assert.deepEqual(payload, { exerciseId: 'sa-sustain', locale: 'mr', metrics: { reliableFrameCount: 4, totalFrameCount: 5, medianAbsoluteCents: 2 } });
+});

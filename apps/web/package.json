@@ -28,7 +28,8 @@
      ,"@swarsadhak/exercises": "*"
      ,"@swarsadhak/routines": "*"
       ,"@swarsadhak/gamification": "*"
-      ,"@swarsadhak/api-client": "*"
+       ,"@swarsadhak/api-client": "*"
+       ,"@swarsadhak/ai-coach": "*"
   },
   "devDependencies": {}
 }
