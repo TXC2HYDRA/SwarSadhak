@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { estimatePitch } from '../packages/audio-engine/src/index.js';
-import { frequencyToNote, frameToObservation } from '../packages/musical-core/src/index.js';
+import { classifyPitchFeedback, frequencyToNote, frameToObservation } from '../packages/musical-core/src/index.js';
 import { exerciseIds, getExercise, validateExerciseId } from '../packages/exercises/src/index.js';
 
 test('autocorrelation estimates a voiced sine and rejects invalid input', () => {
@@ -20,7 +20,8 @@ test('tonic-relative conversion reports swara and cents classification', () => {
 });
 
 test('canonical exercise IDs are available and validated', () => {
-  assert.deepEqual(exerciseIds, ['sa-sustain', 'pitch-match', 'sa-re-ga', 'ascending-sargam']);
+  assert.deepEqual(exerciseIds, ['sa-sustain', 'sa-re-ga', 'ascending-sargam']);
+  assert.equal(getExercise('pitch-match'), null);
   assert.equal(getExercise('sa-re-ga').notes[2], 'Ga');
   assert.equal(validateExerciseId('unknown'), false);
 });
@@ -36,4 +37,21 @@ test('frame adapter preserves invalid frames without inventing cents', () => {
   const observation = frameToObservation({ frequencyHz: null, voiced: false, reason: 'silence' }, 261.63);
   assert.equal(observation.centsError, null);
   assert.equal(observation.voiced, false);
+});
+
+test('Sa Sustain feedback classifies silence, pitch direction, and in-tune singing', () => {
+  assert.equal(classifyPitchFeedback({ voiced: false, reason: 'silence' }).status, 'silent');
+  assert.equal(classifyPitchFeedback({ voiced: true, frequencyHz: 250, centsError: -70 }).status, 'flat');
+  assert.equal(classifyPitchFeedback({ voiced: true, frequencyHz: 275, centsError: 70 }).status, 'sharp');
+  assert.equal(classifyPitchFeedback({ voiced: true, frequencyHz: 261.63, centsError: 12 }).status, 'in-tune');
+  assert.equal(classifyPitchFeedback({ voiced: false, clipped: true, reason: 'clipping' }).status, 'clipped');
+});
+
+test('Sa Sustain feedback reports lower, selected, and higher octaves', () => {
+  const target = 261.63;
+  const makeObservation = (frequencyHz) => ({ voiced: true, frequencyHz, targetFrequencyHz: target, centsError: 1200 * Math.log2(frequencyHz / target) });
+  assert.equal(classifyPitchFeedback(makeObservation(target / 2)).octaveLabelKey, 'pitchFeedback.baseOctave');
+  assert.equal(classifyPitchFeedback(makeObservation(target)).octaveLabelKey, 'pitchFeedback.middleOctave');
+  assert.equal(classifyPitchFeedback(makeObservation(target * 2)).octaveLabelKey, 'pitchFeedback.highOctave');
+  assert.equal(classifyPitchFeedback(makeObservation(target * 2)).centsError, 0);
 });

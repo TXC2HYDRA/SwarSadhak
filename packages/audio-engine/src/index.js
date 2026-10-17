@@ -52,7 +52,7 @@ export function createAudioController(options = {}) {
         source.connect(gain); gain.connect(context.destination);
         if (context.createScriptProcessor) {
           processor = context.createScriptProcessor(options.bufferSize ?? 2048, 1, 1);
-          processor.onaudioprocess = (event) => { if (!stopped) options.onFrame?.(estimatePitch(event.inputBuffer.getChannelData(0), context.sampleRate, options.pitchOptions)); };
+           processor.onaudioprocess = (event) => { if (!stopped) { const frame = estimatePitch(event.inputBuffer.getChannelData(0), context.sampleRate, options.pitchOptions); if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('swar:audio-frame', { detail: frame })); options.onFrame?.(frame); } };
           source.connect(processor); processor.connect(gain);
         }
         stopped = false; return { ok: true, context, stream };
