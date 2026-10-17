@@ -2,7 +2,7 @@ import { exerciseIds, getExercise } from '@swarsadhak/exercises';
 
 export const ROUTINE_LIMITS = Object.freeze({ minItemSeconds: 10, maxItemSeconds: 900, maxTotalSeconds: 3600, maxItems: 20 });
 export const SECTION_TYPES = Object.freeze(['warmup', 'main', 'cooldown']);
-export const STARTER_ROUTINES = Object.freeze([{ id: 'routine-morning-foundation', nameKey: 'routines.morningFoundation.name', descriptionKey: 'routines.morningFoundation.description', sections: [{ id: 'warmup', type: 'warmup', titleKey: 'routineSections.warmup', items: [{ id: 'warmup-sa', exerciseId: 'sa-sustain', durationSeconds: 30 }] }, { id: 'main', type: 'main', titleKey: 'routineSections.main', items: [{ id: 'main-pitch', exerciseId: 'pitch-match', durationSeconds: 60 }] }, { id: 'cooldown', type: 'cooldown', titleKey: 'routineSections.cooldown', items: [{ id: 'cooldown-sa', exerciseId: 'sa-sustain', durationSeconds: 30 }] }] }]);
+export const STARTER_ROUTINES = Object.freeze([{ id: 'routine-morning-foundation', nameKey: 'routines.morningFoundation.name', descriptionKey: 'routines.morningFoundation.description', sections: [{ id: 'warmup', type: 'warmup', titleKey: 'routineSections.warmup', items: [{ id: 'warmup-sa', exerciseId: 'sa-sustain', durationSeconds: 30 }] }, { id: 'main', type: 'main', titleKey: 'routineSections.main', items: [{ id: 'main-sa', exerciseId: 'sa-sustain', durationSeconds: 60 }] }, { id: 'cooldown', type: 'cooldown', titleKey: 'routineSections.cooldown', items: [{ id: 'cooldown-sa', exerciseId: 'sa-sustain', durationSeconds: 30 }] }] }]);
 const error = (message) => { throw new RangeError(message); };
 export function validateRoutine(routine) {
   if (!routine || typeof routine !== 'object' || !routine.id || !routine.nameKey) error('routine id and nameKey are required');
@@ -13,7 +13,7 @@ export function validateRoutine(routine) {
   return true;
 }
 export function normalizeRoutine(routine) { validateRoutine(routine); return structuredClone(routine); }
-export function routineItems(routine) { return routine.sections.flatMap((section) => section.items.map((item) => ({ ...item, sectionType: section.type, exercise: getExercise(item.exerciseId) }))); }
+export function routineItems(routine) { return routine.sections.flatMap((section) => section.items.map((item) => ({ ...item, sectionType: section.type, exercise: getExercise(item.exerciseId) ?? getExercise('sa-sustain') }))); }
 export function totalRoutineSeconds(routine) { return routineItems(routine).reduce((sum, item) => sum + item.durationSeconds, 0); }
 export function createRoutine({ id = `routine-${Date.now()}`, nameKey = 'routines.custom.name', descriptionKey = 'routines.custom.description', sections } = {}) { return normalizeRoutine({ id, nameKey, descriptionKey, sections: sections || SECTION_TYPES.map((type) => ({ id: type, type, titleKey: `routineSections.${type}`, items: [] })) }); }
 

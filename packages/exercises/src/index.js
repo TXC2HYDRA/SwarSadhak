@@ -1,6 +1,5 @@
 export const EXERCISES = Object.freeze([
   { id: 'sa-sustain', nameKey: 'exercises.saSustain.name', descriptionKey: 'exercises.saSustain.description', instructionKey: 'exercises.saSustain.instruction', notes: ['Sa'], durationSeconds: 10, toleranceCents: 50, level: 1, tradition: 'Hindustani' },
-  { id: 'pitch-match', nameKey: 'exercises.pitchMatch.name', descriptionKey: 'exercises.pitchMatch.description', instructionKey: 'exercises.pitchMatch.instruction', notes: ['Sa'], durationSeconds: 10, toleranceCents: 50, level: 1, tradition: 'Hindustani' },
   { id: 'sa-re-ga', nameKey: 'exercises.saReGa.name', descriptionKey: 'exercises.saReGa.description', instructionKey: 'exercises.saReGa.instruction', notes: ['Sa', 'Re', 'Ga'], durationSeconds: 15, toleranceCents: 50, level: 2, tradition: 'Hindustani', limited: true },
   { id: 'ascending-sargam', nameKey: 'exercises.ascendingSargam.name', descriptionKey: 'exercises.ascendingSargam.description', instructionKey: 'exercises.ascendingSargam.instruction', notes: ['Sa', 'Re', 'Ga', 'Ma', 'Pa', 'Dha', 'Ni', 'Sa'], targetNotes: ['Sa', 'Re', 'Ga', 'Ma', 'Pa', 'Dha', 'Ni', 'Sa'], durationSeconds: 30, toleranceCents: 50, level: 2, tradition: 'Hindustani', limited: true },
 ]);
