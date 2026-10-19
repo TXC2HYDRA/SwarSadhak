@@ -37,6 +37,7 @@ test('audio controller maps permission errors and invokes error callback', async
   assert.equal(callback, 'microphone-permission-denied');
 });
 
+
 test('real observations flow through metrics into a validated session', () => {
   const observations = [
     { voiced: true, clipped: false, confidence: .9, frequencyHz: 260, centsError: -10 },
