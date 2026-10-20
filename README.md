@@ -21,6 +21,7 @@ The repository now contains:
 - Frontend API client that preserves local-first behavior when the backend is disabled or unavailable
 - Provider-neutral deterministic coaching and bounded acoustic summaries in `packages/ai-coach` and `packages/acoustic-analysis`
 - Results-screen coaching that shows the measured evidence and an explicit offline/deterministic status
+- Looping, fade-in/fade-out real tanpura accompaniment from Cloudinary for all 12 tonic scales in Practice Studio and Alankar Practice; playback stays outside the microphone analysis graph
 
 Phase 1 and Phase 2 are implemented as a browser-local, deterministic flow. Microphone permission must be granted for real measurements. The practice lifecycle supports start, pause, resume, manual completion, and automatic completion at the exercise duration; active duration excludes paused time. Tonic selection is persisted with each session. If no reliable frames are collected, no normal completed session is persisted and the user receives retry guidance rather than a fabricated score.
 
@@ -38,10 +39,10 @@ Small sample sizes are intentionally not presented as statistically meaningful t
 
 ## Requirements
 
-- Node.js 22.19.0
+- Node.js 22.19.0 (see `.nvmrc`)
 - npm
 - Docker, for container verification
-- Python 3.11 or 3.12, only for the optional API
+- Python 3.11.11, only for the optional API (see `.python-version`)
 
 ## Setup
 
@@ -50,7 +51,8 @@ cp .env.example .env
 npm ci
 ```
 
-No paid API or external AI service is required.
+`npm ci` uses the committed `package-lock.json`; it does not resolve floating
+dependency ranges. No paid API or external AI service is required.
 
 ### Optional AI and privacy
 
@@ -90,7 +92,10 @@ npm start
 npm test
 ```
 
-The tests verify the pinned manifest, locale parity, metric/session validation, persistence fallback, and recommendation boundaries. Browser microphone behavior is not claimed or tested in Node.
+This is the single project test command. The tests verify the pinned manifest,
+locale parity, metric/session validation, persistence fallback, and
+recommendation boundaries. Browser microphone behavior is not claimed or
+tested in Node.
 
 ## Docker
 
@@ -99,7 +104,26 @@ docker build -t swar-sadhak .
 docker run --rm -p 4173:4173 swar-sadhak
 ```
 
-The container serves the built web app. Microphone access still requires a supported browser secure context, normally localhost or HTTPS.
+The image runs a dependency-free Node static server and exposes a health check
+at `http://localhost:4173/health`. The container serves the built web app;
+microphone access still requires a supported browser secure context, normally
+localhost or HTTPS.
+
+## Clean Linux rebuild commands
+
+From a fresh clone, the complete frontend setup, verification, and run flow is:
+
+```bash
+cp .env.example .env
+npm ci
+npm test
+npm run build
+docker build -t swar-sadhak .
+docker run --rm -p 4173:4173 swar-sadhak
+```
+
+Open `http://localhost:4173` after the final command. Do not commit `.env`; use
+`.env.example` as the shareable configuration template.
 
 The Dockerfile remains frontend-only. Docker is not required for the offline flow; run the API directly for local development.
 
@@ -114,4 +138,4 @@ research_notes            Existing buildathon research notes
 
 ## Privacy and AI direction
 
-Audio analysis is browser-side and no recording upload is required. See `docs/backend-and-collaboration.md` and `docs/privacy.md` for backend storage, permissions, authentication limits, and sync failure behavior. Browser microphone, accessibility, and deployment behavior remain manual-test limitations.
+Audio analysis is browser-side and no recording upload is required. See `docs/backend-and-collaboration.md` and `docs/privacy.md` for backend storage, permissions, authentication limits, and sync failure behavior. Browser microphone, accessibility, and deployment behavior remain manual-test limitations....
