@@ -5,7 +5,7 @@ export function AlankarPracticeDisplay({ beat, timeline, groups, octaveGroups = 
   const practiceBeat = beat.phase === 'practice' ? beat : null;
   const beatSwaraIndex = (groupLength, groupBeatIndex) => groupLength === 1 ? 0 : groupLength === 2 ? Math.floor(groupBeatIndex / 2) : Math.min(groupBeatIndex, 2);
   const currentSwara = practiceBeat ? octaveGroups[practiceBeat.groupIndex]?.[beatSwaraIndex(octaveGroups[practiceBeat.groupIndex]?.length ?? 1, practiceBeat.groupBeatIndex)] : null;
-  return <section className="panel alankar-live" aria-live="polite">
+  return <section className="panel alankar-live">
     <div className="live-metrics">
       <div><small>{phase === 'count-in' ? t.countIn : t.activePractice}</small><strong>{phase === 'count-in' ? `${t.countInBeat} ${beat.countInBeat || 1} / ${timeline.countInBeats}` : (practiceBeat?.accent ? `♩ ${t.beat} 1` : `${t.beat} ${practiceBeat ? practiceBeat.beatInBar : 1}`)}</strong></div>
       <div><small>{t.currentSwara}</small><strong>{currentSwara ? <SwaraLabel t={t} {...currentSwara} /> : '—'}</strong></div>

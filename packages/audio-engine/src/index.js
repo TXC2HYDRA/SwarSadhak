@@ -47,7 +47,7 @@ export function createAudioController(options = {}) {
         const AudioContext = options.AudioContext ?? globalThis.AudioContext ?? globalThis.webkitAudioContext;
         const getUserMedia = options.getUserMedia ?? globalThis.navigator?.mediaDevices?.getUserMedia?.bind(globalThis.navigator.mediaDevices);
         if (!AudioContext || !getUserMedia) return error(new Error('Audio APIs unavailable'));
-        context = new AudioContext(); stream = await getUserMedia({ audio: true });
+        context = new AudioContext(); stream = await getUserMedia({ audio: options.audioConstraints ?? { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: false } });
         source = context.createMediaStreamSource(stream); gain = context.createGain(); gain.gain.value = 0;
         source.connect(gain); gain.connect(context.destination);
         if (context.createScriptProcessor) {

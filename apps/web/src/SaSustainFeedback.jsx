@@ -7,6 +7,7 @@ const textAt = (t, key) => key.split('.').reduce((value, part) => value?.[part],
 
 export function SaSustainFeedback({ tonic, t }) {
   const [feedback, setFeedback] = useState(initialFeedback);
+  const [announcement, setAnnouncement] = useState('');
 
   useEffect(() => {
     setFeedback(initialFeedback);
@@ -18,7 +19,14 @@ export function SaSustainFeedback({ tonic, t }) {
     return () => window.removeEventListener('swar:audio-frame', handleFrame);
   }, [tonic]);
 
-  return <section className={`sa-feedback sa-feedback-${feedback.status}`} aria-live="polite">
+  useEffect(() => {
+    const nextAnnouncement = feedback.status === 'waiting' ? '' : textAt(t, feedback.labelKey);
+    const timeout = setTimeout(() => setAnnouncement(nextAnnouncement), 350);
+    return () => clearTimeout(timeout);
+  }, [feedback.status, feedback.labelKey, t]);
+
+  return <section className={`sa-feedback sa-feedback-${feedback.status}`}>
+    <span className="sr-only" role="status" aria-live="polite">{announcement}</span>
     <div>
       <span className="sa-feedback-label">{textAt(t, 'pitchFeedback.target')}</span>
       <strong>Sa · {targetFrequency('Sa', tonic).toFixed(2)} Hz</strong>

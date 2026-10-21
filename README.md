@@ -136,6 +136,12 @@ test                     Offline Node tests
 research_notes            Existing buildathon research notes
 ```
 
+## Optional Tanpura accompaniment
+
+Tanpura accompaniment is an optional enhancement and is not part of the microphone pitch-analysis dependency. The current recordings are remote Cloudinary assets, so playback may be unavailable without network access; the app reports that state instead of fabricating audio. For a fully offline distribution, replace these URLs with appropriately licensed local assets before claiming offline accompaniment support.
+
+The web UI references `Inter` and `Noto Sans Devanagari`, but neither font is bundled; the stack assumes an installed/system font or browser fallback (self-hosting remains a future option). Manually verify Marathi and Hindi glyphs, wrapping, and weights on the target demo machine before presenting.
+
 ## Privacy and AI direction
 
 Audio analysis is browser-side and no recording upload is required. See `docs/backend-and-collaboration.md` and `docs/privacy.md` for backend storage, permissions, authentication limits, and sync failure behavior. Browser microphone, accessibility, and deployment behavior remain manual-test limitations....
