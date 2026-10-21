@@ -16,6 +16,22 @@ test('the foundation declares all required locales and translation keys', () => 
   assert.ok(requiredTranslationKeys.length >= 25);
 });
 
+test('Phase 2 landing, dashboard, and discovery copy is translated in every locale', () => {
+  const keys = [
+    'landing.heroTitle', 'landing.start', 'landing.features.pitch', 'landing.steps.chooseTitle',
+    'landing.privacyItems.rawAudio', 'landing.footerSettings', 'dashboard.newTitle',
+    'dashboard.recommendedReason', 'dashboard.smallSample', 'exerciseUi.searchPlaceholder',
+    'exerciseUi.goalSequence', 'exerciseUi.noResults', 'accessibility.previewLabel'
+  ];
+  for (const locale of supportedLocales) {
+    const t = getTranslations(locale);
+    for (const key of keys) assert.equal(typeof key.split('.').reduce((value, part) => value?.[part], t), 'string', `${locale}.${key}`);
+  }
+  assert.ok(requiredTranslationKeys.includes('landing.heroTitle'));
+  assert.ok(requiredTranslationKeys.includes('dashboard.newTitle'));
+  assert.ok(requiredTranslationKeys.includes('exerciseUi.searchPlaceholder'));
+});
+
 test('all locale trees have deep key parity for exercise metadata', () => {
   for (const locale of supportedLocales) {
     for (const exercise of EXERCISES) {
