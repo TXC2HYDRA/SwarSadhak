@@ -47,12 +47,12 @@ export function createAudioController(options = {}) {
         const AudioContext = options.AudioContext ?? globalThis.AudioContext ?? globalThis.webkitAudioContext;
         const getUserMedia = options.getUserMedia ?? globalThis.navigator?.mediaDevices?.getUserMedia?.bind(globalThis.navigator.mediaDevices);
         if (!AudioContext || !getUserMedia) return error(new Error('Audio APIs unavailable'));
-        context = new AudioContext(); stream = await getUserMedia({ audio: true });
+        context = new AudioContext(); stream = await getUserMedia({ audio: options.audioConstraints ?? { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: false } });
         source = context.createMediaStreamSource(stream); gain = context.createGain(); gain.gain.value = 0;
         source.connect(gain); gain.connect(context.destination);
         if (context.createScriptProcessor) {
           processor = context.createScriptProcessor(options.bufferSize ?? 2048, 1, 1);
-          processor.onaudioprocess = (event) => { if (!stopped) options.onFrame?.(estimatePitch(event.inputBuffer.getChannelData(0), context.sampleRate, options.pitchOptions)); };
+           processor.onaudioprocess = (event) => { if (!stopped) { const frame = estimatePitch(event.inputBuffer.getChannelData(0), context.sampleRate, options.pitchOptions); if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('swar:audio-frame', { detail: frame })); options.onFrame?.(frame); } };
           source.connect(processor); processor.connect(gain);
         }
         stopped = false; return { ok: true, context, stream };

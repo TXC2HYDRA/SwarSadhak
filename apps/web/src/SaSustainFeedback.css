@@ -1,0 +1,16 @@
+.sa-feedback { display: flex; align-items: center; justify-content: space-between; gap: 20px; max-width: 720px; margin: 24px auto 0; padding: 18px 22px; background: rgba(9, 14, 28, .42); border: 1px solid var(--border); border-radius: 16px; }
+.sa-feedback > div { display: flex; flex-direction: column; gap: 5px; }
+.sa-feedback-label { color: var(--text-subtle); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.sa-feedback-result { align-items: flex-end; }
+.sa-feedback-result span { font-size: 18px; font-weight: 700; }
+.sa-feedback-result .sa-feedback-octave { color: var(--text-subtle); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.sa-feedback-result small { color: var(--text-muted); }
+.sa-feedback-in-tune { background: rgba(102, 213, 156, .1); border-color: rgba(102, 213, 156, .35); }
+.sa-feedback-in-tune .sa-feedback-result span { color: var(--pitch-tune); }
+.sa-feedback-flat { background: rgba(113, 182, 232, .1); border-color: rgba(113, 182, 232, .35); }
+.sa-feedback-flat .sa-feedback-result span { color: var(--pitch-flat); }
+.sa-feedback-sharp { background: rgba(238, 155, 101, .1); border-color: rgba(238, 155, 101, .35); }
+.sa-feedback-sharp .sa-feedback-result span { color: var(--pitch-sharp); }
+.sa-feedback-clipped { background: rgba(240, 132, 120, .1); border-color: rgba(240, 132, 120, .35); }
+.sa-feedback-clipped .sa-feedback-result span { color: var(--error); }
+@media (max-width: 560px) { .sa-feedback { margin: 20px 0 0; padding: 16px; align-items: flex-start; flex-direction: column; } .sa-feedback-result { align-items: flex-start; } }

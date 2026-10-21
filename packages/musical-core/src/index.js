@@ -24,3 +24,25 @@ export function frameToObservation(frame, tonicHz, options = {}) {
   const centsError = centsBetween(frame.frequencyHz, targetFrequencyHz);
   return { ...frame, centsError, targetFrequencyHz, targetNote: options.targetNote ?? 'Sa', voiced: centsError !== null };
 }
+
+export function classifyPitchFeedback(observation, options = {}) {
+  const toleranceCents = options.toleranceCents ?? 50;
+  const confidenceThreshold = options.confidenceThreshold ?? 0.55;
+  if (!observation || observation.clipped === true || observation.reason === 'clipping') return { status: 'clipped', labelKey: 'pitchFeedback.clipping', centsError: null };
+  if (observation.reason === 'low-confidence' || (Number.isFinite(observation.confidence) && observation.confidence < confidenceThreshold)) {
+    return { status: 'low-confidence', labelKey: 'pitchFeedback.lowConfidence', centsError: null };
+  }
+  if (observation.voiced !== true || !Number.isFinite(observation.frequencyHz)) return { status: 'silent', labelKey: 'pitchFeedback.silence', centsError: null };
+  const targetFrequencyHz = observation.targetFrequencyHz;
+  const centsError = Number.isFinite(observation.centsError) ? observation.centsError : null;
+  if (centsError === null) return { status: 'silent', labelKey: 'pitchFeedback.silence', centsError: null };
+  const hasTarget = Number.isFinite(targetFrequencyHz) && targetFrequencyHz > 0;
+  const octaveOffset = hasTarget ? Math.round(Math.log2(observation.frequencyHz / targetFrequencyHz)) : 0;
+  const effectiveCentsError = centsError - (octaveOffset * 1200);
+  const octaveLabelKey = octaveOffset < 0 ? 'pitchFeedback.baseOctave' : octaveOffset > 0 ? 'pitchFeedback.highOctave' : 'pitchFeedback.middleOctave';
+  const feedback = { octaveOffset, octaveLabelKey, centsError: effectiveCentsError };
+  if (Math.abs(effectiveCentsError) <= toleranceCents) return { ...feedback, status: 'in-tune', labelKey: 'pitchFeedback.inTune' };
+  return effectiveCentsError < 0
+    ? { ...feedback, status: 'flat', labelKey: 'pitchFeedback.flat' }
+    : { ...feedback, status: 'sharp', labelKey: 'pitchFeedback.sharp' };
+}
