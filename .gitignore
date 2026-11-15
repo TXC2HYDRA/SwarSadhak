@@ -10,3 +10,8 @@ reports/
 __pycache__/
 .pytest_cache/
 *.py[cod]
+
+# Local-only artifacts
+docs/tanpura/*.mp3
+apps/data/
+.opencode/

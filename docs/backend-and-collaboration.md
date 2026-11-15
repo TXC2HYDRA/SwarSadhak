@@ -1,6 +1,6 @@
 # Optional backend and collaboration
 
-Phase 4 adds an optional FastAPI + SQLite service. Start it with `uvicorn app.main:app --reload --app-dir apps/api` after installing `apps/api/requirements.txt`. The database defaults to `apps/api/data/swar_sadhak.db`; set `DATABASE_URL` to change it.
+Phase 4 adds an optional FastAPI + SQLite service. Start it with `python3 apps/api/run.py` (or `npm run api`) after installing `apps/api/requirements.txt`. The runner reads `API_HOST` and `API_PORT`, defaulting to `0.0.0.0:8020`. The API is available at `http://localhost:8020`; the database defaults to `apps/api/data/swar_sadhak.db`; set `DATABASE_URL` to change it.
 
 The local authentication mode uses username/password and signed, short-lived development tokens. Passwords are PBKDF2-hashed; this is not production authentication and has no OAuth, email recovery, rate limiting, or account provisioning. Never use the default secret for deployment.
 

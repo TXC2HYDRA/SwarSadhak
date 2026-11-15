@@ -1,6 +1,8 @@
 import os
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/swar_sadhak.db")
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("API_PORT", "8020"))
 AUTH_MODE = os.getenv("AUTH_MODE", "local")
 AUTH_SECRET = os.getenv("AUTH_SECRET", "local-development-secret-change-me")
 if AUTH_MODE != "local" and AUTH_SECRET == "local-development-secret-change-me":

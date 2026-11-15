@@ -66,10 +66,10 @@ The optional Gemini adapter uses model `gemini-2.5-flash-lite` and is disabled u
 python3.11 -m venv .venv
 . .venv/bin/activate
 pip install -r apps/api/requirements.txt
-uvicorn app.main:app --reload --app-dir apps/api
+python3 apps/api/run.py
 ```
 
-The API runs at `http://localhost:8000`; health is `GET /api/health`. Set `VITE_API_URL=http://localhost:8000` to enable the frontend client, or leave it empty for offline/local-only use. Run API tests with `python -m pytest apps/api/tests`. Authentication is development-only local username/password with signed short-lived tokens; production OAuth, recovery, rate limiting, cloud databases, and deployment are deferred.
+The API runs at `http://localhost:8020`; health is `GET /api/health`. The canonical startup command is also available as `npm run api`. Set `VITE_API_URL=http://localhost:8020` to enable the frontend client, or leave it empty for offline/local-only use. Run API tests with `python -m pytest apps/api/tests`. Authentication is development-only local username/password with signed short-lived tokens; production OAuth, recovery, rate limiting, cloud databases, and deployment are deferred.
 
 ## Development
 

@@ -24,66 +24,62 @@ export function createTanpuraPlayer(options = {}) {
   const fadeSeconds = options.fadeSeconds ?? 0.8;
   const targetVolume = options.targetVolume ?? 0.72;
   let audio = null;
-  let fadeToken = 0;
-
-  const ensureAudio = () => {
-    if (!audio && Audio) {
-      audio = new Audio();
-      audio.preload = 'auto';
-      audio.loop = true;
-      audio.volume = 0;
-    }
-    return audio;
-  };
-
-  const fadeTo = async (target) => {
-    const element = ensureAudio();
+  let generation = 0, pending = null;
+  const release = (element) => {
     if (!element) return;
-    const token = ++fadeToken;
+    element.pause?.();
+    try { element.currentTime = 0; } catch {}
+    element.volume = 0;
+    element.removeAttribute?.('src');
+    element.load?.();
+  };
+  const fadeTo = async (element, target, token) => {
     const start = Number.isFinite(element.volume) ? element.volume : 0;
     const steps = Math.max(1, Math.ceil(fadeSeconds * 30));
     for (let step = 1; step <= steps; step += 1) {
-      if (token !== fadeToken) return;
+      if (token !== generation) return;
       element.volume = Math.max(0, Math.min(1, start + ((target - start) * step) / steps));
       await sleep((fadeSeconds * 1000) / steps);
     }
-    if (token === fadeToken) element.volume = target;
+    if (token === generation) element.volume = target;
   };
 
   const stop = async ({ immediate = false } = {}) => {
-    const element = ensureAudio();
+    const element = audio;
+    const token = ++generation;
+    audio = null; pending = null;
     if (!element) return;
-    if (immediate) {
-      ++fadeToken;
-      element.pause?.();
-      try { element.currentTime = 0; } catch {}
-      element.volume = 0;
-      return;
-    }
-    await fadeTo(0);
-    element.pause?.();
-    try { element.currentTime = 0; } catch {}
+    if (!immediate) await fadeTo(element, 0, token);
+    release(element);
   };
 
   return {
-    async start(recording) {
-      const element = ensureAudio();
-      if (!element || !recording?.url) return { ok: false, error: 'audio-unavailable' };
-      try {
-        if (element.src !== recording.url) {
-          if (element.src && !element.paused) await stop();
-          element.src = recording.url;
-          element.loop = true;
+    start(recording) {
+      if (pending) return pending;
+      if (!Audio || !recording?.url) return Promise.resolve({ ok: false, error: 'audio-unavailable' });
+      if (audio && !audio.paused && audio.src === recording.url) return Promise.resolve({ ok: true });
+      void stop({ immediate: true });
+      const token = ++generation;
+      const operation = (async () => {
+        let element;
+        try {
+          element = new Audio(); audio = element;
+          element.preload = 'auto'; element.src = recording.url; element.loop = true; element.volume = 0;
           element.load?.();
+          await element.play();
+          if (token !== generation) { release(element); return { ok: false, error: 'audio-cancelled' }; }
+          await fadeTo(element, targetVolume, token);
+          if (token !== generation) { release(element); return { ok: false, error: 'audio-cancelled' }; }
+          return { ok: true };
+        } catch (cause) {
+          release(element);
+          if (audio === element) audio = null;
+          return { ok: false, error: 'audio-unavailable', cause };
         }
-        element.volume = 0;
-        await element.play();
-        await fadeTo(targetVolume);
-        return { ok: true };
-      } catch (cause) {
-        await stop({ immediate: true });
-        return { ok: false, error: 'audio-unavailable', cause };
-      }
+      })();
+      pending = operation;
+      void operation.then(() => { if (pending === operation) pending = null; });
+      return operation;
     },
     stop,
     get playing() { return Boolean(audio && !audio.paused); },

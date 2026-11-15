@@ -8,6 +8,7 @@
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "npm run dev --workspace @swarsadhak/web",
+    "api": "python3 apps/api/run.py",
     "build": "npm run build --workspace @swarsadhak/web",
     "start": "npm run preview --workspace @swarsadhak/web",
     "test": "node --test"

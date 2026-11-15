@@ -39,28 +39,101 @@ export function estimatePitch(samples, sampleRate, options = {}) {
 }
 
 export function createAudioController(options = {}) {
-  let context = null, source = null, gain = null, processor = null, stream = null, stopped = false;
-  const error = (cause) => ({ ok: false, error: cause?.name === 'NotAllowedError' ? 'microphone-permission-denied' : 'audio-unavailable', cause });
-  return {
-    async start() {
+  let current = null, state = 'idle', pendingStart = null, pendingTransition = null, transitionMethod = null;
+  const cancelled = () => ({ ok: false, error: 'audio-cancelled' });
+  const notifyError = (cause, code) => {
+    try { Promise.resolve(options.onError?.(cause, code)).catch(() => {}); } catch {}
+  };
+  // Clear each handle before releasing it. A broken node/track must not prevent
+  // the remaining resources from being released, including a late media stream.
+  const cleanup = (attempt) => {
+    if (!attempt) return Promise.resolve();
+    const { processor, source, gain, stream, context } = attempt;
+    attempt.processor = attempt.source = attempt.gain = attempt.stream = attempt.context = null;
+    try { if (processor) processor.onaudioprocess = null; } catch {}
+    for (const node of [processor, source, gain]) { try { node?.disconnect(); } catch {} }
+    try { for (const track of stream?.getTracks?.() ?? []) { try { track.stop(); } catch {} } } catch {}
+    try { return Promise.resolve(context?.close?.()).catch(() => {}); } catch { return Promise.resolve(); }
+  };
+  const fail = (attempt, cause, code) => {
+    if (current !== attempt) { void cleanup(attempt); return cancelled(); }
+    current = null; state = 'error';
+    void cleanup(attempt);
+    const error = code ?? (cause?.name === 'NotAllowedError' ? 'microphone-permission-denied' : 'audio-unavailable');
+    notifyError(cause, error);
+    return { ok: false, error, cause };
+  };
+  const transition = (method, nextState) => {
+    if (pendingTransition) return transitionMethod === method ? pendingTransition : Promise.resolve({ ok: false, error: 'audio-transition-pending' });
+    if (!current || !['running', 'paused'].includes(state)) return Promise.resolve({ ok: false, error: 'audio-not-running' });
+    if (state === nextState) return Promise.resolve({ ok: true });
+    const attempt = current;
+    // Frame delivery stops synchronously, before suspend/resume can settle.
+    state = 'requesting'; transitionMethod = method;
+    const operation = (async () => {
       try {
-        const AudioContext = options.AudioContext ?? globalThis.AudioContext ?? globalThis.webkitAudioContext;
-        const getUserMedia = options.getUserMedia ?? globalThis.navigator?.mediaDevices?.getUserMedia?.bind(globalThis.navigator.mediaDevices);
-        if (!AudioContext || !getUserMedia) return error(new Error('Audio APIs unavailable'));
-        context = new AudioContext(); stream = await getUserMedia({ audio: options.audioConstraints ?? { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: false } });
-        source = context.createMediaStreamSource(stream); gain = context.createGain(); gain.gain.value = 0;
-        source.connect(gain); gain.connect(context.destination);
-        if (context.createScriptProcessor) {
-          processor = context.createScriptProcessor(options.bufferSize ?? 2048, 1, 1);
-           processor.onaudioprocess = (event) => { if (!stopped) { const frame = estimatePitch(event.inputBuffer.getChannelData(0), context.sampleRate, options.pitchOptions); if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('swar:audio-frame', { detail: frame })); options.onFrame?.(frame); } };
-          source.connect(processor); processor.connect(gain);
-        }
-        stopped = false; return { ok: true, context, stream };
-      } catch (cause) { this.stop?.(); const mapped = error(cause); options.onError?.(cause, mapped.error); return mapped; }
+        if (typeof attempt.context?.[method] !== 'function') throw new Error(`AudioContext.${method} unavailable`);
+        await attempt.context[method]();
+        if (current !== attempt) return cancelled();
+        if (method === 'resume' && attempt.context.state && attempt.context.state !== 'running') throw new Error('AudioContext did not resume');
+        state = nextState;
+        return { ok: true };
+      } catch (cause) { return fail(attempt, cause, method === 'resume' ? 'audio-resume-failed' : 'audio-pause-failed'); }
+    })();
+    pendingTransition = operation;
+    void operation.then(() => { if (pendingTransition === operation) pendingTransition = null; });
+    return operation;
+  };
+  return {
+    start() {
+      if (pendingStart) return pendingStart;
+      if (current) return Promise.resolve({ ok: false, error: 'audio-already-started' });
+      const attempt = { context: null, stream: null, source: null, gain: null, processor: null };
+      current = attempt; state = 'requesting';
+      const operation = (async () => {
+        try {
+          const AudioContext = options.AudioContext ?? globalThis.AudioContext ?? globalThis.webkitAudioContext;
+          const getUserMedia = options.getUserMedia ?? globalThis.navigator?.mediaDevices?.getUserMedia?.bind(globalThis.navigator.mediaDevices);
+          if (!AudioContext || !getUserMedia) throw new Error('Audio APIs unavailable');
+          attempt.context = new AudioContext();
+          attempt.stream = await getUserMedia({ audio: options.audioConstraints ?? { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: false } });
+          if (current !== attempt) { await cleanup(attempt); return cancelled(); }
+          const context = attempt.context;
+          if (typeof context.createScriptProcessor !== 'function') return fail(attempt, new Error('Audio analysis processor unavailable'), 'audio-analysis-unavailable');
+          attempt.source = context.createMediaStreamSource(attempt.stream);
+          attempt.gain = context.createGain(); attempt.gain.gain.value = 0;
+          attempt.processor = context.createScriptProcessor(options.bufferSize ?? 2048, 1, 1);
+          if (!attempt.processor) return fail(attempt, new Error('Audio analysis processor unavailable'), 'audio-analysis-unavailable');
+          attempt.processor.onaudioprocess = (event) => {
+            if (current !== attempt || state !== 'running') return;
+            try {
+              const frame = estimatePitch(event.inputBuffer.getChannelData(0), context.sampleRate, options.pitchOptions);
+              if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('swar:audio-frame', { detail: frame }));
+              Promise.resolve(options.onFrame?.(frame)).catch((cause) => fail(attempt, cause, 'audio-processing-failed'));
+            } catch (cause) { fail(attempt, cause, 'audio-processing-failed'); }
+          };
+          attempt.source.connect(attempt.processor); attempt.processor.connect(attempt.gain); attempt.gain.connect(context.destination);
+          if (context.state !== 'running' && typeof context.resume === 'function') {
+            try { await context.resume(); } catch (cause) { return fail(attempt, cause, 'audio-resume-failed'); }
+          }
+          if (current !== attempt) { await cleanup(attempt); return cancelled(); }
+          if (context.state && context.state !== 'running') return fail(attempt, new Error('AudioContext did not start'), 'audio-resume-failed');
+          state = 'running';
+          return { ok: true, context, stream: attempt.stream };
+        } catch (cause) { return fail(attempt, cause); }
+      })();
+      pendingStart = operation;
+      void operation.then(() => { if (pendingStart === operation) pendingStart = null; });
+      return operation;
     },
-    pause() { if (context?.suspend) context.suspend(); },
-    resume() { if (context?.resume) context.resume(); },
-    stop() { stopped = true; stream?.getTracks?.().forEach((track) => track.stop()); try { processor?.disconnect(); source?.disconnect(); gain?.disconnect(); } catch {} if (context?.close) context.close(); processor = source = gain = context = stream = null; },
-    get stopped() { return stopped; },
+    pause() { return transition('suspend', 'paused'); },
+    resume() { return transition('resume', 'running'); },
+    stop() {
+      const attempt = current;
+      current = null; state = 'stopped'; pendingStart = pendingTransition = null;
+      return cleanup(attempt);
+    },
+    get stopped() { return ['stopped', 'error'].includes(state); },
+    get state() { return state; },
   };
 }
