@@ -1,0 +1,37 @@
+# NadoPasana: API + web app. Start with `docker compose up --build`, then create the first Owner:
+#   docker compose exec api python run.py create-owner owner --display-name "Academy Owner"
+# Settings come from the shell or a root .env file. Set AUTH_SECRET to a long random value for real use.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:-change-this-docker-secret}
+      CORS_ORIGINS: ${PUBLIC_WEB_URL:-http://localhost:${WEB_PORT:-4173}}
+      # Browser-facing API address; signed file links point here when files are stored locally.
+      API_PUBLIC_URL: ${PUBLIC_API_URL:-http://localhost:${API_PORT:-8020}}
+      # Leave empty to keep files in the data volume; fill all four to use Cloudflare R2.
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+    ports:
+      - "${API_PORT:-8020}:8020"
+    volumes:
+      - academy-data:/app/apps/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      args:
+        VITE_API_URL: ${PUBLIC_API_URL:-http://localhost:${API_PORT:-8020}}
+    ports:
+      - "${WEB_PORT:-4173}:4173"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  academy-data:
