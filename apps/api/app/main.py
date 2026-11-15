@@ -12,8 +12,6 @@ from .security import hash_password, verify_password, issue_token
 app = FastAPI(title="SwarSadhak API", version=API_VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_credentials=False, allow_methods=["GET","POST","PATCH","DELETE"], allow_headers=["Authorization","Content-Type"])
 init_db()
-@app.on_event("startup")
-def startup(): init_db()
 def now(): return datetime.now(timezone.utc).isoformat()
 def public_user(u): return {"id":u["id"],"username":u["username"],"display_name":u["display_name"],"role":u["role"],"created_at":u["created_at"],"updated_at":u["updated_at"]}
 
