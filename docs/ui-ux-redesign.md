@@ -1,0 +1,319 @@
+# NadoPasana UI/UX redesign
+
+This document tracks the UI/UX redesign described in the design brief (ten confirmed decisions: hybrid modern–musical–cultural identity, ivory/burgundy/antique-gold palette with light and dark themes, adaptive navigation, role-adaptive dashboards, context-aware motion, editorial typography, bento layouts with selective glass, functional-only musical visuals, device-specific UX, product-level scope).
+
+It holds the Phase 0 audit, the design system (tokens, type, components), the plan for every later phase, and a progress log. Update it in the same pull request as the code it describes.
+
+| Phase | Scope | Status |
+| --- | --- | --- |
+| 0 | Repository audit, UX inventory, plan | Done (this document) |
+| 1 | Design tokens, light/dark theme, fonts, colour refactor | Next |
+| 2 | Shared shell and navigation (sidebar, bottom nav, URL routes) | Planned |
+| 3 | Teacher workspace and batch calendar (flagship) | Planned |
+| 4 | Owner command center | Planned |
+| 5 | Student Riyaz studio | Planned |
+| 6 | Polish, accessibility, performance, QA | Planned |
+
+---
+
+## 1. Current state (Phase 0 audit)
+
+### 1.1 Stack and UI architecture
+
+- **Frontend:** React 19 + Vite 8 in `apps/web`, plain JavaScript (JSX), no router, no UI kit. Icons from `lucide-react`. Strings from `packages/localization` (English, Marathi, Hindi).
+- **Styling:** four global stylesheets, no CSS modules.
+  - `src/styles.css` (347 lines): tokens in `:root`, studio shell, landing page, practice and library screens.
+  - `src/portal.css` (151 lines): sign-in, Owner and Teacher screens, batch calendar, timetable, assignments.
+  - `src/SaSustainFeedback.css`, `src/practiceStudio.css`: practice feedback.
+- **Shells (two, different):**
+  - `App` in `src/main.jsx`: fixed left sidebar + sticky top bar with breadcrumbs. Used by the student portal and the offline/guest studio.
+  - `PortalShell` in `src/PortalShell.jsx`: sticky top header with tab buttons. Used by the Owner and Teacher portals.
+- **Navigation state:** page keys in React state (`route`, `page`), not in the URL. Refresh returns to the first page; the browser Back button leaves the app; there are no deep links.
+- **Entry:** `src/index.jsx` renders `AccountRoot`, which picks login, guest studio, or a role portal from the stored session.
+- **Data:** `packages/api-client` (fetch wrapper) against the FastAPI backend; `useApi` + `LoadState` in `PortalShell.jsx` give loading/error/empty states for portal lists.
+- **Tests:** `node --test` with server-side rendering of components (`test/portal.test.js` and others). 147 web tests and 57 API tests pass at the start of the redesign.
+
+### 1.2 Page inventory
+
+| Role | Page | Component | Notes |
+| --- | --- | --- | --- |
+| Everyone | Sign in | `LoginPage` (`AccountRoot.jsx`) | Centred card; dark only. |
+| Guest | Landing | `Landing` (`main.jsx`) | Marketing page for the offline studio. |
+| Guest / Student | Home, Practice, Library, Alankar, Routines, Progress, Settings, Results | `App` (`main.jsx`), `PracticeStudio.jsx`, `Results.jsx` | Sidebar shell. Practice uses the real microphone pipeline. |
+| Student | Timetable | `StudentTimetable.jsx` | Day cards, already agenda-style. |
+| Student | Assignments | `Assignments.jsx` (`StudentAssignments`) | Answer note, file upload, links, teacher feedback. |
+| Teacher | Dashboard | `TeacherPortal.jsx`, `BatchCalendar.jsx` | Two stat tiles, week grid 06:00–22:00, roster. |
+| Teacher | Assignments | `Assignments.jsx` (`TeacherAssignments`) | Create/edit, attachments, review answers. |
+| Owner | Overview | `OwnerPortal.jsx` | Five number tiles. |
+| Owner | Accounts, Courses, Enrollments, Batches | `OwnerPortal.jsx` | Form column + data table. |
+
+### 1.3 Prioritized UX and design issues
+
+**P1 — blocks the brief or harms daily use**
+
+1. **Dark only, off-brand palette.** Navy, violet and teal with gold. There is no light theme, no theme toggle, and `color-scheme: dark` is hard-coded. The brief asks for ivory/burgundy/antique gold in both themes.
+2. **Colour is not tokenised.** 145 hard-coded colour literals (118 in `styles.css`, 18 in `portal.css`, 9 in `SaSustainFeedback.css`), mostly `rgba()` copies of token colours. Text on accent fills uses `#1a2231` directly. A light theme is impossible without fixing this first.
+3. **Two unrelated shells.** Owner/Teacher use a top tab bar; Student uses a sidebar. They look and behave like different products.
+4. **No URL routing.** Refresh, Back, bookmarks and shared links all lose the current page.
+5. **Mobile headers waste space.** On a 390 px screen the Teacher header wraps to three rows (≈170 px) before any content. The Student top bar wraps "Sign out" onto its own row and shows a lone chevron where the brand was hidden. There is no bottom navigation.
+6. **Fonts are declared but never loaded.** `Inter` and `Noto Sans Devanagari` fall back to whatever the device has, so Latin and Devanagari text render differently on every machine. There is no display face.
+7. **`<html lang>` is only set by the studio shell.** Owner, Teacher and sign-in screens in Marathi or Hindi still announce `lang="en"`, so screen readers use the wrong voice.
+
+**P2 — quality and clarity**
+
+8. **Owner overview is thin.** Five numbers and empty space; no upcoming sessions, paused batches or other exceptions that the data already supports.
+9. **Teacher calendar is tall and low-contrast.** The 06:00–22:00 grid is about 1300 px high at desktop, short batches truncate ("Bhaja…"), and all blocks are the same gold. The "Create batch" button floats below the heading baseline.
+10. **Student home ignores academy data.** The next class and open assignments are on separate pages; home only shows studio content.
+11. **Headline tracking is tuned for Latin.** `letter-spacing: -.06em` and `line-height: 1.03` on headings squeeze Devanagari conjuncts and clip matras.
+12. **Decorative musical motifs.** The orbit with Sa/Re/Ga on the studio hero and landing page is decoration, not data. The brief allows musical visuals only where they are functional.
+13. **Focus ring colour** (`#ffe08f`) only works on dark backgrounds.
+
+**P3 — polish**
+
+14. Routine planner and Progress share the same trophy icon in the sidebar.
+15. Tables on the Owner pages have no sorting or search; long tables only scroll.
+16. Form controls are 40–44 px; a few (portal tabs, day tabs) are 40 px, below the 44 px target.
+
+### 1.4 What we reuse
+
+- All React components, data flows, API contracts and role checks. The redesign changes presentation, not behaviour.
+- `useApi` / `LoadState` for loading, error and empty states.
+- Native `<dialog>` in `BatchCalendar.jsx` (focus trap and Escape handling for free).
+- `schedule.js` (week maths, slot sizing) and the calendar's keyboard-focusable slots.
+- `StudentTimetable` day cards as the base for the mobile agenda.
+- `prefers-reduced-motion` handling, `sr-only`, focus-to-heading on page change in `PortalShell`.
+- The existing token names (`--bg`, `--surface`, `--text`, `--accent`, …) as the semantic layer, so existing CSS keeps working while values change.
+- The SSR test harness and the screenshot harness used for this audit.
+
+### 1.5 Regressions to avoid
+
+- Microphone practice, tanpura, routines and results must keep working offline without an account.
+- Role isolation: a teacher sees only their own students and answers; only the assignment's teacher opens student answer files.
+- Calendar: recurring weekdays, academy timezone label, paused batches shown as paused, overlap warnings.
+- Uploads: progress bar, size/type errors, link attachments.
+- All three languages; no new untranslated strings.
+- Google Meet stays an external link; never claim it is embedded or generated.
+- No invented numbers: no fake streaks, scores, trends or AI evaluation.
+
+---
+
+## 2. Design brief and visual direction
+
+**Concept: "Rehearsal room at dusk."** Warm ivory paper and burgundy ink by day; a deep plum-black room lit by brass by night. Editorial serif headlines give the academy a cultural, printed-programme feel; a quiet sans keeps forms, tables and the calendar easy to scan.
+
+- **Light theme:** ivory canvas, white cards, burgundy for primary actions and headings accents, antique gold as hairlines, rings and highlights only (never body text), muted rose as a secondary accent.
+- **Dark theme:** plum-black canvas with raised plum surfaces, ivory text, a lightened burgundy-rose for primary actions, brass gold for emphasis numbers and focus rings.
+- **Layout:** bento grids on dashboards (one hero tile, smaller supporting tiles), generous whitespace, asymmetric editorial headers. Glass (translucent blur) only on sticky bars and the mobile bottom navigation.
+- **Musical cues:** a thin gold rule, swara names set in Devanagari serif, a tanpura/pitch visual only where real audio or pitch data drives it.
+- **Motion:** 120–280 ms fades and lifts for navigation, dialogs and cards; richer motion only while audio is playing or being analysed; everything off under `prefers-reduced-motion`.
+
+---
+
+## 3. Design tokens
+
+Tokens live at the top of `apps/web/src/styles.css`. Light values sit on `:root`; dark values on `:root[data-theme="dark"]`. Existing names are kept as the semantic layer so current components keep working.
+
+Contrast ratios are WCAG 2.x relative-luminance ratios, computed for the pairs that occur in the UI. Targets: 4.5:1 for normal text, 3:1 for large text, icons and control boundaries.
+
+### 3.1 Light theme
+
+| Token | Value | Use | Contrast (pair) |
+| --- | --- | --- | --- |
+| `--bg` | `#F8F3EA` | Canvas (ivory) | — |
+| `--surface` | `#FFFFFF` | Cards, panels, inputs | — |
+| `--surface-soft` | `#FBF7F1` | List rows, insets | — |
+| `--surface-strong` | `#F1E8DE` | Hover, active tab, secondary button | — |
+| `--text` | `#28232B` | Body text | 13.91 on canvas, 12.70 on strong |
+| `--text-muted` | `#5E5460` | Secondary text | 6.52 on canvas, 5.95 on strong, 7.21 on white |
+| `--text-subtle` | `#6E636C` | Captions, hints | 5.19 on canvas, 4.73 on strong, 5.73 on white |
+| `--border` | `#DFD1C4` | Decorative dividers and card edges | 1.49 (decorative only) |
+| `--border-strong` | `#8A7A73` | Input and control boundaries | 4.11 on white, 3.72 on canvas, 3.39 on strong |
+| `--primary` | `#6A2339` | Primary buttons, selected states | 10.98 with white text |
+| `--primary-hover` | `#57192D` | Primary hover | 12.01 with ivory text |
+| `--on-primary` | `#FFFFFF` | Text on primary | — |
+| `--accent` | `#6A2339` | Eyebrows, links, active marks | 9.94 on canvas |
+| `--accent-strong` | `#7A5A1E` | Emphasis numbers (gold ink) | 5.74 on canvas, 6.35 on white |
+| `--gold` | `#C6A46A` | Hairlines, rings, ornaments | 2.13 — never for text |
+| `--rose` | `#A15B62` | Secondary accent | 5.01 on white |
+| `--success` | `#2D6A45` | Success text | 5.83 on canvas, 5.52 on its tint |
+| `--warning` | `#8A5300` | Warning text | 5.73 on canvas, 5.37 on its tint |
+| `--error` | `#A3302F` | Error text | 6.29 on canvas, 5.69 on its tint |
+| `--info` | `#2E5C85` | Info text | 6.36 on canvas, 5.89 on its tint |
+| `--focus` | `#6A2339` | Focus ring | 9.94 on canvas |
+| `--pitch-flat / sharp / tune` | `#2E5C85` / `#9A4A12` / `#2D6A45` | Pitch feedback | ≥ 5.8 on white |
+| `--chart-1…5` | `#6A2339 #B08A45 #2F6B66 #4A5C8C #A15B62` | Data series | ≥ 3.2 on white |
+
+### 3.2 Dark theme
+
+| Token | Value | Use | Contrast (pair) |
+| --- | --- | --- | --- |
+| `--bg` | `#19151B` | Canvas | — |
+| `--surface` | `#262029` | Cards, panels | — |
+| `--surface-soft` | `#201A22` | Inputs, list rows | — |
+| `--surface-strong` | `#332A33` | Hover, active tab, secondary button | — |
+| `--text` | `#F8F3EA` | Body text | 16.32 on canvas, 12.50 on strong |
+| `--text-muted` | `#C9BFC5` | Secondary text | 8.89 on surface, 7.73 on strong |
+| `--text-subtle` | `#A79BA3` | Captions, hints | 6.75 on canvas, 5.17 on strong |
+| `--border` | `#493A45` | Decorative dividers | 1.49 (decorative only) |
+| `--border-strong` | `#86737F` | Control boundaries | 3.61 on surface, 3.14 on strong, 4.10 on canvas |
+| `--primary` | `#C77E94` | Primary buttons, selected states | 5.87 with canvas-coloured text |
+| `--primary-hover` | `#D594A7` | Primary hover | 7.41 |
+| `--on-primary` | `#19151B` | Text on primary | — |
+| `--accent` | `#E3A1B4` | Eyebrows, links, active marks | 7.59 on surface, 8.61 on canvas |
+| `--accent-strong` | `#D7B97E` | Emphasis numbers (brass) | 8.43 on surface |
+| `--gold` | `#D7B97E` | Hairlines, rings | 8.43 on surface |
+| `--rose` | `#D9A0A6` | Secondary accent | 7.21 on surface |
+| `--success / warning / error / info` | `#7FD1A0 #E9B96A #F29A8E #8FB9E6` | Status text | 8.73 / 8.79 / 7.41 / 7.76 on surface |
+| `--focus` | `#D7B97E` | Focus ring | 9.56 on canvas, 7.32 on strong |
+| `--pitch-flat / sharp / tune` | `#8FB9E6` / `#EFA071` / `#7FD1A0` | Pitch feedback | ≥ 7.5 on surface |
+| `--chart-1…5` | `#C77E94 #D7B97E #7CC4B8 #9CAFE0 #E7A9A3` | Data series | ≥ 5.1 on surface |
+
+Status is never shown by colour alone: badges carry a word, paused batches use a hatch pattern plus a "Paused" label, chart series get direct labels.
+
+### 3.3 Derived tokens
+
+- **Tints** use `color-mix(in srgb, <token> N%, transparent)` instead of copied `rgba()` values, so one change updates both themes.
+- **Overlay** (`--overlay`): scrims and dialog backdrops. Light `rgb(40 35 43 / .45)`, dark `rgb(8 6 10 / .72)`.
+- **Glass** (`--glass`): sticky bars only. `color-mix(in srgb, var(--bg) 82%, transparent)` + `backdrop-filter: blur(18px)`.
+- **Shadows:** light uses warm brown shadows at low alpha; dark uses black at higher alpha.
+
+### 3.4 Scale tokens
+
+- **Spacing:** 4-point rhythm, `--space-1` (4 px) to `--space-8` (64 px).
+- **Radius:** `--radius-sm` 10 px (controls), `--radius-md` 16 px (cards), `--radius-lg` 24 px (hero tiles, dialogs), `99px` pills.
+- **Motion:** `--duration-fast` 120 ms, `--ease` 180 ms, `--duration-slow` 280 ms; `--ease-out` `cubic-bezier(.2, .7, .2, 1)`.
+- **Breakpoints:** 560, 700, 850, 1024 px (existing). Phase 2 settles on 600 (phone), 900 (tablet), 1200 (wide desktop).
+
+### 3.5 Theme behaviour
+
+- First visit follows the system setting (`prefers-color-scheme`).
+- The theme button switches light/dark and stores the choice in `localStorage` (`nadopasana-theme`).
+- With no stored choice, the page follows live system changes.
+- An inline script in `index.html` sets `data-theme` before the first paint, so there is no flash of the wrong theme. It also sets `<meta name="theme-color">`.
+- `color-scheme` follows the theme, so native controls, scrollbars and date pickers match.
+
+---
+
+## 4. Typography
+
+| Role | Family | Why |
+| --- | --- | --- |
+| Display (h1, hero, section titles) | **Fraunces** (variable, OFL) | Soft editorial serif with warmth; reads as cultural and premium without being ornamental. |
+| UI (body, forms, tables, nav) | **Inter** (variable, OFL) | Neutral, highly legible at small sizes, tabular numbers for times. |
+| Devanagari UI | **Noto Sans Devanagari** (variable, OFL) | Matches Inter's weight and x-height; full Marathi and Hindi coverage. |
+| Devanagari display, swara names | **Noto Serif Devanagari** (variable, OFL) | Gives Marathi and Hindi headings the same editorial voice as Fraunces. |
+
+- Fonts are self-hosted through `@fontsource-variable/*` packages and bundled by Vite. No request goes to a third-party font CDN.
+- Each family is split by `unicode-range`, so the browser downloads only the scripts a page uses.
+- Font stacks list the Latin face first and the Devanagari face second. Latin glyphs come from Fraunces/Inter; Devanagari glyphs fall through to Noto. A Latin display face is never forced onto Devanagari.
+- Under `:lang(mr)` and `:lang(hi)`, headings drop negative tracking and use a taller line height so conjuncts and matras are not clipped.
+- Scale (fluid): display `clamp(2.2rem, 5vw, 4.2rem)`, h1 `clamp(1.9rem, 4vw, 2.9rem)`, h2 `1.15–1.45rem`, body 16 px, small 13–14 px, caption 12 px. Body line height 1.6; headings 1.08 (Latin) / 1.3 (Devanagari).
+
+---
+
+## 5. Sitemap, navigation and core journeys
+
+### 5.1 Sitemap (target, Phase 2 adds URLs)
+
+```
+/login
+/studio            (guest and student practice)
+  /studio/practice  /studio/library  /studio/alankar  /studio/routines  /studio/progress  /studio/settings
+/student           Riyaz studio home (next class, open assignments, practice)
+  /student/timetable  /student/assignments
+/teacher           Teaching workspace (today, calendar, roster)
+  /teacher/assignments
+/owner             Command center
+  /owner/accounts  /owner/courses  /owner/enrollments  /owner/batches
+```
+
+Routing uses the History API with a small route table (no new dependency). Unknown or unauthorised paths go to the role's home.
+
+### 5.2 Navigation map
+
+| Width | Navigation |
+| --- | --- |
+| ≥ 1024 px | Collapsible left sidebar (icons + labels; collapses to icons). Compact top bar: page title, language, theme, account. |
+| 600–1023 px | Sidebar as a drawer opened from the top bar; 44 px targets. |
+| < 600 px | Bottom navigation with up to five primary items; secondary items in a "More" sheet. One-row top bar. |
+
+### 5.3 Core journeys
+
+- **Teacher:** open workspace → see today's classes and next session → create or edit a batch from the calendar (tap a slot or "Create batch") → review submitted answers.
+- **Owner:** see academy totals and exceptions (paused batches, students without a batch) → open a table → search, filter, edit.
+- **Student:** see next class and open assignments → start practice or open an assignment → upload a recording → read teacher feedback.
+
+---
+
+## 6. Component inventory and strategy
+
+Components stay in plain JSX + CSS classes. Primitives are built once and reused instead of one-off CSS per page. No UI library is added.
+
+| Group | Exists today | Plan |
+| --- | --- | --- |
+| Buttons | `.button`, `.primary`, `.quiet`, `.danger`, `.icon-button` | Add tertiary, loading and disabled styles; tokenise (Phase 1–2). |
+| Inputs | `select`, `.portal-input`, `.search-field`, day toggles | One field style for all inputs; error state with message (Phase 2). |
+| Dialogs | Native `<dialog>` batch dialog | Shared dialog styles; full-screen sheet under 600 px (Phase 2–3). |
+| Cards | `.panel`, `.stat-card`, `.feature-card`, `.hero-panel` | Standard, bento, metric, class, practice variants (Phase 2). |
+| Tables | `.data-table` | Sortable headers, search, responsive card list on phones (Phase 4). |
+| Calendar | `BatchCalendar` grid, `.cal-block` | Trim hours to the teacher's range, colour by course with labels, agenda on phones (Phase 3). |
+| Feedback | `.notice`, `.status-badge`, `LoadState` | Toast for saves, skeletons for loading (Phase 2). |
+| Navigation | Sidebar, top tabs, breadcrumbs | One shell with sidebar, drawer and bottom nav (Phase 2). |
+| Theme switcher | — | `ThemeToggle` (Phase 1). |
+| Audio | Tanpura player, pitch readout, Sa sustain feedback | Keep; visuals only when driven by real audio (Phase 5). |
+| Charts | — | Only when real data exists; tokens ready (`--chart-*`). |
+
+---
+
+## 7. Page-by-page plan
+
+| Page | Desktop | Tablet | Mobile |
+| --- | --- | --- | --- |
+| Sign in | Split: brand panel + form | Centred card | Full-width form, one-row header |
+| Owner overview | Bento: totals row, upcoming sessions, exceptions | Two columns | Single column, totals as a 2×N grid |
+| Owner tables | Form drawer + full table with search/sort | Table with horizontal scroll inside the card | Card list per row, actions in an overflow menu |
+| Teacher workspace | Today strip + next session, calendar, roster | Calendar with day tabs | Agenda list by day; full-screen batch sheet |
+| Teacher assignments | List + detail | Same, stacked | Stacked cards; answers collapsible |
+| Student home | Bento: next class, open assignments, practice CTA, recent practice | Two columns | Single column, practice CTA first |
+| Student timetable | Week agenda | Same | Agenda (already) |
+| Student assignments | Cards with answer area | Same | Same; upload button full width |
+| Studio pages | Keep layouts, restyle with tokens | — | — |
+
+---
+
+## 8. Phased file-level plan
+
+| Phase | Files | Rollback |
+| --- | --- | --- |
+| 1 | `index.html` (theme boot script), `src/styles.css` (tokens, colour refactor, fonts), `src/portal.css`, `src/SaSustainFeedback.css`, new `src/theme.jsx` (`ThemeToggle`), `src/PortalShell.jsx`, `src/main.jsx`, `src/AccountRoot.jsx` (toggle placement, `lang`), `packages/localization/src/portalUi.js` (theme strings), `apps/web/package.json` (font packages), tests | Revert the PR; no data or API change. |
+| 2 | New `src/AppShell.jsx` and `src/router.js`; `main.jsx`, `PortalShell.jsx`, `OwnerPortal.jsx`, `TeacherPortal.jsx`, `AccountRoot.jsx`; CSS for shell, bottom nav, sheets | Revert the PR. |
+| 3 | `TeacherPortal.jsx`, `BatchCalendar.jsx`, `schedule.js`, `portal.css` | Revert the PR. |
+| 4 | `OwnerPortal.jsx`, `portal.css` (tables, filters) | Revert the PR. |
+| 5 | `main.jsx` (student home), `StudentTimetable.jsx`, `Assignments.jsx` | Revert the PR. |
+| 6 | Any; accessibility and performance fixes; screenshots | Revert the PR. |
+
+Each phase ships as its own branch and pull request, with tests and before/after screenshots at 360, 390, 768, 1024, 1280 and 1440 px in both themes.
+
+---
+
+## 9. Screenshots
+
+Before the redesign (dark theme only), captured with headless Chrome against a seeded demo academy:
+
+| Screen | File |
+| --- | --- |
+| Sign in, 390 px | `ui-redesign/before/03-login-390.jpg` |
+| Studio home, 1280 px | `ui-redesign/before/04-studio-home-1280.jpg` |
+| Owner overview, 1280 px | `ui-redesign/before/06-owner-overview-1280.jpg` |
+| Owner accounts, 1280 px | `ui-redesign/before/07-owner-users-1280.jpg` |
+| Teacher dashboard, 1440 px (full page) | `ui-redesign/before/08-teacher-dashboard-1440.jpg` |
+| Teacher dashboard, 390 px | `ui-redesign/before/09-teacher-dashboard-390.jpg` |
+| Teacher assignments, 1280 px | `ui-redesign/before/10-teacher-assignments-1280.jpg` |
+| Student timetable, 390 px | `ui-redesign/before/12-student-timetable-390.jpg` |
+| Student assignments, 1280 px | `ui-redesign/before/13-student-assignments-1280.jpg` |
+
+---
+
+## 10. Progress log
+
+- **Phase 0:** audit, token specification with contrast checks, sitemap, component inventory and phased plan written; baseline screenshots captured.
