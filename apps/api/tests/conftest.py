@@ -5,6 +5,8 @@ from uuid import uuid4
 os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(tempfile.mkdtemp(), "test.db")
 # Never reach real file storage from tests, even if apps/api/.env has R2 credentials.
 for name in ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"): os.environ[name] = ""
+os.environ["STORAGE_BACKEND"] = "local"
+os.environ["STORAGE_DIR"] = os.path.join(tempfile.mkdtemp(), "storage")
 
 import pytest
 from fastapi.testclient import TestClient

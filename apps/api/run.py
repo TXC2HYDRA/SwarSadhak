@@ -24,21 +24,27 @@ def create_owner(args):
 
 
 def check_storage(_args):
-    """Round-trip a tiny object through R2 with the same presigned URLs the app uses."""
+    """Round-trip a tiny object with the same presigned URLs the app uses (local: the API must be running)."""
+    from urllib.error import URLError
     from urllib.request import Request, urlopen
     from app import storage
     if not storage.enabled():
-        sys.exit("Storage is not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET in apps/api/.env.")
+        sys.exit("R2 is selected but not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY and R2_BUCKET in apps/api/.env.")
     key, body = "health-check/nadopasana.txt", b"ok"
     try:
         urlopen(Request(storage.upload_url(key, "text/plain"), data=body, method="PUT", headers={"Content-Type": "text/plain"}), timeout=15).close()
+        with urlopen(storage.presign("GET", key, 60), timeout=15) as response: downloaded = response.read()
         found = storage.head(key)
         storage.delete(key)
+    except URLError as exc:
+        hint = " Start the API first (npm run api)." if storage.backend() == "local" else ""
+        sys.exit(f"Storage check failed: {getattr(exc, 'reason', exc)}.{hint}")
     except Exception as exc:
         sys.exit(f"Storage check failed: {exc}")
-    if found != (len(body), "text/plain"):
+    if found != (len(body), "text/plain") or downloaded != body:
         sys.exit(f"Storage check failed: unexpected object {found}")
-    print(f"Storage works: uploaded, read and deleted a test file in bucket '{storage.config.R2_BUCKET}'.")
+    where = f"folder {storage.storage_root()}" if storage.backend() == "local" else "Cloudflare R2"
+    print(f"Storage works ({storage.backend()}): uploaded, downloaded and deleted a test file in bucket '{storage.bucket()}' ({where}).")
 
 
 if __name__ == "__main__":
