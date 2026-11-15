@@ -68,6 +68,10 @@ export const portalUi = {
       search: 'Search students', allCourses: 'All courses', courseFilter: 'Course',
       noStudents: 'No students are enrolled with you yet. The academy Owner manages enrollments.', noMatches: 'No students match your search.',
     },
+    student: {
+      nav: 'Timetable', title: 'My timetable', lede: 'Your weekly classes. Your teachers schedule them.', teacher: 'Teacher', today: 'Today',
+      empty: 'You are not in a batch yet. Your teacher adds you to one.',
+    },
   },
   mr: {
     signIn: 'साइन इन करा', signInTitle: 'नादोपासना मध्ये साइन इन करा', signInLede: 'तुमच्या अकॅडमीने तयार केलेले खाते वापरा.',
@@ -131,6 +135,10 @@ export const portalUi = {
       search: 'विद्यार्थी शोधा', allCourses: 'सर्व अभ्यासक्रम', courseFilter: 'अभ्यासक्रम',
       noStudents: 'अद्याप तुमच्याकडे कोणत्याही विद्यार्थ्याचा प्रवेश नाही. प्रवेश अकॅडमी मालक व्यवस्थापित करतात.', noMatches: 'शोधाशी जुळणारे विद्यार्थी नाहीत.',
     },
+    student: {
+      nav: 'वेळापत्रक', title: 'माझे वेळापत्रक', lede: 'तुमचे साप्ताहिक वर्ग. ते तुमचे शिक्षक ठरवतात.', teacher: 'शिक्षक', today: 'आज',
+      empty: 'तुम्ही अद्याप कोणत्याही बॅचमध्ये नाही. तुमचे शिक्षक तुम्हाला बॅचमध्ये जोडतील.',
+    },
   },
   hi: {
     signIn: 'साइन इन करें', signInTitle: 'नादोपासना में साइन इन करें', signInLede: 'अपनी अकादमी द्वारा बनाया गया खाता इस्तेमाल करें।',
@@ -193,6 +201,10 @@ export const portalUi = {
       title: 'शिक्षक डैशबोर्ड', lede: 'आपके विद्यार्थी और साप्ताहिक बैच कैलेंडर।', students: 'मेरे विद्यार्थी', studentCount: 'आपको सौंपे गए विद्यार्थी',
       search: 'विद्यार्थी खोजें', allCourses: 'सभी पाठ्यक्रम', courseFilter: 'पाठ्यक्रम',
       noStudents: 'अभी आपके साथ कोई विद्यार्थी नामांकित नहीं है। नामांकन अकादमी मालिक प्रबंधित करते हैं।', noMatches: 'खोज से मेल खाने वाला कोई विद्यार्थी नहीं।',
+    },
+    student: {
+      nav: 'समय-सारिणी', title: 'मेरी समय-सारिणी', lede: 'आपकी साप्ताहिक कक्षाएँ। इन्हें आपके शिक्षक तय करते हैं।', teacher: 'शिक्षक', today: 'आज',
+      empty: 'आप अभी किसी बैच में नहीं हैं। आपके शिक्षक आपको बैच में जोड़ेंगे।',
     },
   },
 };

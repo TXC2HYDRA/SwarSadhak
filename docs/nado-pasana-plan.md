@@ -1,6 +1,6 @@
 # Nado Pasana: audit and incremental plan
 
-Status: Phases 0 to 3 are done (see section 7). Later phases are in progress. Discovery is ongoing, and Riyaz management is intentionally undesigned.
+Status: Phases 0 to 4 are done (see section 7). Discovery is ongoing, and Riyaz management is intentionally undesigned.
 
 ## 1. What exists today (audit)
 
@@ -263,8 +263,9 @@ Each phase ends with all existing tests passing, new tests for the phase, a buil
   - Overlap boundaries: 10:00–11:00 next to 11:00–12:00 is allowed.
   - Student filtering, other teacher's batch returns 404, and pause or delete removes the batch from the calendar.
 
-**Phase 4: student portal**
-- Timetable from `GET /api/student/batches` next to the existing Riyaz Studio and assignments.
+**Phase 4: student portal**: done on 2026-11-16.
+- Timetable from `GET /api/student/batches` next to the existing Riyaz Studio: a weekly list grouped by day, with course, teacher and time, today marked, and paused batches labelled. A batch drops off when the student's enrollment with that teacher in that course is no longer active.
+- The web app has no assignments screen yet; assignments stay API-only until Riyaz management is designed.
 
 **Later (needs discovery first)**: Riyaz management, attendance, lesson content, submissions and recordings (needs a storage and access decision), feedback, announcements, fees, and the design system proposal.
 
