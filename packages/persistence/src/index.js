@@ -1,7 +1,9 @@
-export const createStorage = (storage = globalThis.localStorage) => {
+const browserStorage = () => { try { return globalThis.localStorage; } catch { return null; } };
+export const createStorage = (storage = browserStorage()) => {
   const memory = new Map();
   const backend = storage && typeof storage.getItem === 'function' && typeof storage.setItem === 'function' ? storage : null;
   return {
+    persistent: Boolean(backend),
     get(key, fallback = null) {
       let raw;
       try { raw = backend ? backend.getItem(key) : memory.get(key); } catch { return fallback; }

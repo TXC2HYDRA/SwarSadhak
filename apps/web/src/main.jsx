@@ -2,33 +2,28 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Activity, AlertCircle, ArrowRight, BarChart3, BookOpen, CheckCircle2, ChevronRight, Clock3, Home, Languages, Library, LockKeyhole, Menu, Mic2, Music2, Pause, Play, Radio, Route, Search, Settings, ShieldCheck, Sparkles, Target, Trophy, X } from 'lucide-react';
 import { getTranslations, localeNames, supportedLocales } from '@swarsadhak/localization';
-import { advanceElapsed, calculateMetrics, createAlankarTimeline, createSession, getAlankarBeatAt } from '@swarsadhak/practice-domain';
+import { createSession } from '@swarsadhak/practice-domain';
 import { createStorage } from '@swarsadhak/persistence';
-import { createAudioController } from '@swarsadhak/audio-engine';
-import { frameToObservation } from '@swarsadhak/musical-core';
-import { ALANKARS, EXERCISES, alankarDisplayGroups, alankarGroups, getExercise } from '@swarsadhak/exercises';
-import { STARTER_ROUTINES, createRoutine, normalizeRoutine, routineItems, totalRoutineSeconds, nextRoutineIndex } from '@swarsadhak/routines';
+import { ALANKARS, EXERCISES, getExercise } from '@swarsadhak/exercises';
+import { STARTER_ROUTINES, createRoutine, normalizeRoutine, routineItems, totalRoutineSeconds } from '@swarsadhak/routines';
 import { deriveRewards, deriveAchievements, getLevel, getStreak, ACHIEVEMENTS } from '@swarsadhak/gamification';
-import { deterministicCoach } from '@swarsadhak/ai-coach';
-import { createApiClient } from '@swarsadhak/api-client';
 import { recommend } from '@swarsadhak/recommendations';
 import './styles.css';
 import './optionalSync.js';
-import { SaSustainFeedback } from './SaSustainFeedback.jsx';
-import { TONICS } from './tonics.js';
 import { AlankarList } from './AlankarList.jsx';
-import { AlankarPracticeDisplay } from './AlankarPracticeDisplay.jsx';
-import { TanpuraPlayer } from './TanpuraPlayer.jsx';
+import { Practice, AlankarPractice } from './PracticeStudio.jsx';
+import { Results } from './Results.jsx';
+import { assessPracticeEvidence } from './practiceSession.js';
+import { clearRoutineCurrent, completeRoutineItem, exerciseRoute, readPreference, routineRunState, skipRoutineItem, writePreference } from './navigation.js';
 
 const store = createStorage();
 const KEYS = { sessions: 'swar-practice-sessions-v1', routines: 'swar-routines-v1', rewards: 'swar-reward-events-v1', streak: 'swar-streak-preferences-v1' };
 const textAt = (t, key) => key.split('.').reduce((value, part) => value?.[part], t) || key;
-const swaraLabel = (t, note) => t.swaras?.[note] || note;
 
-function App() {
-  const [locale, setLocale] = useState(() => localStorage.getItem('swar-locale') || 'en');
+export function App() {
+  const [locale, setLocale] = useState(() => readPreference('swar-locale', 'en') || 'en');
   const t = getTranslations(locale);
-  const [route, setRoute] = useState(() => localStorage.getItem('swar-visited-v1') === 'true' || store.get(KEYS.sessions, []).length > 0 ? 'home' : 'landing');
+  const [route, setRoute] = useState(() => readPreference('swar-visited-v1', 'false') === 'true' || store.get(KEYS.sessions, []).length > 0 ? 'home' : 'landing');
   const [sessions, setSessions] = useState(() => store.get(KEYS.sessions, []));
   const [routines, setRoutines] = useState(() => store.get(KEYS.routines, STARTER_ROUTINES));
   const [rewards, setRewards] = useState(() => store.get(KEYS.rewards, []));
@@ -41,6 +36,16 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(() => globalThis.innerWidth <= 850);
   const [streakEnabled, setStreakEnabled] = useState(() => store.get(KEYS.streak, true));
+  const [resultSaved, setResultSaved] = useState(null);
+  const [retrySettings, setRetrySettings] = useState(null);
+  const mainRef = useRef(null);
+  useEffect(() => {
+    document.documentElement.lang = supportedLocales.includes(locale) ? locale : 'en';
+  }, [locale]);
+  useEffect(() => {
+    const heading = mainRef.current?.querySelector('h1');
+    if (heading) { heading.tabIndex = -1; heading.focus(); }
+  }, [route]);
   useEffect(() => {
     const handleResize = () => {
       const nextIsMobile = globalThis.innerWidth <= 850;
@@ -56,29 +61,56 @@ function App() {
   const recommendation = useMemo(() => recommend(sessions.at(-1) || {}), [sessions]);
   const recommendedExercise = useMemo(() => getExercise(recommendation.exerciseId) || EXERCISES[0], [recommendation.exerciseId]);
   const level = useMemo(() => getLevel(derivedRewards.reduce((sum, item) => sum + item.xp, 0)), [derivedRewards]);
-  const persist = (key, value) => { const result = store.set(key, value); if (!result.ok) setNotice(t.persistenceWarning); return result.ok; };
+  const persist = (key, value) => { const result = store.set(key, value); const saved = result.ok && store.persistent; if (!saved) setNotice(t.persistenceWarning); else setNotice(''); return saved; };
   const saveSession = (payload) => {
     const routine = activeRoutine?.current ? activeRoutine : null;
-    const valid = payload.metrics?.reliableFrameCount > 0 && payload.completion?.completed === true;
+    const valid = assessPracticeEvidence(payload.metrics).sufficient && payload.completion?.completed === true;
     if (!valid) { setNotice(t.insufficientGuidance); return false; }
     const items = routine && routineItems(routine);
     const itemIndex = routine ? items.findIndex((item) => item.id === routine.current?.id) : -1;
     const routineCompleted = Boolean(routine && itemIndex === items.length - 1);
-    const session = createSession({ schemaVersion: 1, id: `session-${Date.now()}`, ...payload, ...(routine ? { routineId: routine.id, routineItemId: routine.current.id, routineItemIndex: itemIndex, sectionType: routine.current.sectionType, routineCompleted } : {}) });
+    const session = createSession({ schemaVersion: 1, id: `session-${Date.now()}-${sessions.length}`, ...payload, ...(routine ? { routineId: routine.id, routineItemId: routine.current.id, routineItemIndex: itemIndex, sectionType: routine.current.sectionType, routineCompleted } : {}) });
     const next = [...sessions, session];
-    setSessions(next); persist(KEYS.sessions, next);
+    setSessions(next); setResultSaved(persist(KEYS.sessions, next));
     const nextRewards = deriveRewards(next, rewards);
     setRewards(nextRewards); persist(KEYS.rewards, nextRewards);
     if (routine) {
-      setActiveRoutine({ ...routine, completedIndex: itemIndex, routineCompleted });
-      setRoute('routine');
-    } else setRoute('results');
+      setActiveRoutine(completeRoutineItem(routine, itemIndex));
+    }
+    setRoute(routine ? 'routine' : 'results');
     return true;
   };
-  const go = (nextRoute) => {
-    if (activeRoutine && route === 'practice' && nextRoute !== 'routine' && nextRoute !== 'results' && !confirm(t.exitConfirm)) return;
-    if (nextRoute !== 'landing') localStorage.setItem('swar-visited-v1', 'true');
-    setRoute(nextRoute); setNotice(''); setMenuOpen(false);
+  const go = (nextRoute, { routineItem } = {}) => {
+    if (nextRoute === 'practice' && !routineItem) nextRoute = exerciseRoute(selected);
+    if (nextRoute === route && !routineItem) { setMenuOpen(false); return true; }
+    if (activeRoutine?.current && ['practice', 'alankar-practice'].includes(route) && nextRoute !== 'routine' && nextRoute !== 'results' && !confirm(t.exitConfirm)) return false;
+    const saved = nextRoute === 'landing' || writePreference('swar-visited-v1', 'true');
+    setActiveRoutine((routine) => routineItem ? { ...routine, current: routineItem } : clearRoutineCurrent(routine));
+    setRoute(nextRoute); setNotice(saved ? '' : t.persistenceWarning); setMenuOpen(false);
+    return true;
+  };
+  const changeLocale = (value) => {
+    setLocale(value);
+    if (!writePreference('swar-locale', value)) setNotice(t.persistenceWarning);
+  };
+  const chooseExercise = (exercise) => {
+    setRetrySettings(null);
+    const nextRoute = exerciseRoute(exercise);
+    if (go(nextRoute) && nextRoute === 'practice') setSelected(exercise);
+  };
+  const retrySession = () => {
+    const session = sessions.at(-1);
+    if (!session) return;
+    setTonic(session.tonicFrequency || tonic);
+    const pattern = ALANKARS.find((item) => item.id === session.completion?.alankarId);
+    if (pattern) { setSelectedAlankar(pattern); setRetrySettings(session.completion); go('alankar-practice'); }
+    else chooseExercise(getExercise(session.exerciseId) || EXERCISES[0]);
+  };
+  const openRoutine = () => {
+    const routine = activeRoutine || routines[0];
+    if (routineRunState(routine).empty) { go('routines'); return; }
+    setActiveRoutine(clearRoutineCurrent(routine));
+    go('routine');
   };
   const toggleNavigation = () => {
     if (isMobile) setMenuOpen((open) => !open);
@@ -89,28 +121,27 @@ function App() {
   const navItems = [['home', Home], ['practice', Activity], ['library', Library], ['routines', Trophy], ['progress', Trophy], ['settings', Settings]];
   const routeLabel = { home: t.home, practice: t.practice, results: t.results, library: t.library, alankars: t.alankarListTitle, 'alankar-practice': t.alankarPracticeTitle, routines: t.planner, planner: t.planner, routine: t.routineProgress, progress: t.progress, settings: t.settings }[route] || t.home;
   const isActive = (key) => route === key || (key === 'library' && ['alankars', 'alankar-practice'].includes(route)) || (key === 'routines' && ['planner', 'routine'].includes(route));
-  if (route === 'landing') return <LandingPage t={t} locale={locale} onLocaleChange={(value) => { setLocale(value); localStorage.setItem('swar-locale', value); }} onStart={() => go('home')} onExplore={() => go('library')} onNavigate={go} />;
+  if (route === 'landing') return <LandingPage t={t} locale={locale} onLocaleChange={changeLocale} onStart={() => go('home')} onExplore={() => go('library')} onNavigate={go} />;
   return <div className="app-shell">
-    <aside id="primary-navigation" className={`sidebar ${menuOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`} aria-label={t.nav}>
+    <aside id="primary-navigation" className={`sidebar ${menuOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`} aria-label={t.nav} inert={(isMobile && !menuOpen) || sidebarCollapsed ? true : undefined} onKeyDown={(event) => { if (event.key === 'Escape') { setMenuOpen(false); mainRef.current?.querySelector('.menu-button')?.focus(); } }}>
       <div className="sidebar-header"><div className="brand"><span className="brand-mark"><Music2 size={20} /></span><span>Swar<span>Sadhak</span></span></div><button className="icon-button close-menu" aria-label={t.close} onClick={() => setMenuOpen(false)}><X size={20} /></button></div>
       <div className="sidebar-intro"><span className="sidebar-kicker">{t.studio}</span><span className="sidebar-note">{t.ready}</span></div>
       <nav aria-label={t.nav}>{navItems.map(([key, Icon]) => <button className={`nav-item ${isActive(key) ? 'active' : ''}`} key={key} onClick={() => go(key)}><Icon size={19} aria-hidden="true" /><span>{key === 'routines' ? t.planner : t[key]}</span>{isActive(key) && <span className="nav-active-mark" aria-hidden="true" />}</button>)}</nav>
       <div className="sidebar-footer"><div className="practice-tip"><Radio size={17} aria-hidden="true" /><strong>{t.tanpuraTitle}</strong><span>{t.tanpuraDescription}</span></div><small>{t.privacy}</small></div>
     </aside>
     {menuOpen && <button className="scrim" aria-label={t.close} onClick={() => setMenuOpen(false)} />}
-    <main className={`main-content ${sidebarCollapsed ? 'expanded' : ''}`}><header className="topbar"><button className="icon-button menu-button" aria-label={isMobile ? (menuOpen ? t.close : t.openMenu) : (sidebarCollapsed ? t.openMenu : t.close)} aria-controls="primary-navigation" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} onClick={toggleNavigation}><Menu size={22} aria-hidden="true" /></button><div className="breadcrumbs" aria-label={t.nav}><span className="breadcrumb-brand">SwarSadhak</span><ChevronRight size={15} aria-hidden="true" /><strong>{routeLabel}</strong></div><div className="language-picker"><Languages size={16} aria-hidden="true" /><select value={locale} aria-label={t.language} onChange={(event) => { setLocale(event.target.value); localStorage.setItem('swar-locale', event.target.value); }}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></div></header>
+    <main ref={mainRef} className={`main-content ${sidebarCollapsed ? 'expanded' : ''}`}><header className="topbar"><button className="icon-button menu-button" aria-label={isMobile ? (menuOpen ? t.close : t.openMenu) : (sidebarCollapsed ? t.openMenu : t.close)} aria-controls="primary-navigation" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} onClick={toggleNavigation}><Menu size={22} aria-hidden="true" /></button><div className="breadcrumbs" aria-label={t.nav}><span className="breadcrumb-brand">SwarSadhak</span><ChevronRight size={15} aria-hidden="true" /><strong>{routeLabel}</strong></div><div className="language-picker"><Languages size={16} aria-hidden="true" /><select value={locale} aria-label={t.language} onChange={(event) => changeLocale(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></div></header>
         {notice && <div className="notice" role="status">{notice}</div>}
-       <TanpuraPlayer t={t} tonic={tonic} setTonic={setTonic} visible={route === 'practice' || route === 'alankar-practice'} />
-        {route === 'home' && <HomePage t={t} sessions={sessions} routines={routines} activeRoutine={activeRoutine} rewards={derivedRewards} achievements={achievements} level={level} recommendation={recommendation} recommendedExercise={recommendedExercise} onStart={() => go('practice')} onSelectExercise={(exercise) => { setSelected(exercise); go('practice'); }} onAlankar={() => go('alankars')} onRoutine={() => { setActiveRoutine(activeRoutine || routines[0] || null); go('routine'); }} onProgress={() => go('progress')} />}
-      {route === 'practice' && <Practice t={t} exercise={selected} tonic={tonic} setTonic={setTonic} onFinish={saveSession} />}
-      {route === 'results' && <Results t={t} session={sessions.at(-1)} onBack={() => go(sessions.at(-1)?.completion?.alankarId ? 'alankars' : 'home')} />}
+        {route === 'home' && <HomePage t={t} sessions={sessions} routines={routines} activeRoutine={activeRoutine} rewards={derivedRewards} achievements={achievements} level={level} recommendation={recommendation} recommendedExercise={recommendedExercise} onStart={() => go('practice')} onSelectExercise={chooseExercise} onAlankar={() => chooseExercise(getExercise('sa-re-ga'))} onRoutine={openRoutine} onProgress={() => go('progress')} />}
+      {route === 'practice' && <Practice key={`${selected.id}-${activeRoutine?.current?.id || 'single'}`} t={t} exercise={selected} durationSeconds={activeRoutine?.current?.durationSeconds} tonic={tonic} setTonic={setTonic} onFinish={saveSession} onBack={() => go(activeRoutine?.current ? 'routine' : 'library')} />}
+      {route === 'results' && <Results t={t} session={sessions.at(-1)} saved={resultSaved} onSaveAgain={() => { setResultSaved(persist(KEYS.sessions, sessions)); persist(KEYS.rewards, derivedRewards); }} onRetry={retrySession} onNext={() => chooseExercise(recommendedExercise)} onRoutine={sessions.at(-1)?.routineId && activeRoutine ? () => go('routine') : undefined} onBack={() => go(sessions.at(-1)?.completion?.alankarId ? 'alankars' : 'library')} />}
       {(route === 'routines' || route === 'planner') && <PlannerWithAllControls t={t} routines={routines} setRoutines={setRoutines} onStart={(routine) => { setActiveRoutine(routine); go('routine'); }} />}
-      {route === 'routine' && activeRoutine && <RoutineRun t={t} routine={activeRoutine} completedIndex={activeRoutine.completedIndex ?? -1} routineCompleted={activeRoutine.routineCompleted === true} onItem={(item) => { setSelected(getExercise(item.exerciseId)); setActiveRoutine({ ...activeRoutine, current: item }); go('practice'); }} onExit={() => { setActiveRoutine(null); go('routines'); }} />}
-       {route === 'library' && <LibraryPage t={t} onChoose={(exercise) => { setSelected(exercise); go('practice'); }} onOpenAlankars={() => go('alankars')} />}
-      {route === 'alankars' && <AlankarList t={t} onChoose={(pattern) => { setSelectedAlankar(pattern); go('alankar-practice'); }} onBack={() => go('library')} />}
-      {route === 'alankar-practice' && <AlankarPractice t={t} pattern={selectedAlankar} tonic={tonic} setTonic={setTonic} onFinish={saveSession} onBack={() => go('alankars')} />}
+        {route === 'routine' && activeRoutine && <RoutineRun t={t} routine={activeRoutine} onItem={(item) => { setRetrySettings(null); if (go(exerciseRoute(getExercise(item.exerciseId)), { routineItem: item })) setSelected(getExercise(item.exerciseId)); }} onSkip={() => setActiveRoutine(skipRoutineItem)} onExit={() => { setActiveRoutine(null); go('routines'); }} />}
+        {route === 'library' && <LibraryPage t={t} onChoose={chooseExercise} onOpenAlankars={() => chooseExercise(getExercise('sa-re-ga'))} />}
+      {route === 'alankars' && <AlankarList t={t} onChoose={(pattern) => { setSelectedAlankar(pattern); setRetrySettings(null); go('alankar-practice', { routineItem: activeRoutine?.current }); }} onBack={() => go(activeRoutine?.current ? 'routine' : 'library')} />}
+      {route === 'alankar-practice' && <AlankarPractice key={selectedAlankar.id} t={t} pattern={selectedAlankar} initialSettings={retrySettings} durationSeconds={activeRoutine?.current?.durationSeconds} tonic={tonic} setTonic={setTonic} onFinish={saveSession} onBack={() => go(activeRoutine?.current ? 'routine' : 'alankars')} />}
        {route === 'progress' && <Progress t={t} sessions={sessions} rewards={derivedRewards} achievements={achievements} onClear={clearHistory} streakEnabled={streakEnabled} setStreakEnabled={(value) => { setStreakEnabled(value); persist(KEYS.streak, value); }} />}
-       {route === 'settings' && <SettingsPage t={t} locale={locale} setLocale={(value) => { setLocale(value); localStorage.setItem('swar-locale', value); }} />}
+        {route === 'settings' && <SettingsPage t={t} locale={locale} setLocale={changeLocale} />}
     </main>
   </div>;
 }
@@ -136,70 +167,22 @@ function LandingPage({ t, locale, onLocaleChange, onStart, onExplore, onNavigate
   </div>;
 }
 
-function HomePage({ t, sessions, routines, activeRoutine, rewards, achievements, level, recommendation, recommendedExercise, onStart, onSelectExercise, onAlankar, onRoutine, onProgress }) {
+export function HomePage({ t, sessions, routines, activeRoutine, rewards, achievements, level, recommendation, recommendedExercise, onStart, onSelectExercise, onAlankar, onRoutine, onProgress }) {
   const latest = sessions.at(-1);
   const routine = activeRoutine || routines[0];
-  const routineItemsCount = routine ? routineItems(routine).length : 0;
-  const currentRoutineItem = activeRoutine?.current ? routineItems(activeRoutine).findIndex((item) => item.id === activeRoutine.current.id) + 1 : 0;
+  const routineState = routineRunState(routine);
+  const routineAction = routineState.empty ? t.planner : routineState.completed ? t.finishRoutine : activeRoutine ? t.dashboard.continueRoutine : t.dashboard.startRoutine;
+  const routineDescription = routineState.empty ? t.routinesEmpty : routineState.completed ? t.finishRoutine : activeRoutine ? `${t.dashboard.routineProgress}: ${routineState.index + 1} / ${routineState.items.length}` : textAt(t, routine.descriptionKey);
   const exerciseName = textAt(t, recommendedExercise.nameKey);
   const xp = rewards.reduce((sum, item) => sum + item.xp, 0);
   const hasSessions = sessions.length > 0;
   return <div className="page dashboard-page">
     <section className="hero-panel dashboard-hero"><div className="hero-copy"><p className="eyebrow"><Music2 size={15} aria-hidden="true" /> {hasSessions ? t.dashboard.returnEyebrow : t.dashboard.newEyebrow}</p><h1>{hasSessions ? t.greeting : t.dashboard.newTitle}</h1><p className="hero-subtitle">{hasSessions ? t.dashboard.returnDescription : t.dashboard.newDescription}</p><div className="top-actions"><button className="button primary" onClick={onStart}><Play size={17} aria-hidden="true" />{t.start}</button><button className="button quiet" onClick={onAlankar}>{t.alankar.name}<ChevronRight size={16} aria-hidden="true" /></button></div></div><div className="hero-orbit" aria-hidden="true"><span>{t.swaras.Sa}</span><span>{t.swaras.Re}</span><span>{t.swaras.Ga}</span></div></section>
     <div className="dashboard-grid dashboard-grid-main"><Surface className="next-step-panel"><SectionHeader eyebrow={t.dashboard.nextAction} title={exerciseName} /><div className="next-step"><span className="icon-tile"><Target size={20} aria-hidden="true" /></span><div><strong>{t.dashboard.recommendedReason}</strong><p>{textAt(t, recommendation.reasonKey)}</p>{hasSessions && sessions.length < 2 && <small className="honest-note">{t.dashboard.smallSample}</small>}</div><button className="icon-button subtle" aria-label={`${t.start}: ${exerciseName}`} onClick={() => onSelectExercise(recommendedExercise)}><ChevronRight size={18} aria-hidden="true" /></button></div></Surface><Surface className="recent-panel"><SectionHeader eyebrow={t.dashboard.recentSummary} title={hasSessions ? t.dashboard.recentLatest : t.ready} />{latest ? <><div className="recent-summary"><StatusBadge tone="success" icon={CheckCircle2}>{t.complete}</StatusBadge><strong>{sessions.length}</strong><span>{t.dashboard.sessionsCompleted}</span></div><div className="recent-detail"><span>{t.dashboard.lastExercise}</span><strong>{textAt(t, getExercise(latest.exerciseId)?.nameKey || 'exercises.saSustain.name')}</strong><span>{t.reliableMatch}: {latest.metrics?.reliablePitchMatchPercent ?? t.noAudio}%</span></div></> : <div className="empty-state"><StatusBadge tone="neutral" icon={Clock3}>{t.ready}</StatusBadge><p>{t.empty}</p></div>}</Surface></div>
-    <div className="dashboard-grid dashboard-grid-secondary"><Surface><SectionHeader eyebrow={t.dashboard.noRoutine} title={activeRoutine ? t.dashboard.continueRoutine : t.dashboard.startRoutine} /><div className="routine-summary"><span className="icon-tile"><Route size={20} aria-hidden="true" /></span><div><strong>{textAt(t, routine?.nameKey || 'routines.morningFoundation.name')}</strong><p>{activeRoutine ? `${t.dashboard.routineProgress}: ${currentRoutineItem || 1} / ${routineItemsCount}` : textAt(t, routine?.descriptionKey || 'routines.morningFoundation.description')}</p></div><button className="button" onClick={onRoutine}>{activeRoutine ? t.dashboard.continueRoutine : t.dashboard.startRoutine}</button></div></Surface><Surface><SectionHeader eyebrow={t.dashboard.currentLevel} title={`${t.levelLabel} ${level.level}`} /><div className="level-summary"><div><strong>{xp}</strong><span>{t.dashboard.xp}</span></div><div><strong>{achievements.length}</strong><span>{t.dashboard.achievementPreview}</span></div><button className="button quiet" onClick={onProgress}>{t.view}</button></div>{achievements.length === 0 && <p className="empty-copy">{t.dashboard.noAchievements}</p>}</Surface></div>
+    <div className="dashboard-grid dashboard-grid-secondary"><Surface><SectionHeader eyebrow={t.dashboard.noRoutine} title={routineAction} /><div className="routine-summary"><span className="icon-tile"><Route size={20} aria-hidden="true" /></span><div><strong>{routine ? textAt(t, routine.nameKey) : t.planner}</strong><p>{routineDescription}</p></div><button className="button" onClick={onRoutine}>{routineAction}</button></div></Surface><Surface><SectionHeader eyebrow={t.dashboard.currentLevel} title={`${t.levelLabel} ${level.level}`} /><div className="level-summary"><div><strong>{xp}</strong><span>{t.dashboard.xp}</span></div><div><strong>{achievements.length}</strong><span>{t.dashboard.achievementPreview}</span></div><button className="button quiet" onClick={onProgress}>{t.view}</button></div>{achievements.length === 0 && <p className="empty-copy">{t.dashboard.noAchievements}</p>}</Surface></div>
     <div className="dashboard-privacy-note"><ShieldCheck size={16} aria-hidden="true" /><span>{t.privacy}</span></div>
   </div>;
 }
-
-function Practice({ t, exercise, tonic, setTonic, onFinish }) {
-  const [phase, setPhase] = useState('idle'); const [elapsed, setElapsed] = useState(0);
-  const observations = useRef([]); const startRef = useRef(0); const active = useRef(0); const controller = useRef(null);
-  useEffect(() => () => controller.current?.stop(), []);
-  const start = async () => { observations.current = []; const audio = createAudioController({ onFrame: (frame) => observations.current.push({ ...frameToObservation(frame, tonic, { targetNote: exercise.notes?.[0] || 'Sa' }), timestamp: Date.now() }), onError: () => setPhase('error') }); controller.current = audio; const result = await audio.start(); if (!result.ok) { setPhase('error'); return; } startRef.current = performance.now(); setPhase('running'); };
-  useEffect(() => { if (phase !== 'running') return undefined; const id = setInterval(() => setElapsed((performance.now() - startRef.current + active.current) / 1000), 250); return () => clearInterval(id); }, [phase]);
-  const pause = () => { active.current += performance.now() - startRef.current; controller.current?.pause(); setPhase('paused'); };
-  const resume = () => { startRef.current = performance.now(); controller.current?.resume(); setPhase('running'); };
-  const finish = () => { if (phase === 'running') active.current += performance.now() - startRef.current; controller.current?.stop(); const metrics = calculateMetrics(observations.current, { toleranceCents: exercise.toleranceCents ?? 50, confidenceThreshold: .55 }); onFinish({ startedAt: new Date(Date.now() - active.current).toISOString(), endedAt: new Date().toISOString(), exerciseId: exercise.id, tonicFrequency: tonic, durationSeconds: active.current / 1000, reliableFrameCount: metrics.reliableFrameCount, totalFrameCount: metrics.totalFrameCount, metrics, quality: metrics.quality, completion: { completed: true, reason: 'finished' } }); setPhase('idle'); };
-  const status = phase === 'error' ? { label: t.microphoneError, tone: 'error', icon: AlertCircle } : phase === 'running' ? { label: t.activePractice, tone: 'success', icon: Mic2 } : phase === 'paused' ? { label: t.paused, tone: 'warning', icon: Clock3 } : { label: t.ready, tone: 'neutral', icon: Radio };
-  return <div className="page practice-page"><div className="practice-heading"><div><p className="eyebrow">{t.practice}</p><h1>{textAt(t, exercise.nameKey)}</h1><p className="page-lede">{textAt(t, exercise.descriptionKey)}</p></div><StatusBadge tone={status.tone} icon={status.icon}>{status.label}</StatusBadge></div><div className="practice-grid"><Surface className="practice-studio"><div className="studio-header"><div><p className="eyebrow"><Target size={15} aria-hidden="true" /> {t.pitchFeedback.target}</p><strong className="target-note">{swaraLabel(t, exercise.notes?.[0] || 'Sa')}</strong></div><div className="elapsed"><Clock3 size={16} aria-hidden="true" /><span>{Math.round(elapsed)}s</span><small>{t.activePractice}</small></div></div>{phase === 'error' && <div className="notice error" role="alert"><AlertCircle size={17} aria-hidden="true" />{t.microphoneError}</div>}{phase === 'paused' && <div className="notice warning" role="status"><Clock3 size={17} aria-hidden="true" />{t.paused}</div>}<div className="practice-signal"><span className="signal-icon"><Mic2 size={22} aria-hidden="true" /></span><div><strong>{phase === 'running' ? t.activePractice : t.ready}</strong><p>{phase === 'running' ? t.pitchFeedback.waiting : t.ready}</p></div></div>{exercise.id === 'sa-sustain' && <SaSustainFeedback tonic={tonic} t={t} />}</Surface><Surface className="practice-controls"><SectionHeader eyebrow={t.practice} title={t.ready} /><label className="field-label">{t.tonic}<select value={tonic} onChange={(event) => setTonic(Number(event.target.value))}>{TONICS.map((item) => <option key={item.value} value={item.value}>{textAt(t, item.labelKey)}</option>)}</select></label><div className="control-stack">{phase === 'idle' || phase === 'error' ? <button className="button primary wide" onClick={start}><Play size={17} aria-hidden="true" />{t.start}</button> : phase === 'running' ? <button className="button wide" onClick={pause}><Pause size={17} aria-hidden="true" />{t.pause}</button> : <button className="button primary wide" onClick={resume}><Play size={17} aria-hidden="true" />{t.resume}</button>}{phase !== 'idle' && <button className="button quiet wide" onClick={finish}>{t.complete}</button>}</div></Surface></div></div>;
-}
-
-function playBeat(accent) { const AudioContext = globalThis.AudioContext || globalThis.webkitAudioContext; if (!AudioContext) return; const context = new AudioContext(); const oscillator = context.createOscillator(); const gain = context.createGain(); oscillator.frequency.value = accent ? 880 : 660; gain.gain.setValueAtTime(.045, context.currentTime); gain.gain.exponentialRampToValueAtTime(.001, context.currentTime + .08); oscillator.connect(gain); gain.connect(context.destination); oscillator.start(); oscillator.stop(context.currentTime + .09); oscillator.addEventListener('ended', () => context.close(), { once: true }); }
-
-function AlankarPractice({ t, pattern, tonic, setTonic, onFinish, onBack }) {
-  const [direction, setDirection] = useState('full'); const [bpm, setBpm] = useState(60); const [loops, setLoops] = useState(1); const [phase, setPhase] = useState('idle'); const [elapsed, setElapsed] = useState(0); const [beat, setBeat] = useState({ phase: 'idle' });
-  const groups = useMemo(() => alankarGroups(pattern, direction), [pattern, direction]); const octaveGroups = useMemo(() => alankarDisplayGroups(pattern, direction), [pattern, direction]); const timeline = useMemo(() => createAlankarTimeline({ groups, bpm, loops }), [groups, bpm, loops]);
-  const observations = useRef([]); const controller = useRef(null); const startRef = useRef(0); const elapsedRef = useRef(0); const beatRef = useRef(beat); const lastBeatIndex = useRef(-1); const finished = useRef(false);
-  useEffect(() => { beatRef.current = beat; }, [beat]); useEffect(() => () => controller.current?.stop(), []);
-  const finish = (reason = 'finished') => { if (finished.current) return; finished.current = true; controller.current?.stop(); const metrics = calculateMetrics(observations.current, { toleranceCents: 50, confidenceThreshold: .55 }); onFinish({ startedAt: new Date(Date.now() - elapsedRef.current).toISOString(), endedAt: new Date().toISOString(), exerciseId: 'sa-re-ga', tonicFrequency: tonic, durationSeconds: elapsedRef.current / 1000, reliableFrameCount: metrics.reliableFrameCount, totalFrameCount: metrics.totalFrameCount, metrics, quality: metrics.quality, completion: { completed: true, reason, alankarId: pattern.id, direction, bpm: timeline.bpm, loops: timeline.loops, timeSignature: '4/4', countInBeats: timeline.countInBeats, practiceBeats: timeline.practiceBeats } }); setPhase('idle'); };
-  const tick = () => { const now = performance.now(); const nextElapsed = advanceElapsed(elapsedRef.current, startRef.current, now); elapsedRef.current = nextElapsed; startRef.current = now; const nextBeat = getAlankarBeatAt(nextElapsed, timeline); beatRef.current = nextBeat; setElapsed(nextElapsed); setBeat(nextBeat); if (nextBeat.index !== lastBeatIndex.current && nextBeat.phase !== 'idle') { lastBeatIndex.current = nextBeat.index; playBeat(nextBeat.accent); } if (nextBeat.phase === 'complete') finish('completed'); };
-  const start = async () => { observations.current = []; elapsedRef.current = 0; setElapsed(0); setBeat({ phase: 'idle' }); finished.current = false; lastBeatIndex.current = -1; const audio = createAudioController({ onFrame: (frame) => { const current = beatRef.current; if (current.phase !== 'practice') return; observations.current.push({ ...frameToObservation(frame, tonic, { targetNote: current.swara }), timestamp: Date.now(), groupIndex: current.groupIndex, groupBeatIndex: current.groupBeatIndex, loopIndex: current.loopIndex, targetSwara: current.swara, isSustain: current.isSustain }); }, onError: () => setPhase('error') }); controller.current = audio; const result = await audio.start(); if (!result.ok) { setPhase('error'); return; } startRef.current = performance.now(); setPhase('count-in'); };
-  useEffect(() => { if (phase !== 'count-in' && phase !== 'running') return undefined; const id = setInterval(() => { if (phase === 'count-in' && getAlankarBeatAt(elapsedRef.current, timeline).phase === 'practice') setPhase('running'); tick(); }, 40); return () => clearInterval(id); }, [phase, timeline]);
-  const pause = () => { elapsedRef.current += performance.now() - startRef.current; setElapsed(elapsedRef.current); controller.current?.pause(); setPhase('paused'); };
-  const resume = () => { startRef.current = performance.now(); controller.current?.resume(); setPhase(getAlankarBeatAt(elapsedRef.current, timeline).phase === 'count-in' ? 'count-in' : 'running'); };
-  const stop = () => { if (phase === 'running' || phase === 'count-in') elapsedRef.current += performance.now() - startRef.current; finish('finished'); };
-  const progress = timeline.practiceBeats ? Math.min(100, Math.round(((beat.practiceIndex ?? -1) + 1) / timeline.practiceBeats * 100)) : 0;
-  const announcement = phase === 'count-in' ? t.countInReady : phase === 'running' ? t.activePractice : phase === 'paused' ? t.paused : phase === 'error' ? t.microphoneError : t.ready;
-  return <div className="page alankar-practice-page"><p className="sr-only" role="status" aria-live="polite">{announcement}</p><p className="eyebrow">{t.alankar.name}</p><h1>{textAt(t, pattern.nameKey)}</h1><p>{t.alankar.instruction}</p><div className="control-grid"><label>{t.tonic}<select disabled={phase !== 'idle'} value={tonic} onChange={(event) => setTonic(Number(event.target.value))}>{TONICS.map((item) => <option key={item.value} value={item.value}>{textAt(t, item.labelKey)}</option>)}</select></label><label>{t.bpm}<input disabled={phase !== 'idle'} type="number" min="20" max="240" value={bpm} onChange={(event) => setBpm(Number(event.target.value))} /></label><label>{t.loops}<input disabled={phase !== 'idle'} type="number" min="1" max="10" value={loops} onChange={(event) => setLoops(Number(event.target.value))} /></label><label>{t.direction}<select disabled={phase !== 'idle'} value={direction} onChange={(event) => setDirection(event.target.value)}><option value="full">{t.full}</option><option value="aaroha">{t.aaroha}</option><option value="avaroha">{t.avaroha}</option></select></label></div><p className="time-signature-note">{t.timeSignature}: {t.timeSignatureValue}</p>{phase === 'error' && <div className="notice" role="alert">{t.microphoneError}</div>}<AlankarPracticeDisplay beat={beat} timeline={timeline} groups={groups} octaveGroups={octaveGroups} progress={progress} phase={phase} t={t} groupKey={`${pattern.id}-${direction}`} /><div className="top-actions">{phase === 'idle' || phase === 'error' ? <button className="button primary" onClick={start}><Play size={17} />{t.startAlankar}</button> : phase === 'paused' ? <button className="button primary" onClick={resume}><Play size={17} />{t.resume}</button> : <button className="button" onClick={pause}><Pause size={17} />{t.pause}</button>}{phase !== 'idle' && <button className="button" onClick={stop}>{t.stop}</button>}</div><button className="button" onClick={onBack}>{t.backToAlankars}</button></div>;
-}
-
-function Results({ t, session, onBack }) {
-  const coaching = useMemo(() => session ? deterministicCoach({ exerciseId: session.exerciseId, metrics: session.metrics, quality: session.quality }) : null, [session]);
-  const [remote, setRemote] = useState(null); const [provider, setProvider] = useState('deterministic');
-  useEffect(() => {
-    let cancelled = false; if (!session) return undefined;
-    const baseUrl = import.meta.env.VITE_API_URL || ''; const token = localStorage.getItem('swar-access-token');
-    if (!baseUrl || !token) { setProvider(baseUrl && !token ? 'disabled' : 'unavailable'); return undefined; }
-    const client = createApiClient({ baseUrl, token }); const request = client.coach.explain(session, localStorage.getItem('swar-locale') || 'en'); const timeout = new Promise((resolve) => setTimeout(() => resolve({ ok: false }), 5000));
-    Promise.race([request, timeout]).then((result) => { if (cancelled) return; if (result?.ok && result.data?.messageKey) { setRemote({ ...coaching, ...result.data, metrics: coaching.metrics }); setProvider(result.data.source === 'gemini' ? 'gemini' : 'fallback'); } else setProvider('fallback'); }).catch(() => { if (!cancelled) setProvider('fallback'); });
-    return () => { cancelled = true; };
-  }, [session, coaching]);
-  const displayed = remote || coaching; const providerKey = `coachingProvider${provider[0].toUpperCase()}${provider.slice(1)}`;
-  const alankarId = session?.completion?.alankarId; const alankar = ALANKARS.find((item) => item.id === alankarId); const exercise = getExercise(session?.exerciseId);
-  return <div className="page"><h1>{t.results}</h1>{session ? <><section className="panel"><h2>{alankar ? `${t.alankar.name} · ${textAt(t, alankar.nameKey)}` : textAt(t, exercise?.nameKey || 'exercises.saSustain.name')}</h2>{alankarId && <p>{t[session.completion.direction] || session.completion.direction} · {session.completion.bpm} {t.bpm} · {session.completion.loops} {t.loops}</p>}<Metric label={t.reliableMatch} value={`${session.metrics.reliablePitchMatchPercent ?? t.noAudio}%`} /><Metric label={t.deviation} value={`${Math.round(session.metrics.medianAbsoluteCents ?? 0)} ${t.cents}`} /><p>{t.noHealthClaim}</p></section><section className="panel" aria-live="polite"><p className="eyebrow">{t.coachingProvider}: {t[providerKey] || t.coachingProviderFallback}</p><h2>{textAt(t, displayed.messageKey)}</h2><p>{textAt(t, displayed.reasonKey)}</p><p><strong>{t.coachingEvidence}:</strong> {displayed.metrics.reliableFrameCount ?? 0} {t.frames}</p><small>{t.coachingPrivacy}</small></section></> : <p>{t.noAudio}</p>}<button className="button" onClick={onBack}>{alankarId ? t.backToAlankars : t.back}</button></div>;
-}
-function Metric({ label, value }) { return <div className="metric-row"><span>{label}</span><strong>{value}</strong></div>; }
 
 function PlannerWithAllControls({ t, routines, setRoutines, onStart }) {
   const [routine, setRoutine] = useState(() => routines[0] || createRoutine()); const [error, setError] = useState('');
@@ -212,7 +195,11 @@ function PlannerWithAllControls({ t, routines, setRoutines, onStart }) {
 }
 
 
-function RoutineRun({ t, routine, onItem, onExit, completedIndex = -1, routineCompleted = false }) { const items = routineItems(routine); const [index, setIndex] = useState(nextRoutineIndex(routine.completedIndex ?? completedIndex, items.length)); const item = items[index]; if (!item || routineCompleted || index >= items.length) return <div className="page"><h1>{textAt(t, routine.nameKey)}</h1><p className="notice">{t.finishRoutine}</p><button className="button primary" onClick={onExit}>{t.back}</button></div>; return <div className="page"><h1>{textAt(t, routine.nameKey)}</h1><p role="status">{t.itemProgress}: {index + 1} / {items.length} · {textAt(t, `routineSections.${item.sectionType}`)}</p><section className="panel"><h2>{textAt(t, item.exercise.nameKey)}</h2><p>{item.durationSeconds}s</p><button className="button primary" onClick={() => onItem(item)}>{t.start}</button><button className="button" onClick={() => { const next = nextRoutineIndex(index, items.length); if (next < items.length) setIndex(next); else onExit(); }}>{t.skipItem}</button></section><button className="button" onClick={onExit}>{t.exitRoutine}</button></div>; }
+export function RoutineRun({ t, routine, onItem, onSkip, onExit }) {
+  const { items, index, item, empty } = routineRunState(routine);
+  if (!item) return <div className="page"><h1>{textAt(t, routine.nameKey)}</h1><p className="notice">{empty ? t.routinesEmpty : t.finishRoutine}</p><button className="button primary" onClick={onExit}>{t.back}</button></div>;
+  return <div className="page"><h1>{textAt(t, routine.nameKey)}</h1><p role="status">{t.itemProgress}: {index + 1} / {items.length} · {textAt(t, `routineSections.${item.sectionType}`)}</p><section className="panel"><h2>{textAt(t, item.exercise.nameKey)}</h2><p>{item.durationSeconds}s</p><button className="button primary" onClick={() => onItem(item)}>{t.start}</button><button className="button" onClick={onSkip}>{t.skipItem}</button></section><button className="button" onClick={onExit}>{t.exitRoutine}</button></div>;
+}
 
 function Progress({ t, sessions, rewards, achievements, onClear, streakEnabled, setStreakEnabled }) { const xp = rewards.reduce((sum, item) => sum + item.xp, 0); return <div className="page"><h1>{t.progressTitle}</h1><section className="stats-grid"><div className="stat-card"><strong>{xp}</strong><small>{t.xp}</small></div><div className="stat-card"><strong>{getLevel(xp).level}</strong><small>{t.levelLabel}</small></div><div className="stat-card"><strong>{getStreak(sessions, streakEnabled)}</strong><small>{streakEnabled ? t.streakOptional : t.streakOff}</small></div></section><p className="notice">{t.participationNotice}</p><label><input type="checkbox" checked={streakEnabled} onChange={(event) => setStreakEnabled(event.target.checked)} />{t.enableStreak}</label><section className="panel"><h2>{t.achievements}</h2>{ACHIEVEMENTS.map((achievement) => <div className="metric-row" key={achievement.id}><span><strong>{textAt(t, achievement.titleKey)}</strong><small>{textAt(t, achievement.descriptionKey)}</small></span><strong>{achievements.some((item) => item.id === achievement.id) ? '✓' : t.locked}</strong></div>)}</section><button className="button" onClick={onClear}>{t.clear}</button></div>; }
 function exerciseGoalKey(exercise) { if (exercise.id === 'sa-sustain') return 'goalSa'; if (exercise.id === 'ascending-sargam') return 'goalSequence'; return 'goalAlankar'; }
@@ -223,4 +210,4 @@ function LibraryPage({ t, onChoose, onOpenAlankars }) {
   return <div className="page library-page"><div className="page-heading"><div><p className="eyebrow"><Library size={15} aria-hidden="true" /> {t.library}</p><h1>{t.libraryTitle}</h1><p className="page-lede">{t.landing.featureDescription}</p></div></div><button className="alankar-hero" onClick={onOpenAlankars}><span className="feature-icon"><Sparkles size={20} aria-hidden="true" /></span><div><strong>{t.alankar.name}</strong><span>{t.alankar.description}</span></div><ChevronRight size={20} aria-hidden="true" /></button><Surface className="library-filters"><div className="filter-heading"><strong>{t.exerciseUi.filter}</strong><button className="button quiet" onClick={() => { setQuery(''); setLevel('all'); }}>{t.exerciseUi.clearFilters}</button></div><div className="filter-controls"><label className="search-field"><Search size={16} aria-hidden="true" /><span className="sr-only">{t.exerciseUi.search}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.exerciseUi.searchPlaceholder} aria-label={t.exerciseUi.search} /></label><label className="field-label"><span className="sr-only">{t.exerciseUi.difficulty}</span><select aria-label={t.exerciseUi.difficulty} value={level} onChange={(event) => setLevel(event.target.value)}><option value="all">{t.exerciseUi.allLevels}</option><option value="1">{t.exerciseUi.beginner}</option><option value="2">{t.exerciseUi.intermediate}</option></select></label></div></Surface>{exercises.length ? <div className="exercise-list">{exercises.map((exercise) => <button className="exercise-card" key={exercise.id} onClick={() => onChoose(exercise)}><span className="exercise-card-icon"><Target size={19} aria-hidden="true" /></span><div className="exercise-card-content"><strong>{textAt(t, exercise.nameKey)}</strong><span>{textAt(t, exercise.descriptionKey)}</span><div className="exercise-meta"><small>{t.exerciseUi.difficulty}: {exercise.level === 1 ? t.exerciseUi.beginner : t.exerciseUi.intermediate}</small><small>{t.exerciseUi.duration}: {exercise.durationSeconds} {t.exerciseUi.seconds}</small><small>{t.exerciseUi.goal}: {t.exerciseUi[exerciseGoalKey(exercise)]}</small>{exercise.limited && <small className="limited-label">{t.exerciseUi.limited}</small>}</div></div><ArrowRight size={19} aria-hidden="true" /></button>)}</div> : <div className="empty-state panel"><Search size={23} aria-hidden="true" /><p>{t.exerciseUi.noResults}</p></div>}</div>;
 }
 function SettingsPage({ t, locale, setLocale }) { return <div className="page settings-page"><div className="page-heading"><div><p className="eyebrow"><Settings size={15} aria-hidden="true" /> {t.settings}</p><h1>{t.settingsTitle}</h1><p className="page-lede">{t.privacy}</p></div></div><Surface className="settings-panel"><SectionHeader title={t.language} /><label className="field-label">{t.language}<select value={locale} aria-label={t.language} onChange={(event) => setLocale(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></label></Surface></div>; }
-createRoot(document.getElementById('root')).render(<App />);
+if (!import.meta.env.SSR) createRoot(document.getElementById('root')).render(<App />);

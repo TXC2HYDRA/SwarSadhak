@@ -1,5 +1,6 @@
 import { createApiClient, syncState } from '@swarsadhak/api-client';
 import { getTranslations } from '@swarsadhak/localization';
+import { readPreference } from './navigation.js';
 
 const SESSION_KEY = 'swar-practice-sessions-v1';
 const ROUTINE_KEY = 'swar-routines-v1';
@@ -23,9 +24,9 @@ function statusElement() {
 
 export function startOptionalSync() {
   const baseUrl = import.meta.env.VITE_API_URL || '';
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = readPreference(TOKEN_KEY, '');
   const element = statusElement();
-  const t = getTranslations(localStorage.getItem('swar-locale') || 'en');
+  const t = getTranslations(readPreference('swar-locale', 'en'));
   if (!baseUrl || !token) {
     element.textContent = t.syncLocalOnly;
     return () => {};

@@ -17,15 +17,16 @@ test('audio controller pauses, resumes, and cleans up mocked resources', async (
   const track = { stop: () => calls.push('track.stop') };
   const stream = { getTracks: () => [track] };
   const context = {
-    sampleRate: 44100, destination: {},
+    sampleRate: 44100, destination: {}, state: 'running',
     createMediaStreamSource: () => ({ connect: () => {}, disconnect: () => calls.push('source.disconnect') }),
     createGain: () => ({ gain: { value: 1 }, connect: () => {}, disconnect: () => calls.push('gain.disconnect') }),
+    createScriptProcessor: () => ({ connect: () => {}, disconnect: () => calls.push('processor.disconnect') }),
     suspend: () => calls.push('suspend'), resume: () => calls.push('resume'), close: () => calls.push('close'),
   };
   const controller = createAudioController({ AudioContext: class { constructor() { return context; } }, getUserMedia: async () => stream });
   assert.equal((await controller.start()).ok, true);
-  controller.pause(); controller.resume(); controller.stop();
-  assert.deepEqual(calls, ['suspend', 'resume', 'track.stop', 'source.disconnect', 'gain.disconnect', 'close']);
+  await controller.pause(); await controller.resume(); await controller.stop();
+  assert.deepEqual(calls, ['suspend', 'resume', 'processor.disconnect', 'source.disconnect', 'gain.disconnect', 'track.stop', 'close']);
   assert.equal(controller.stopped, true);
 });
 
