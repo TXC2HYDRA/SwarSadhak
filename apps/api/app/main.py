@@ -7,7 +7,7 @@ from .ai_coach import coach as ai_coach
 from .db import connect, init_db
 from .accounts import academy_settings, public_user
 from .dependencies import current_user, require_role, user_roles
-from .routers import owner, teacher
+from .routers import owner, student, teacher
 from .schemas import Login, Practice, Routine, AssignmentCreate, AssignmentUpdate, CoachPayload
 from .security import clear_login_failures, issue_token, login_blocked, record_login_failure, verify_password
 
@@ -15,6 +15,7 @@ app = FastAPI(title="NadoPasana API", version=API_VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_credentials=False, allow_methods=["GET","POST","PATCH","DELETE"], allow_headers=["Authorization","Content-Type"])
 app.include_router(owner.router)
 app.include_router(teacher.router)
+app.include_router(student.router)
 init_db()
 def now(): return datetime.now(timezone.utc).isoformat()
 

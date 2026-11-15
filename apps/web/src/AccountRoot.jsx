@@ -9,6 +9,7 @@ import { startOptionalSync } from './optionalSync.js';
 import { AccountMenu, LanguagePicker, PortalShell } from './PortalShell.jsx';
 import { OwnerPortal } from './OwnerPortal.jsx';
 import { TeacherPortal } from './TeacherPortal.jsx';
+import { StudentTimetable } from './StudentTimetable.jsx';
 import './portal.css';
 
 const readLocale = () => readPreference('swar-locale', 'en') || 'en';
@@ -55,7 +56,7 @@ export function AccountRoot({ apiUrl = import.meta.env.VITE_API_URL || '' }) {
 
   const accountBar = <AccountMenu t={t} user={session.user} portal={portal} onPortal={switchPortal} onSignOut={() => signOut()} />;
   const shell = { t, locale, onLocale: changeLocale, accountBar };
-  if (portal === 'student') return <App account={session.user} accountBar={accountBar} />;
+  if (portal === 'student') return <App account={session.user} accountBar={accountBar} timetable={(appT, appLocale) => <StudentTimetable t={appT} locale={appLocale} client={client} />} />;
   if (portal === 'owner') return <OwnerPortal shell={shell} client={client} user={session.user} />;
   if (portal === 'teacher') return <TeacherPortal shell={shell} client={client} user={session.user} />;
   return <PortalShell {...shell} nav={[]}><div className="page"><h1>{t.portal.account}</h1><p className="notice" role="status">{t.portal.noAccess}</p></div></PortalShell>;

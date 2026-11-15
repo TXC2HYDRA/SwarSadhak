@@ -20,6 +20,8 @@ before(async () => {
     ...(await server.ssrLoadModule('/src/optionalSync.js')),
     ...(await server.ssrLoadModule('/src/TeacherPortal.jsx')),
     ...(await server.ssrLoadModule('/src/BatchCalendar.jsx')),
+    ...(await server.ssrLoadModule('/src/StudentTimetable.jsx')),
+    App: (await server.ssrLoadModule('/src/main.jsx')).App,
   };
 });
 after(async () => { await server?.close(); });
@@ -253,4 +255,28 @@ test('API client builds batch and academy requests', async () => {
     ['http://api.test/api/owner/batches', 'GET', undefined],
     ['http://api.test/api/academy', 'GET', undefined],
   ]);
+});
+
+test('the student timetable groups batches by weekday and the student app links to it', () => {
+  const batches = [{ id: 'b1', days: ['thu', 'tue'] }, { id: 'b2', days: ['tue'] }];
+  assert.deepEqual(web.timetableDays(batches).map(({ day, items }) => [day, items.map((item) => item.id)]), [['tue', ['b1', 'b2']], ['thu', ['b1']]]);
+  assert.deepEqual(web.timetableDays([]), []);
+  const client = { student: { batches: pending }, academy: pending };
+  for (const locale of supportedLocales) {
+    const t = getTranslations(locale); const s = t.portal.student;
+    const html = renderToStaticMarkup(React.createElement(web.StudentTimetable, { t, locale, client }));
+    assert.match(html, new RegExp(s.title));
+    assert.match(html, new RegExp(t.portal.users.loading));
+  }
+  const t = getTranslations('en');
+  const withTimetable = renderToStaticMarkup(React.createElement(web.App, { account: { id: 'u1', roles: ['student'] }, timetable: () => null }));
+  assert.match(withTimetable, new RegExp(`<span>${t.portal.student.nav}</span>`));
+  assert.doesNotMatch(renderToStaticMarkup(React.createElement(web.App, { account: { id: 'u1', roles: ['student'] } })), new RegExp(`<span>${t.portal.student.nav}</span>`));
+});
+
+test('API client calls the student timetable endpoint', async () => {
+  const calls = [];
+  const client = createApiClient({ baseUrl: 'http://api.test', token: 't', fetchImpl: async (url) => { calls.push(url); return new Response('[]'); } });
+  assert.deepEqual((await client.student.batches()).data, []);
+  assert.deepEqual(calls, ['http://api.test/api/student/batches']);
 });

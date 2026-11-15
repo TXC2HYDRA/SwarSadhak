@@ -120,3 +120,8 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
   .day-tabs { display: flex; }
   .time-row { grid-template-columns: 1fr; }
 }
+
+/* Phase 4: student weekly timetable. */
+.timetable-day h2 { display: flex; align-items: center; gap: 10px; }
+.timetable-day.is-today { border-color: rgba(239,183,95,.45); }
+.student-list li.is-paused { opacity: .7; }

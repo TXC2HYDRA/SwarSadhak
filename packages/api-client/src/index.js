@@ -33,6 +33,7 @@ export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || ''
       batches: { list: () => request('/api/teacher/batches'), create: (batch) => request('/api/teacher/batches', { method: 'POST', body: JSON.stringify(batch) }), update: (id, changes) => request(`/api/teacher/batches/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }), remove: (id) => request(`/api/teacher/batches/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
     },
     academy: () => request('/api/academy'),
+    student: { batches: () => request('/api/student/batches') },
     assignments: { list: () => request('/api/assignments'), create: (assignment) => request('/api/assignments', { method: 'POST', body: JSON.stringify(assignment) }), update: (id, update) => request(`/api/assignments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(update) }), remove: (id) => request(`/api/assignments/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
   };
 }
