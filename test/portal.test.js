@@ -7,6 +7,7 @@ import { createServer } from 'vite';
 import { createApiClient, toApiSession } from '@swarsadhak/api-client';
 import { getTranslations, supportedLocales } from '@swarsadhak/localization';
 import { apiErrorKey, choosePortal, clearSession, loginErrorKey, readSession, writeSession } from '../apps/web/src/auth.js';
+import { ACCEPT, checkFile, fileErrorKey, fileType, formatSize, uploadFile } from '../apps/web/src/files.js';
 import { addDays, batchFormErrors, formatTime, mondayOf, slotForm, todayIn, visibleRange, weekDates, weekOccurrences } from '../apps/web/src/schedule.js';
 
 const memoryStorage = () => { const values = new Map(); return { getItem: (k) => values.get(k) ?? null, setItem: (k, v) => values.set(k, String(v)), removeItem: (k) => values.delete(k) }; };
@@ -21,6 +22,7 @@ before(async () => {
     ...(await server.ssrLoadModule('/src/TeacherPortal.jsx')),
     ...(await server.ssrLoadModule('/src/BatchCalendar.jsx')),
     ...(await server.ssrLoadModule('/src/StudentTimetable.jsx')),
+    ...(await server.ssrLoadModule('/src/Assignments.jsx')),
     App: (await server.ssrLoadModule('/src/main.jsx')).App,
   };
 });
@@ -269,7 +271,7 @@ test('the student timetable groups batches by weekday and the student app links 
     assert.match(html, new RegExp(t.portal.users.loading));
   }
   const t = getTranslations('en');
-  const withTimetable = renderToStaticMarkup(React.createElement(web.App, { account: { id: 'u1', roles: ['student'] }, timetable: () => null }));
+  const withTimetable = renderToStaticMarkup(React.createElement(web.App, { account: { id: 'u1', roles: ['student'] }, pages: [{ key: 'timetable', Icon: () => null, label: (appT) => appT.portal.student.nav, render: () => null }] }));
   assert.match(withTimetable, new RegExp(`<span>${t.portal.student.nav}</span>`));
   assert.doesNotMatch(renderToStaticMarkup(React.createElement(web.App, { account: { id: 'u1', roles: ['student'] } })), new RegExp(`<span>${t.portal.student.nav}</span>`));
 });
@@ -279,4 +281,95 @@ test('API client calls the student timetable endpoint', async () => {
   const client = createApiClient({ baseUrl: 'http://api.test', token: 't', fetchImpl: async (url) => { calls.push(url); return new Response('[]'); } });
   assert.deepEqual((await client.student.batches()).data, []);
   assert.deepEqual(calls, ['http://api.test/api/student/batches']);
+});
+
+test('file types fall back to the extension and limits match the API', () => {
+  const file = (name, type, size = 1024) => ({ name, type, size });
+  assert.equal(fileType(file('take1.m4a', '')), 'audio/mp4');
+  assert.equal(fileType(file('take1.webm', 'audio/webm;codecs=opus')), 'audio/webm');
+  assert.equal(fileType(file('class.MOV', '')), 'video/quicktime');
+  assert.equal(checkFile(file('page.html', 'text/html')), 'type');
+  assert.equal(checkFile(file('class.mp4', 'video/mp4', 300 * 1024 * 1024)), null);
+  assert.equal(checkFile(file('class.mp4', 'video/mp4', 300 * 1024 * 1024 + 1)), 'size');
+  assert.equal(checkFile(file('notes.pdf', 'application/pdf', 21 * 1024 * 1024)), 'size');
+  assert.equal(checkFile(file('take.mp3', 'audio/mpeg', 25 * 1024 * 1024)), null);
+  assert.ok(ACCEPT.includes('video/mp4') && ACCEPT.includes('.m4a'));
+  assert.equal(formatSize(3 * 1024 * 1024, 'en'), '3 MB');
+  assert.equal(formatSize(1536, 'en'), '1.5 kB');
+  assert.deepEqual([413, 415, 503, 502, 409, 0].map((status) => fileErrorKey({ status })), ['size', 'type', 'storageOff', 'storage', 'limit', 'upload']);
+});
+
+test('uploads go straight to storage with the signed headers, and a failed upload is cleaned up', async () => {
+  const calls = [];
+  const client = { files: {
+    startUpload: async (body) => { calls.push(['start', body]); return { ok: true, data: { attachment: { id: 'f1' }, upload: { method: 'PUT', url: 'https://r2.test/put', headers: { 'Content-Type': 'audio/mp4' } } } }; },
+    complete: async (id) => { calls.push(['complete', id]); return { ok: true, data: { id } }; },
+    remove: async (id) => { calls.push(['remove', id]); return { ok: true }; },
+  } };
+  const xhr = (status) => () => ({ upload: {}, headers: {}, open(method, url) { calls.push(['open', method, url]); }, setRequestHeader(name, value) { this.headers[name] = value; },
+    send(body) { calls.push(['send', body.name, this.headers]); this.upload.onprogress?.({ lengthComputable: true, loaded: 1, total: 2 }); this.status = status; status ? this.onload() : this.onerror(); } });
+  const file = { name: 'take1.m4a', type: '', size: 2048 };
+  const progress = [];
+  assert.equal((await uploadFile(client, { submission_id: 's1' }, file, (value) => progress.push(value), xhr(200))).ok, true);
+  assert.deepEqual(calls, [
+    ['start', { submission_id: 's1', name: 'take1.m4a', content_type: 'audio/mp4', size: 2048 }],
+    ['open', 'PUT', 'https://r2.test/put'], ['send', 'take1.m4a', { 'Content-Type': 'audio/mp4' }], ['complete', 'f1'],
+  ]);
+  assert.deepEqual(progress, [0.5]);
+  calls.length = 0;
+  assert.equal((await uploadFile(client, { submission_id: 's1' }, file, null, xhr(0))).ok, false);
+  assert.deepEqual(calls.at(-1), ['remove', 'f1']);
+});
+
+test('assignment pages, attachments and the teacher nav render in every locale', () => {
+  const client = { teacher: { assignments: { list: pending }, courses: pending, students: pending, batches: { list: pending }, summary: pending }, student: { assignments: { list: pending } }, academy: pending };
+  const attachments = [
+    { id: 'l1', kind: 'link', name: 'www.youtube.com', url: 'https://www.youtube.com/watch?v=abc', owner_id: 'u1' },
+    { id: 'f1', kind: 'file', name: 'Yaman.pdf', content_type: 'application/pdf', size: 2 * 1024 * 1024, owner_id: 'u2' },
+  ];
+  for (const locale of supportedLocales) {
+    const t = getTranslations(locale); const a = t.portal.assignments;
+    const render = (Component, props = {}) => renderToStaticMarkup(React.createElement(Component, { t, locale, client, ...props }));
+    assert.match(render(web.TeacherAssignments), new RegExp(a.create));
+    assert.match(render(web.StudentAssignments), new RegExp(a.studentTitle));
+    const list = render(web.AttachmentList, { attachments, userId: 'u1', onChange() {} });
+    assert.match(list, /href="https:\/\/www.youtube.com\/watch\?v=abc" target="_blank" rel="noopener noreferrer"/);
+    assert.match(list, /Yaman.pdf/);
+    assert.equal(list.match(new RegExp(`aria-label="${a.removeFile}`, 'g')).length, 1); // only the uploader's own item
+    assert.equal(render(web.AttachmentList, { attachments: [] }), '');
+    assert.match(render(web.AttachmentPicker, { parent: { assignment_id: 'a1' }, onChange() {} }), /accept="[^"]*video\/mp4/);
+    const portal = renderToStaticMarkup(React.createElement(web.TeacherPortal, { shell: { t, locale, onLocale() {}, accountBar: null }, client, user: { id: 'u1' } }));
+    assert.match(portal, new RegExp(a.nav));
+  }
+});
+
+test('API client builds assignment and file requests', async () => {
+  const calls = [];
+  const client = createApiClient({ baseUrl: 'http://api.test', token: 't', fetchImpl: async (url, options) => { calls.push([url.replace('http://api.test', ''), options.method || 'GET', options.body]); return new Response('{}'); } });
+  await client.teacher.assignments.create({ title: 'A' });
+  await client.teacher.assignments.update('a/1', { title: 'B' });
+  await client.teacher.assignments.remove('a1');
+  await client.teacher.assignments.submissions('a1');
+  await client.teacher.assignments.review('s1', { feedback: 'ok', reviewed: true });
+  await client.student.assignments.list();
+  await client.student.assignments.saveSubmission('a1', { note: '', status: 'draft' });
+  await client.files.startUpload({ submission_id: 's1' });
+  await client.files.complete('f1');
+  await client.files.addLink({ assignment_id: 'a1', url: 'https://x.test' });
+  await client.files.open('f1');
+  await client.files.remove('f1');
+  assert.deepEqual(calls, [
+    ['/api/teacher/assignments', 'POST', '{"title":"A"}'],
+    ['/api/teacher/assignments/a%2F1', 'PATCH', '{"title":"B"}'],
+    ['/api/teacher/assignments/a1', 'DELETE', undefined],
+    ['/api/teacher/assignments/a1/submissions', 'GET', undefined],
+    ['/api/teacher/submissions/s1', 'PATCH', '{"feedback":"ok","reviewed":true}'],
+    ['/api/student/assignments', 'GET', undefined],
+    ['/api/student/assignments/a1/submission', 'PUT', '{"note":"","status":"draft"}'],
+    ['/api/files/uploads', 'POST', '{"submission_id":"s1"}'],
+    ['/api/files/f1/complete', 'POST', undefined],
+    ['/api/files/links', 'POST', '{"assignment_id":"a1","url":"https://x.test"}'],
+    ['/api/files/f1', 'GET', undefined],
+    ['/api/files/f1', 'DELETE', undefined],
+  ]);
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { LogIn, Music2 } from 'lucide-react';
+import { CalendarDays, ClipboardList, LogIn, Music2 } from 'lucide-react';
 import { createApiClient } from '@swarsadhak/api-client';
 import { getTranslations } from '@swarsadhak/localization';
 import { App, Brand } from './main.jsx';
@@ -10,6 +10,7 @@ import { AccountMenu, LanguagePicker, PortalShell } from './PortalShell.jsx';
 import { OwnerPortal } from './OwnerPortal.jsx';
 import { TeacherPortal } from './TeacherPortal.jsx';
 import { StudentTimetable } from './StudentTimetable.jsx';
+import { StudentAssignments } from './Assignments.jsx';
 import './portal.css';
 
 const readLocale = () => readPreference('swar-locale', 'en') || 'en';
@@ -56,7 +57,10 @@ export function AccountRoot({ apiUrl = import.meta.env.VITE_API_URL || '' }) {
 
   const accountBar = <AccountMenu t={t} user={session.user} portal={portal} onPortal={switchPortal} onSignOut={() => signOut()} />;
   const shell = { t, locale, onLocale: changeLocale, accountBar };
-  if (portal === 'student') return <App account={session.user} accountBar={accountBar} timetable={(appT, appLocale) => <StudentTimetable t={appT} locale={appLocale} client={client} />} />;
+  if (portal === 'student') return <App account={session.user} accountBar={accountBar} pages={[
+    { key: 'timetable', Icon: CalendarDays, label: (appT) => appT.portal.student.nav, render: (appT, appLocale) => <StudentTimetable t={appT} locale={appLocale} client={client} /> },
+    { key: 'assignments', Icon: ClipboardList, label: (appT) => appT.portal.assignments.nav, render: (appT, appLocale) => <StudentAssignments t={appT} locale={appLocale} client={client} user={session.user} /> },
+  ]} />;
   if (portal === 'owner') return <OwnerPortal shell={shell} client={client} user={session.user} />;
   if (portal === 'teacher') return <TeacherPortal shell={shell} client={client} user={session.user} />;
   return <PortalShell {...shell} nav={[]}><div className="page"><h1>{t.portal.account}</h1><p className="notice" role="status">{t.portal.noAccess}</p></div></PortalShell>;

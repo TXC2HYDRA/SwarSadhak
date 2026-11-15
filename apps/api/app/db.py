@@ -51,6 +51,19 @@ MIGRATIONS = [
         CREATE TABLE batch_members (batch_id TEXT NOT NULL REFERENCES batches(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, PRIMARY KEY (batch_id, student_id));
         CREATE INDEX batch_members_student ON batch_members(student_id);
         ''',
+        # 5: manual Riyaz assignments with file/link attachments and student submissions.
+        # (The older `assignments` table links a synced practice routine to one student.)
+        # File bytes live in R2; rows keep only the object key. Exactly one parent per attachment.
+        '''
+        CREATE TABLE riyaz_assignments (id TEXT PRIMARY KEY, teacher_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE, title TEXT NOT NULL, instructions TEXT NOT NULL DEFAULT '', due_on TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+        CREATE INDEX riyaz_assignments_teacher ON riyaz_assignments(teacher_id);
+        CREATE TABLE riyaz_assignment_students (assignment_id TEXT NOT NULL REFERENCES riyaz_assignments(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, PRIMARY KEY (assignment_id, student_id));
+        CREATE INDEX riyaz_assignment_students_student ON riyaz_assignment_students(student_id);
+        CREATE TABLE submissions (id TEXT PRIMARY KEY, assignment_id TEXT NOT NULL REFERENCES riyaz_assignments(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, note TEXT NOT NULL DEFAULT '', status TEXT NOT NULL CHECK (status IN ('draft','submitted','reviewed')), feedback TEXT NOT NULL DEFAULT '', submitted_at TEXT, reviewed_at TEXT, updated_at TEXT NOT NULL, UNIQUE (assignment_id, student_id));
+        CREATE TABLE attachments (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, assignment_id TEXT REFERENCES riyaz_assignments(id) ON DELETE CASCADE, submission_id TEXT REFERENCES submissions(id) ON DELETE CASCADE, kind TEXT NOT NULL CHECK (kind IN ('file','link')), name TEXT NOT NULL, url TEXT, object_key TEXT UNIQUE, content_type TEXT, size INTEGER, status TEXT NOT NULL CHECK (status IN ('pending','ready')), created_at TEXT NOT NULL, CHECK ((assignment_id IS NULL) != (submission_id IS NULL)));
+        CREATE INDEX attachments_assignment ON attachments(assignment_id);
+        CREATE INDEX attachments_submission ON attachments(submission_id);
+        ''',
 ]
 
 def init_db():

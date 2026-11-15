@@ -1,4 +1,6 @@
 export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || '', token = null, fetchImpl = fetch, onUnauthorized } = {}) {
+  const send = (path, method, body) => request(path, { method, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+  const id = encodeURIComponent;
   const request = async (path, options = {}) => {
     if (!baseUrl) return { ok: false, offline: true, status: 0, error: 'backend_disabled' };
     try {
@@ -31,9 +33,22 @@ export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || ''
       courses: () => request('/api/teacher/courses'),
       students: ({ q = '', courseId = '' } = {}) => request(`/api/teacher/students?${new URLSearchParams({ q, ...(courseId ? { course_id: courseId } : {}) })}`),
       batches: { list: () => request('/api/teacher/batches'), create: (batch) => request('/api/teacher/batches', { method: 'POST', body: JSON.stringify(batch) }), update: (id, changes) => request(`/api/teacher/batches/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }), remove: (id) => request(`/api/teacher/batches/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
+      assignments: {
+        list: () => request('/api/teacher/assignments'), create: (body) => send('/api/teacher/assignments', 'POST', body),
+        update: (aid, body) => send(`/api/teacher/assignments/${id(aid)}`, 'PATCH', body), remove: (aid) => send(`/api/teacher/assignments/${id(aid)}`, 'DELETE'),
+        submissions: (aid) => request(`/api/teacher/assignments/${id(aid)}/submissions`), review: (sid, body) => send(`/api/teacher/submissions/${id(sid)}`, 'PATCH', body),
+      },
     },
     academy: () => request('/api/academy'),
-    student: { batches: () => request('/api/student/batches') },
+    student: {
+      batches: () => request('/api/student/batches'),
+      assignments: { list: () => request('/api/student/assignments'), saveSubmission: (aid, body) => send(`/api/student/assignments/${id(aid)}/submission`, 'PUT', body) },
+    },
+    // Files go straight to storage with the presigned upload URL; these calls only manage metadata and access.
+    files: {
+      startUpload: (body) => send('/api/files/uploads', 'POST', body), complete: (fid) => send(`/api/files/${id(fid)}/complete`, 'POST'),
+      addLink: (body) => send('/api/files/links', 'POST', body), open: (fid) => request(`/api/files/${id(fid)}`), remove: (fid) => send(`/api/files/${id(fid)}`, 'DELETE'),
+    },
     assignments: { list: () => request('/api/assignments'), create: (assignment) => request('/api/assignments', { method: 'POST', body: JSON.stringify(assignment) }), update: (id, update) => request(`/api/assignments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(update) }), remove: (id) => request(`/api/assignments/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
   };
 }

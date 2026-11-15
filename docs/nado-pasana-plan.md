@@ -1,6 +1,6 @@
 # Nado Pasana: audit and incremental plan
 
-Status: Phases 0 to 4 are done (see section 7). Discovery is ongoing, and Riyaz management is intentionally undesigned.
+Status: Phases 0 to 5 are done (see section 7). Riyaz management is manual for now (Phase 5 assignments); structured Riyaz plans wait on section 8.
 
 ## 1. What exists today (audit)
 
@@ -267,7 +267,12 @@ Each phase ends with all existing tests passing, new tests for the phase, a buil
 - Timetable from `GET /api/student/batches` next to the existing Riyaz Studio: a weekly list grouped by day, with course, teacher and time, today marked, and paused batches labelled. A batch drops off when the student's enrollment with that teacher in that course is no longer active.
 - The web app has no assignments screen yet; assignments stay API-only until Riyaz management is designed.
 
-**Later (needs discovery first)**: Riyaz management, attendance, lesson content, submissions and recordings (needs a storage and access decision), feedback, announcements, fees, and the design system proposal.
+**Phase 5: manual Riyaz assignments with files**: done on 2026-11-16.
+- Decided: files are stored in a private Cloudflare R2 bucket and opened only through short-lived signed links; only the assignment's teacher (not the Owner) can open a student's answer files; deleting an assignment deletes its files; video limit 300 MB; links (YouTube, Drive) are allowed as attachments.
+- Teacher Assignments page: create for chosen students of one course (or a whole batch), attach files and links, review answers with feedback.
+- Student Assignments page in the practice studio: teacher files play inline; answer with a note and recordings, save a draft, submit, read feedback.
+
+**Later (needs discovery first)**: structured Riyaz plans (section 8), attendance, lesson content, announcements, fees, and the design system proposal.
 
 ## 8. Riyaz management: questions before any design
 
@@ -294,3 +299,6 @@ Each phase ends with all existing tests passing, new tests for the phase, a buil
 - [ ] Editing, pausing and deleting a batch updates the calendar without a reload and persists after a reload.
 - [ ] The whole calendar flow works with the keyboard alone and at 375 px width.
 - [ ] The student sees the batch in their timetable without other students' names.
+- [ ] With R2 configured, `python3 apps/api/run.py check-storage` succeeds; a teacher uploads a PDF and a 200 MB video; an assigned student opens both; another student cannot.
+- [ ] A student records on a phone, uploads the recording to a draft, submits it; the teacher plays it inline and saves feedback; the student sees the feedback.
+- [ ] Deleting the assignment removes its files from the R2 bucket.

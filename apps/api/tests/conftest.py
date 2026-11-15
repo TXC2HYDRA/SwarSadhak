@@ -3,6 +3,8 @@ from uuid import uuid4
 
 # Must run before any app module reads DATABASE_URL.
 os.environ["DATABASE_URL"] = "sqlite:///" + os.path.join(tempfile.mkdtemp(), "test.db")
+# Never reach real file storage from tests, even if apps/api/.env has R2 credentials.
+for name in ("R2_ACCOUNT_ID", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY", "R2_BUCKET"): os.environ[name] = ""
 
 import pytest
 from fastapi.testclient import TestClient

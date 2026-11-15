@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, AlertCircle, ArrowRight, BarChart3, BookOpen, CalendarDays, CheckCircle2, ChevronRight, Clock3, Home, Languages, Library, LockKeyhole, Menu, Mic2, Music2, Pause, Play, Radio, Route, Search, Settings, ShieldCheck, Sparkles, Target, Trophy, X } from 'lucide-react';
+import { Activity, AlertCircle, ArrowRight, BarChart3, BookOpen, CheckCircle2, ChevronRight, Clock3, Home, Languages, Library, LockKeyhole, Menu, Mic2, Music2, Pause, Play, Radio, Route, Search, Settings, ShieldCheck, Sparkles, Target, Trophy, X } from 'lucide-react';
 import { getTranslations, localeNames, supportedLocales } from '@swarsadhak/localization';
 import { createSession } from '@swarsadhak/practice-domain';
 import { createStorage } from '@swarsadhak/persistence';
@@ -20,9 +20,9 @@ const textAt = (t, key) => key.split('.').reduce((value, part) => value?.[part],
 
 export const Brand = ({ t }) => <span>{t.brand.first}<span>{t.brand.second}</span></span>;
 
-// account/accountBar/timetable come from AccountRoot when signed in; without them this is the offline studio.
-// timetable is a render function (t, locale) so it follows this app's language picker.
-export function App({ account = null, accountBar = null, timetable = null } = {}) {
+// account/accountBar/pages come from AccountRoot when signed in; without them this is the offline studio.
+// pages: [{ key, Icon, label(t), render(t, locale) }], rendered with this app's own language picker.
+export function App({ account = null, accountBar = null, pages = [] } = {}) {
   const [locale, setLocale] = useState(() => readPreference('swar-locale', 'en') || 'en');
   const t = getTranslations(locale);
   const [route, setRoute] = useState(() => account || readPreference('swar-visited-v1', 'false') === 'true' || store.get(KEYS.sessions, []).length > 0 ? 'home' : 'landing');
@@ -120,22 +120,22 @@ export function App({ account = null, accountBar = null, timetable = null } = {}
   };
   const clearHistory = () => { if (!confirm(t.clearConfirm)) return; setSessions([]); setRewards([]); persist(KEYS.sessions, []); persist(KEYS.rewards, []); };
 
-  const navItems = [['home', Home], ...(timetable ? [['timetable', CalendarDays]] : []), ['practice', Activity], ['library', Library], ['routines', Trophy], ['progress', Trophy], ['settings', Settings]];
-  const routeLabel = { home: t.home, practice: t.practice, results: t.results, library: t.library, alankars: t.alankarListTitle, 'alankar-practice': t.alankarPracticeTitle, routines: t.planner, planner: t.planner, routine: t.routineProgress, progress: t.progress, settings: t.settings, timetable: t.portal.student.nav }[route] || t.home;
+  const navItems = [['home', Home], ...pages.map((page) => [page.key, page.Icon]), ['practice', Activity], ['library', Library], ['routines', Trophy], ['progress', Trophy], ['settings', Settings]];
+  const routeLabel = { home: t.home, practice: t.practice, results: t.results, library: t.library, alankars: t.alankarListTitle, 'alankar-practice': t.alankarPracticeTitle, routines: t.planner, planner: t.planner, routine: t.routineProgress, progress: t.progress, settings: t.settings }[route] || pages.find((page) => page.key === route)?.label(t) || t.home;
   const isActive = (key) => route === key || (key === 'library' && ['alankars', 'alankar-practice'].includes(route)) || (key === 'routines' && ['planner', 'routine'].includes(route));
   if (route === 'landing') return <LandingPage t={t} locale={locale} onLocaleChange={changeLocale} onStart={() => go('home')} onExplore={() => go('library')} onNavigate={go} />;
   return <div className="app-shell">
     <aside id="primary-navigation" className={`sidebar ${menuOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`} aria-label={t.nav} inert={(isMobile && !menuOpen) || sidebarCollapsed ? true : undefined} onKeyDown={(event) => { if (event.key === 'Escape') { setMenuOpen(false); mainRef.current?.querySelector('.menu-button')?.focus(); } }}>
       <div className="sidebar-header"><div className="brand"><span className="brand-mark"><Music2 size={20} /></span><Brand t={t} /></div><button className="icon-button close-menu" aria-label={t.close} onClick={() => setMenuOpen(false)}><X size={20} /></button></div>
       <div className="sidebar-intro"><span className="sidebar-kicker">{t.studio}</span><span className="sidebar-note">{t.ready}</span></div>
-      <nav aria-label={t.nav}>{navItems.map(([key, Icon]) => <button className={`nav-item ${isActive(key) ? 'active' : ''}`} key={key} onClick={() => go(key)}><Icon size={19} aria-hidden="true" /><span>{key === 'routines' ? t.planner : key === 'timetable' ? t.portal.student.nav : t[key]}</span>{isActive(key) && <span className="nav-active-mark" aria-hidden="true" />}</button>)}</nav>
+      <nav aria-label={t.nav}>{navItems.map(([key, Icon]) => <button className={`nav-item ${isActive(key) ? 'active' : ''}`} key={key} onClick={() => go(key)}><Icon size={19} aria-hidden="true" /><span>{key === 'routines' ? t.planner : pages.find((page) => page.key === key)?.label(t) ?? t[key]}</span>{isActive(key) && <span className="nav-active-mark" aria-hidden="true" />}</button>)}</nav>
       <div className="sidebar-footer"><div className="practice-tip"><Radio size={17} aria-hidden="true" /><strong>{t.tanpuraTitle}</strong><span>{t.tanpuraDescription}</span></div><small>{t.privacy}</small></div>
     </aside>
     {menuOpen && <button className="scrim" aria-label={t.close} onClick={() => setMenuOpen(false)} />}
     <main ref={mainRef} className={`main-content ${sidebarCollapsed ? 'expanded' : ''}`}><header className="topbar"><button className="icon-button menu-button" aria-label={isMobile ? (menuOpen ? t.close : t.openMenu) : (sidebarCollapsed ? t.openMenu : t.close)} aria-controls="primary-navigation" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} onClick={toggleNavigation}><Menu size={22} aria-hidden="true" /></button><div className="breadcrumbs" aria-label={t.nav}><span className="breadcrumb-brand">{t.brand.name}</span><ChevronRight size={15} aria-hidden="true" /><strong>{routeLabel}</strong></div><div className="language-picker"><Languages size={16} aria-hidden="true" /><select value={locale} aria-label={t.language} onChange={(event) => changeLocale(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></div>{accountBar}</header>
         {notice && <div className="notice" role="status">{notice}</div>}
         {route === 'home' && <HomePage t={t} sessions={sessions} routines={routines} activeRoutine={activeRoutine} rewards={derivedRewards} achievements={achievements} level={level} recommendation={recommendation} recommendedExercise={recommendedExercise} onStart={() => go('practice')} onSelectExercise={chooseExercise} onAlankar={() => chooseExercise(getExercise('sa-re-ga'))} onRoutine={openRoutine} onProgress={() => go('progress')} />}
-        {route === 'timetable' && timetable?.(t, locale)}
+        {pages.map((page) => route === page.key && <React.Fragment key={page.key}>{page.render(t, locale)}</React.Fragment>)}
       {route === 'practice' && <Practice key={`${selected.id}-${activeRoutine?.current?.id || 'single'}`} t={t} exercise={selected} durationSeconds={activeRoutine?.current?.durationSeconds} tonic={tonic} setTonic={setTonic} onFinish={saveSession} onBack={() => go(activeRoutine?.current ? 'routine' : 'library')} />}
       {route === 'results' && <Results t={t} session={sessions.at(-1)} saved={resultSaved} onSaveAgain={() => { setResultSaved(persist(KEYS.sessions, sessions)); persist(KEYS.rewards, derivedRewards); }} onRetry={retrySession} onNext={() => chooseExercise(recommendedExercise)} onRoutine={sessions.at(-1)?.routineId && activeRoutine ? () => go('routine') : undefined} onBack={() => go(sessions.at(-1)?.completion?.alankarId ? 'alankars' : 'library')} />}
       {(route === 'routines' || route === 'planner') && <PlannerWithAllControls t={t} routines={routines} setRoutines={setRoutines} onStart={(routine) => { setActiveRoutine(routine); go('routine'); }} />}
