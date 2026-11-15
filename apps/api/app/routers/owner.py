@@ -5,6 +5,7 @@ from ..db import connect
 from ..dependencies import require_role, user_roles
 from ..schemas import CourseCreate, CourseTeachers, CourseUpdate, EnrollmentCreate, EnrollmentUpdate, OwnerUserCreate, OwnerUserUpdate
 from ..security import hash_password
+from .teacher import mask_days
 
 owner = require_role("owner")
 router = APIRouter(prefix="/api/owner", dependencies=[Depends(owner)])
@@ -58,6 +59,7 @@ def summary():
             "students": count("SELECT COUNT(*) FROM user_roles r JOIN users u ON u.id=r.user_id WHERE r.role='student' AND u.active=1"),
             "courses": count("SELECT COUNT(*) FROM courses WHERE active=1"),
             "active_enrollments": count("SELECT COUNT(*) FROM enrollments WHERE status='active'"),
+            "active_batches": count("SELECT COUNT(*) FROM batches WHERE status='active'"),
         }
 
 @router.get("/courses")
@@ -138,3 +140,12 @@ def delete_enrollment(eid: str):
     with connect() as c:
         if not c.execute("DELETE FROM enrollments WHERE id=?", (eid,)).rowcount: raise HTTPException(404, "enrollment not found")
     return {"deleted": True}
+
+@router.get("/batches")
+def all_batches():
+    """Read-only oversight: Owners see every batch but do not edit teachers' schedules."""
+    with connect() as c:
+        rows = c.execute("""SELECT b.*, u.display_name AS teacher_name, co.name AS course_name, (SELECT COUNT(*) FROM batch_members m WHERE m.batch_id=b.id) AS student_count
+            FROM batches b JOIN users u ON u.id=b.teacher_id JOIN courses co ON co.id=b.course_id ORDER BY u.display_name COLLATE NOCASE, b.start_time""").fetchall()
+        return [{"id": r["id"], "name": r["name"], "teacher_name": r["teacher_name"], "course_name": r["course_name"], "days": mask_days(r["days"]),
+                 "start_time": r["start_time"], "end_time": r["end_time"], "status": r["status"], "student_count": r["student_count"]} for r in rows]

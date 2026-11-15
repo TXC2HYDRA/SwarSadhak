@@ -43,6 +43,14 @@ MIGRATIONS = [
         CREATE TABLE enrollments (id TEXT PRIMARY KEY, student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE, teacher_id TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','paused','ended')), created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE (student_id, course_id), FOREIGN KEY (course_id, teacher_id) REFERENCES course_teachers(course_id, teacher_id));
         CREATE INDEX enrollments_teacher ON enrollments(teacher_id, status);
         ''',
+        # 4: weekly recurring batches. Times are wall-clock HH:MM in the academy timezone, so a
+        # class stays at the same local time across DST changes. days: bit 0 = Mon ... bit 6 = Sun.
+        '''
+        CREATE TABLE batches (id TEXT PRIMARY KEY, teacher_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE, name TEXT NOT NULL, start_time TEXT NOT NULL CHECK (start_time GLOB '[0-2][0-9]:[0-5][0-9]'), end_time TEXT NOT NULL CHECK (end_time GLOB '[0-2][0-9]:[0-5][0-9]'), days INTEGER NOT NULL CHECK (days BETWEEN 1 AND 127), starts_on TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','paused')), created_at TEXT NOT NULL, updated_at TEXT NOT NULL, CHECK (end_time > start_time));
+        CREATE INDEX batches_teacher ON batches(teacher_id, status);
+        CREATE TABLE batch_members (batch_id TEXT NOT NULL REFERENCES batches(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, PRIMARY KEY (batch_id, student_id));
+        CREATE INDEX batch_members_student ON batch_members(student_id);
+        ''',
 ]
 
 def init_db():

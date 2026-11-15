@@ -23,13 +23,16 @@ export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || ''
     routines: { list: () => request('/api/routines'), create: (routine) => request('/api/routines', { method: 'POST', body: JSON.stringify(routine) }), get: (id) => request(`/api/routines/${encodeURIComponent(id)}`), update: (id, routine) => request(`/api/routines/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(routine) }), remove: (id) => request(`/api/routines/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
     owner: { users: { list: (role) => request(`/api/owner/users${role ? `?role=${encodeURIComponent(role)}` : ''}`), create: (user) => request('/api/owner/users', { method: 'POST', body: JSON.stringify(user) }), update: (id, changes) => request(`/api/owner/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }) },
       summary: () => request('/api/owner/summary'),
+      batches: () => request('/api/owner/batches'),
       courses: { list: () => request('/api/owner/courses'), create: (course) => request('/api/owner/courses', { method: 'POST', body: JSON.stringify(course) }), update: (id, changes) => request(`/api/owner/courses/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }), setTeachers: (id, teacherIds) => request(`/api/owner/courses/${encodeURIComponent(id)}/teachers`, { method: 'PUT', body: JSON.stringify({ teacher_ids: teacherIds }) }) },
       enrollments: { list: () => request('/api/owner/enrollments'), create: (enrollment) => request('/api/owner/enrollments', { method: 'POST', body: JSON.stringify(enrollment) }), update: (id, changes) => request(`/api/owner/enrollments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }), remove: (id) => request(`/api/owner/enrollments/${encodeURIComponent(id)}`, { method: 'DELETE' }) } },
     teacher: {
       summary: () => request('/api/teacher/summary'),
       courses: () => request('/api/teacher/courses'),
       students: ({ q = '', courseId = '' } = {}) => request(`/api/teacher/students?${new URLSearchParams({ q, ...(courseId ? { course_id: courseId } : {}) })}`),
+      batches: { list: () => request('/api/teacher/batches'), create: (batch) => request('/api/teacher/batches', { method: 'POST', body: JSON.stringify(batch) }), update: (id, changes) => request(`/api/teacher/batches/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }), remove: (id) => request(`/api/teacher/batches/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
     },
+    academy: () => request('/api/academy'),
     assignments: { list: () => request('/api/assignments'), create: (assignment) => request('/api/assignments', { method: 'POST', body: JSON.stringify(assignment) }), update: (id, update) => request(`/api/assignments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(update) }), remove: (id) => request(`/api/assignments/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
   };
 }
