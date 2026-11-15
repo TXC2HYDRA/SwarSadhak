@@ -49,6 +49,7 @@ export function AttachmentList({ t, locale = 'en', client, attachments = [], use
 }
 
 // Not a <form>, so it can sit next to other forms without nesting.
+// `parent` is { assignment_id } / { submission_id }, or an async function that creates one on first use.
 export function AttachmentPicker({ t, client, parent, onChange }) {
   const a = t.portal.assignments;
   const input = useRef(null);
@@ -62,14 +63,18 @@ export function AttachmentPicker({ t, client, parent, onChange }) {
     const problem = checkFile(file);
     if (problem) { setError(a.errors[problem]); return; }
     setError(''); setProgress(0);
-    const result = await uploadFile(client, parent, file, setProgress);
+    const target = await resolveParent(parent);
+    if (!target) { setProgress(null); setError(a.errors.upload); return; }
+    const result = await uploadFile(client, target, file, setProgress);
     setProgress(null);
     if (result.ok) onChange(); else setError(a.errors[fileErrorKey(result)]);
   };
   const addLink = async () => {
     const url = link.trim();
     if (!/^https:\/\/\S+$/.test(url)) { setError(a.errors.link); return; }
-    const result = await client.files.addLink({ ...parent, url });
+    const target = await resolveParent(parent);
+    if (!target) { setError(a.errors.upload); return; }
+    const result = await client.files.addLink({ ...target, url });
     if (!result.ok) { setError(result.status === 422 ? a.errors.link : a.errors[fileErrorKey(result)]); return; }
     setLink(''); setError(''); onChange();
   };
@@ -89,6 +94,8 @@ export function AttachmentPicker({ t, client, parent, onChange }) {
     {error && <p className="field-error" role="alert">{error}</p>}
   </div>;
 }
+
+const resolveParent = async (parent) => typeof parent === 'function' ? parent() : parent;
 
 const emptyForm = { id: null, title: '', instructions: '', course_id: '', due_on: '', student_ids: [] };
 
@@ -221,12 +228,18 @@ export function StudentAssignments({ t, locale = 'en', client, user }) {
   </div>;
 }
 
-function StudentAssignment({ t, locale, client, user, item, onChange }) {
+export function StudentAssignment({ t, locale, client, user, item, onChange }) {
   const a = t.portal.assignments;
   const mine = item.submission;
   const [note, setNote] = useState(mine?.note || '');
   const [message, setMessage] = useState(null);
   const sent = mine && mine.status !== 'draft';
+  // The first file or link saves a draft answer so it has somewhere to attach.
+  const answer = async () => {
+    if (mine) return { submission_id: mine.id };
+    const result = await client.student.assignments.saveSubmission(item.id, { note, status: 'draft' });
+    return result.ok ? { submission_id: result.data.id } : null;
+  };
   const save = async (status) => {
     const result = await client.student.assignments.saveSubmission(item.id, { note, status });
     setMessage(result.ok ? { text: status === 'submitted' ? a.sent : a.draftSaved } : { error: true, text: t.portal.errors[apiErrorKey(result)] });
@@ -242,11 +255,9 @@ function StudentAssignment({ t, locale, client, user, item, onChange }) {
     {mine?.feedback && <div className="feedback-box"><strong>{a.teacherFeedback}</strong><p className="assignment-text">{mine.feedback}</p></div>}
     <h3>{a.myAnswer}</h3>
     <label className="field-label">{a.note}<textarea className="portal-input" rows={3} maxLength={4000} value={note} onChange={(event) => setNote(event.target.value)} /></label>
-    {mine ? <>
-      <AttachmentList t={t} locale={locale} client={client} attachments={mine.attachments} userId={user?.id} onChange={onChange} />
-      <AttachmentPicker t={t} client={client} parent={{ submission_id: mine.id }} onChange={onChange} />
-      <p className="calendar-note">{a.privacyNote}</p>
-    </> : <p className="calendar-note">{a.answerFilesHint}</p>}
+    <AttachmentList t={t} locale={locale} client={client} attachments={mine?.attachments} userId={user?.id} onChange={onChange} />
+    <AttachmentPicker t={t} client={client} parent={answer} onChange={onChange} />
+    <p className="calendar-note">{a.privacyNote}</p>
     <div className="form-actions">
       {!sent && <button className="button quiet" type="button" onClick={() => save('draft')}>{a.saveDraft}</button>}
       <button className="button primary" type="button" onClick={() => save('submitted')}>{a.submit}</button>

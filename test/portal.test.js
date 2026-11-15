@@ -338,6 +338,8 @@ test('assignment pages, attachments and the teacher nav render in every locale',
     assert.equal(list.match(new RegExp(`aria-label="${a.removeFile}`, 'g')).length, 1); // only the uploader's own item
     assert.equal(render(web.AttachmentList, { attachments: [] }), '');
     assert.match(render(web.AttachmentPicker, { parent: { assignment_id: 'a1' }, onChange() {} }), /accept="[^"]*video\/mp4/);
+    const fresh = render(web.StudentAssignment, { user: { id: 's1' }, item: { id: 'a1', title: 'Yaman', instructions: '', course_name: 'Vocal', teacher_name: 'Guru', due_on: null, attachments: [], submission: null }, onChange() {} });
+    assert.ok(fresh.includes(a.addFile) && fresh.includes(a.add)); // students can attach before saving anything
     const portal = renderToStaticMarkup(React.createElement(web.TeacherPortal, { shell: { t, locale, onLocale() {}, accountBar: null }, client, user: { id: 'u1' } }));
     assert.match(portal, new RegExp(a.nav));
   }
