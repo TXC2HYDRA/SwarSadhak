@@ -1,12 +1,17 @@
 .git
 .gitignore
-.env
-.env.*
-!.env.example
-node_modules
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
 coverage
 dist
 __pycache__
 .pytest_cache
 research_notes
 reports
+# Local database, stored files and Python environments never go into an image.
+apps/data
+.venv
+**/.venv
+**/*.db

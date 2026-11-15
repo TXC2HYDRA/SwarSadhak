@@ -9,6 +9,9 @@ COPY src ./src
 COPY test ./test
 RUN npm ci --ignore-scripts
 RUN npm test
+# Empty = offline studio only; set to the API's browser-facing URL for the academy platform.
+ARG VITE_API_URL=
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 FROM node:22.19.0-bookworm-slim

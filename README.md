@@ -138,33 +138,49 @@ tested in Node.
 
 ## Docker
 
+### Full academy platform (API + web)
+
+```bash
+docker compose up --build -d
+docker compose exec api python run.py create-owner owner --display-name "Academy Owner"   # once; asks for a password
+```
+
+Open `http://localhost:4173` and sign in as `owner`. The API runs at `http://localhost:8020`.
+
+- Both images run their test suites during the build, so a broken build fails early.
+- The database and locally stored assignment files live in the `academy-data` volume and survive restarts and rebuilds. `docker compose down` keeps the volume; `docker compose down -v` deletes it with all accounts and files.
+- Settings come from your shell or the root `.env` file:
+  - `AUTH_SECRET`: set a long random value for any real use; the compose default is for local trials only.
+  - `API_PORT` and `WEB_PORT` change the host ports (defaults 8020 and 4173).
+  - `PUBLIC_API_URL` and `PUBLIC_WEB_URL` are the addresses browsers use, when not `http://localhost:<port>`, for example behind a domain.
+  - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET` switch file storage to Cloudflare R2.
+- The web app is built with `PUBLIC_API_URL` baked in. Rebuild with `docker compose up --build -d` after changing it.
+- Check storage inside the container: `docker compose exec api python run.py check-storage`.
+- Logs: `docker compose logs -f api`. Stop: `docker compose down`.
+
+### Offline studio only (single container)
+
 ```bash
 docker build -t swar-sadhak .
 docker run --rm -p 4173:4173 swar-sadhak
 ```
 
-The image runs a dependency-free Node static server and exposes a health check
-at `http://localhost:4173/health`. The container serves the built web app;
-microphone access still requires a supported browser secure context, normally
-localhost or HTTPS.
+Without the `VITE_API_URL` build argument the image is the offline practice studio. It runs a dependency-free Node static server with a health check at `http://localhost:4173/health`. Microphone access needs a secure context, normally localhost or HTTPS.
 
 ## Clean Linux rebuild commands
 
-From a fresh clone, the complete frontend setup, verification, and run flow is:
+From a fresh clone, verify everything and run the full platform:
 
 ```bash
 cp .env.example .env
 npm ci
 npm test
 npm run build
-docker build -t swar-sadhak .
-docker run --rm -p 4173:4173 swar-sadhak
+docker compose up --build -d
+docker compose exec api python run.py create-owner owner --display-name "Academy Owner"
 ```
 
-Open `http://localhost:4173` after the final command. Do not commit `.env`; use
-`.env.example` as the shareable configuration template.
-
-The Dockerfile remains frontend-only. Docker is not required for the offline flow; run the API directly for local development.
+Open `http://localhost:4173`. Do not commit `.env`; use `.env.example` as the shareable configuration template.
 
 ## Repository layout
 
