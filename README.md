@@ -69,7 +69,19 @@ pip install -r apps/api/requirements.txt
 python3 apps/api/run.py
 ```
 
-The API runs at `http://localhost:8020`; health is `GET /api/health`. The canonical startup command is also available as `npm run api`. Set `VITE_API_URL=http://localhost:8020` to enable the frontend client, or leave it empty for offline/local-only use. Run API tests with `python -m pytest apps/api/tests`. Authentication is development-only local username/password with signed short-lived tokens; production OAuth, recovery, rate limiting, cloud databases, and deployment are deferred.
+The API runs at `http://localhost:8020`; health is `GET /api/health`. The canonical startup command is also available as `npm run api`. Set `VITE_API_URL=http://localhost:8020` to enable the frontend client, or leave it empty for offline/local-only use. Run API tests with `python -m pytest apps/api/tests`. Authentication is local username/password with signed one-hour tokens; production OAuth, password recovery, cloud databases, and deployment are deferred.
+
+### Accounts and portals (NadoPasana)
+
+There is no public sign-up. Create the first Owner, and the academy record, from the command line:
+
+```bash
+python3 apps/api/run.py create-owner <username> --display-name "Your Name"
+```
+
+It prompts for a password (at least 8 characters). The academy defaults to the name "NadoPasana" and timezone `Asia/Kolkata`; change them with `--academy-name` and `--timezone`.
+
+With `VITE_API_URL` set, the web app shows a sign-in screen. Each user lands in the portal for their role. Users with several roles get a portal switcher. The Owner creates teacher, student and owner accounts on the Accounts page. Changing a password, roles or active status signs that user out everywhere, and five failed sign-ins for one username block it for 15 minutes. "Practise without an account" keeps the offline studio available. Without `VITE_API_URL`, the app opens straight into the offline studio as before.
 
 ## Development
 

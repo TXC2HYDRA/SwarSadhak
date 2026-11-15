@@ -1,9 +1,10 @@
-export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || '', token = null, fetchImpl = fetch } = {}) {
+export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || '', token = null, fetchImpl = fetch, onUnauthorized } = {}) {
   const request = async (path, options = {}) => {
     if (!baseUrl) return { ok: false, offline: true, status: 0, error: 'backend_disabled' };
     try {
       const response = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) } });
       let body = null; try { body = await response.json(); } catch {}
+      if (response.status === 401 && token) onUnauthorized?.();
       return { ok: response.ok, status: response.status, data: body, error: response.ok ? null : (body?.detail || 'request_failed') };
     } catch { return { ok: false, offline: true, status: 0, error: 'network_unavailable' }; }
   };
@@ -20,7 +21,20 @@ export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || ''
       return request('/api/coach', { method: 'POST', body: JSON.stringify(payload) });
     } },
     routines: { list: () => request('/api/routines'), create: (routine) => request('/api/routines', { method: 'POST', body: JSON.stringify(routine) }), get: (id) => request(`/api/routines/${encodeURIComponent(id)}`), update: (id, routine) => request(`/api/routines/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(routine) }), remove: (id) => request(`/api/routines/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
+    owner: { users: { list: (role) => request(`/api/owner/users${role ? `?role=${encodeURIComponent(role)}` : ''}`), create: (user) => request('/api/owner/users', { method: 'POST', body: JSON.stringify(user) }), update: (id, changes) => request(`/api/owner/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }) } },
     assignments: { list: () => request('/api/assignments'), create: (assignment) => request('/api/assignments', { method: 'POST', body: JSON.stringify(assignment) }), update: (id, update) => request(`/api/assignments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(update) }), remove: (id) => request(`/api/assignments/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
+  };
+}
+// Local sessions are camelCase with nested metrics; the API stores flat snake_case summaries only.
+export function toApiSession(session = {}) {
+  const metrics = session.metrics || {};
+  return {
+    id: session.id, exercise_id: session.exerciseId, tonic_frequency: session.tonicFrequency,
+    started_at: session.startedAt, ended_at: session.endedAt ?? null, duration_seconds: session.durationSeconds ?? 0,
+    reliable_frame_count: metrics.reliableFrameCount ?? 0, total_frame_count: metrics.totalFrameCount ?? 0,
+    reliable_pitch_match_percent: metrics.reliablePitchMatchPercent ?? null, median_absolute_cents: metrics.medianAbsoluteCents ?? null,
+    pitch_stability_cents: metrics.pitchStabilityCents ?? null, min_frequency_hz: metrics.minFrequencyHz ?? null,
+    max_frequency_hz: metrics.maxFrequencyHz ?? null, quality: metrics.quality ?? session.quality ?? {}, completion: session.completion ?? {},
   };
 }
 export const syncState = (result) => result.ok ? 'synced' : result.offline ? 'local-only' : 'sync-failed';
