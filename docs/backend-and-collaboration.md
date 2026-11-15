@@ -1,6 +1,8 @@
 # Optional backend and collaboration
 
-Phase 4 adds an optional FastAPI + SQLite service. Start it with `python3 apps/api/run.py` (or `npm run api`) after installing `apps/api/requirements.txt`. The runner reads `API_HOST` and `API_PORT`, defaulting to `0.0.0.0:8020`. The API is available at `http://localhost:8020`; the database defaults to `apps/api/data/swar_sadhak.db`; set `DATABASE_URL` to change it.
+Phase 4 adds an optional FastAPI + SQLite service. Start it with `python3 apps/api/run.py` (or `npm run api`) after installing `apps/api/requirements.txt`. The runner reads `API_HOST` and `API_PORT`, defaulting to `0.0.0.0:8020`. The API is available at `http://localhost:8020`; the database defaults to `apps/data/swar_sadhak.db` (a relative `DATABASE_URL` resolves against `apps/`); set `DATABASE_URL` to change it.
+
+Schema changes are ordered migrations in `apps/api/app/db.py` (`MIGRATIONS`), tracked with SQLite `PRAGMA user_version`. Each one runs once, in its own transaction, on API start. Append new migrations; never edit or reorder applied ones.
 
 The local authentication mode uses username/password and signed, short-lived development tokens. Passwords are PBKDF2-hashed; this is not production authentication and has no OAuth, email recovery, rate limiting, or account provisioning. Never use the default secret for deployment.
 
