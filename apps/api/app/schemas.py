@@ -152,3 +152,29 @@ class BatchUpdate(BaseModel):
     start_time: str | None = Field(default=None, pattern=TIME_PATTERN); end_time: str | None = Field(default=None, pattern=TIME_PATTERN)
     days: list[Day] | None = Field(default=None, min_length=1, max_length=7); student_ids: list[str] | None = Field(default=None, max_length=200)
     status: Literal["active", "paused"] | None = None
+
+class RiyazAssignmentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    title: str = Field(min_length=1, max_length=160); instructions: str = Field(default="", max_length=4000); course_id: str
+    due_on: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$"); student_ids: list[str] = Field(min_length=1, max_length=200)
+class RiyazAssignmentUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    title: str | None = Field(default=None, min_length=1, max_length=160); instructions: str | None = Field(default=None, max_length=4000)
+    due_on: str | None = Field(default=None, pattern=r"^(\d{4}-\d{2}-\d{2})?$"); student_ids: list[str] | None = Field(default=None, min_length=1, max_length=200)
+class SubmissionSave(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    note: str = Field(default="", max_length=4000); status: Literal["draft", "submitted"]
+class SubmissionReview(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    feedback: str = Field(max_length=4000); reviewed: bool = True
+class AttachmentParent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    assignment_id: str | None = None; submission_id: str | None = None
+    @model_validator(mode="after")
+    def one_parent(self):
+        if (self.assignment_id is None) == (self.submission_id is None): raise ValueError("give exactly one of assignment_id or submission_id")
+        return self
+class UploadStart(AttachmentParent):
+    name: str = Field(min_length=1, max_length=200); content_type: str = Field(max_length=100); size: int = Field(gt=0)
+class LinkCreate(AttachmentParent):
+    url: str = Field(pattern=r"^https://[^\s]+$", max_length=2000); name: str = Field(default="", max_length=200)

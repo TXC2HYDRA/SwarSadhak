@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { CalendarPlus, Search } from 'lucide-react';
 import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
 import { BatchCalendar, BatchDialog, timeRange } from './BatchCalendar.jsx';
+import { TeacherAssignments } from './Assignments.jsx';
 import { apiErrorKey } from './auth.js';
 import { slotForm, todayIn } from './schedule.js';
 
-export function TeacherPortal({ shell, client }) {
+export function TeacherPortal({ shell, client, user }) {
   const [page, setPage] = useState('dashboard');
   const { t } = shell;
-  return <PortalShell {...shell} nav={[['dashboard', t.portal.nav.dashboard]]} page={page} onPage={setPage}>
-    <TeacherDashboard t={t} locale={shell.locale} client={client} />
+  return <PortalShell {...shell} nav={[['dashboard', t.portal.nav.dashboard], ['assignments', t.portal.assignments.nav]]} page={page} onPage={setPage}>
+    {page === 'dashboard' && <TeacherDashboard t={t} locale={shell.locale} client={client} />}
+    {page === 'assignments' && <TeacherAssignments t={t} locale={shell.locale} client={client} user={user} />}
   </PortalShell>;
 }
 
