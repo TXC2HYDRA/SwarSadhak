@@ -49,3 +49,19 @@
   .account-name { display: none; }
   .topbar { flex-wrap: wrap; padding-block: 10px; }
 }
+
+/* Phase 2: overview stats, course and enrollment tables, teacher student list. */
+.portal-stats { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+textarea.portal-input { resize: vertical; min-height: 88px; }
+.data-table select { width: auto; min-width: 120px; padding: 6px 10px; }
+.portal-page .filter-controls { margin: 14px 0; }
+.student-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.student-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 12px 14px; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 10px; }
+.student-list small { grid-column: 1; color: var(--text-subtle); }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; grid-row: 1 / span 2; grid-column: 2; justify-content: flex-end; }
+.chip { padding: 4px 10px; color: var(--musical); font-size: 12px; background: rgba(101,199,180,.1); border: 1px solid rgba(101,199,180,.28); border-radius: 99px; }
+@media (max-width: 600px) {
+  .portal-page .filter-controls { grid-template-columns: minmax(0, 1fr); }
+  .student-list li { grid-template-columns: minmax(0, 1fr); }
+  .chip-row { grid-row: auto; grid-column: 1; justify-content: flex-start; }
+}

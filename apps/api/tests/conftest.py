@@ -25,3 +25,20 @@ def make_user():
             user = create_user(c, f"{'-'.join(roles)}-{uuid4().hex[:8]}", "Test User", password, roles)
         return user, {"Authorization": "Bearer " + issue_token(user["id"], 0)}
     return make
+
+
+@pytest.fixture
+def academy(client, make_user):
+    """Owner-side helpers: create a course with teachers and enroll students through the API."""
+    _, owner_headers = make_user("owner")
+    class Academy:
+        headers = owner_headers
+        def course(self, name, *teachers):
+            course = client.post("/api/owner/courses", json={"name": f"{name} {uuid4().hex[:6]}"}, headers=owner_headers).json()
+            client.put(f"/api/owner/courses/{course['id']}/teachers", json={"teacher_ids": [t["id"] for t in teachers]}, headers=owner_headers)
+            return course
+        def enroll(self, student, course, teacher):
+            response = client.post("/api/owner/enrollments", json={"student_id": student["id"], "course_id": course["id"], "teacher_id": teacher["id"]}, headers=owner_headers)
+            assert response.status_code == 201, response.text
+            return response.json()
+    return Academy()
