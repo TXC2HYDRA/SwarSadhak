@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import API_VERSION, CORS_ORIGINS
 from .ai_coach import coach as ai_coach
 from .db import connect, init_db
-from .accounts import public_user
+from .accounts import academy_settings, public_user
 from .dependencies import current_user, require_role, user_roles
 from .routers import owner, teacher
 from .schemas import Login, Practice, Routine, AssignmentCreate, AssignmentUpdate, CoachPayload
@@ -37,6 +37,9 @@ def login(data: Login):
     return {"user":public_user(u,roles),"access_token":issue_token(u["id"],u["token_version"])}
 @app.get("/api/me")
 def me(user=Depends(current_user)): return public_user(user,user["roles"])
+@app.get("/api/academy")
+def academy(user=Depends(current_user)):
+    with connect() as c: return academy_settings(c)
 
 @app.get("/api/practice-sessions")
 def sessions(user=Depends(current_user)):

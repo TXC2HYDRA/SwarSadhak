@@ -139,3 +139,16 @@ class EnrollmentCreate(BaseModel):
 class EnrollmentUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: Literal["active", "paused", "ended"] | None = None; teacher_id: str | None = None
+DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+Day = Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+TIME_PATTERN = r"^([01][0-9]|2[0-3]):[0-5][0-9]$"
+class BatchCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=120); course_id: str; start_time: str = Field(pattern=TIME_PATTERN); end_time: str = Field(pattern=TIME_PATTERN)
+    days: list[Day] = Field(min_length=1, max_length=7); student_ids: list[str] = Field(default=[], max_length=200)
+class BatchUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = Field(default=None, min_length=1, max_length=120); course_id: str | None = None
+    start_time: str | None = Field(default=None, pattern=TIME_PATTERN); end_time: str | None = Field(default=None, pattern=TIME_PATTERN)
+    days: list[Day] | None = Field(default=None, min_length=1, max_length=7); student_ids: list[str] | None = Field(default=None, max_length=200)
+    status: Literal["active", "paused"] | None = None

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
+import { timeRange } from './BatchCalendar.jsx';
 
 const ROLES = ['owner', 'teacher', 'student'];
 const emptyForm = { id: null, username: '', display_name: '', password: '', roles: [] };
@@ -10,19 +11,20 @@ const noMessage = { text: '', error: false };
 export function OwnerPortal({ shell, client, user }) {
   const [page, setPage] = useState('overview');
   const { t } = shell; const p = t.portal;
-  const nav = [['overview', p.nav.overview], ['users', p.nav.users], ['courses', p.nav.courses], ['enrollments', p.nav.enrollments]];
+  const nav = [['overview', p.nav.overview], ['users', p.nav.users], ['courses', p.nav.courses], ['enrollments', p.nav.enrollments], ['batches', p.nav.batches]];
   return <PortalShell {...shell} nav={nav} page={page} onPage={setPage}>
     {page === 'overview' && <OverviewPage t={t} client={client} />}
     {page === 'users' && <UsersPage t={t} client={client} me={user} />}
     {page === 'courses' && <CoursesPage t={t} client={client} />}
     {page === 'enrollments' && <EnrollmentsPage t={t} client={client} />}
+    {page === 'batches' && <BatchesPage t={t} locale={shell.locale} client={client} />}
   </PortalShell>;
 }
 
 export function OverviewPage({ t, client }) {
   const o = t.portal.overview;
   const summary = useApi(t, () => client.owner.summary());
-  const stats = [['teachers', o.teachers], ['students', o.students], ['courses', o.courses], ['active_enrollments', o.enrollments]];
+  const stats = [['teachers', o.teachers], ['students', o.students], ['courses', o.courses], ['active_enrollments', o.enrollments], ['active_batches', o.batches]];
   return <div className="page portal-page">
     <h1>{o.title}</h1><p className="page-lede">{o.lede}</p>
     <LoadState t={t} state={summary} />
@@ -207,5 +209,25 @@ export function UsersPage({ t, client, me }) {
         </table></div>}
       </section>
     </div>
+  </div>;
+}
+
+export function BatchesPage({ t, locale = 'en', client }) {
+  const b = t.portal.batches;
+  const batches = useApi(t, () => client.owner.batches());
+  return <div className="page portal-page">
+    <h1>{b.ownerTitle}</h1><p className="page-lede">{b.ownerLede}</p>
+    <section className="panel">
+      <LoadState t={t} state={batches} empty={b.empty} />
+      {batches.data?.length > 0 && <div className="table-wrap"><table className="data-table">
+        <thead><tr><th scope="col">{b.name}</th><th scope="col">{b.teacher}</th><th scope="col">{b.course}</th><th scope="col">{b.schedule}</th><th scope="col">{b.students}</th><th scope="col">{b.status}</th></tr></thead>
+        <tbody>{batches.data.map((batch) => <tr key={batch.id}>
+          <td><strong>{batch.name}</strong></td><td>{batch.teacher_name}</td><td>{batch.course_name}</td>
+          <td>{batch.days.map((day) => b.dayShort[day]).join(', ')}<small>{timeRange(batch, locale)}</small></td>
+          <td>{batch.student_count}</td>
+          <td><span className={`status-badge ${batch.status === 'active' ? 'success' : 'neutral'}`}>{batch.status === 'active' ? b.active : b.paused}</span></td>
+        </tr>)}</tbody>
+      </table></div>}
+    </section>
   </div>;
 }

@@ -1,6 +1,6 @@
 # Nado Pasana: audit and incremental plan
 
-Status: Phases 0 to 2 are done (see section 7). Later phases are in progress. Discovery is ongoing, and Riyaz management is intentionally undesigned.
+Status: Phases 0 to 3 are done (see section 7). Later phases are in progress. Discovery is ongoing, and Riyaz management is intentionally undesigned.
 
 ## 1. What exists today (audit)
 
@@ -84,9 +84,9 @@ Decided on 2026-11-16:
 
 Still open:
 
-1. **Timezone display**: always show times in the academy timezone, or in each viewer's local timezone (needed for students abroad)?
-2. **Calendar grain and hours**: 30-minute or 15-minute slots? Which visible hours (for example 6 AM–10 PM)?
-3. **Design system**: keep the current dark/gold token set and extend it, or propose a new visual direction first? Is light mode required now?
+1. **Timezone display**: always show times in the academy timezone, or in each viewer's local timezone (needed for students abroad)? Phase 3 default: the academy timezone, stated above the calendar.
+2. **Calendar grain and hours**: 30-minute or 15-minute slots? Which visible hours (for example 6 AM–10 PM)? Phase 3 default: 30-minute slots, 6 AM–10 PM, widened to fit any batch outside those hours. Times can still be set to 5-minute steps in the dialog.
+3. **Design system**: keep the current dark/gold token set and extend it, or propose a new visual direction first? Is light mode required now? Phase 3 default: the existing dark/gold tokens.
 4. **Riyaz management**: see section 8.
 
 ## 4. Architecture
@@ -251,7 +251,7 @@ Each phase ends with all existing tests passing, new tests for the phase, a buil
   - Student X is in course A with teacher T1 and course B with teacher T2. T1 sees X only under A and cannot see B's enrollments or batches; the same holds for T2.
   - Teachers cannot write courses (403).
 
-**Phase 3: batches and the teacher calendar**
+**Phase 3: batches and the teacher calendar**: done on 2026-11-16. Recurrence starts on the creation date in the academy timezone. Paused batches stay on the calendar (striped) but do not block other times. The Owner has a read-only Batches page.
 - Add batches and batch_members, plus the teacher batch API with validation and overlap checks.
 - Teacher dashboard:
   - Student count and week calendar (previous/next week, today).

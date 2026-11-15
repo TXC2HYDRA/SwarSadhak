@@ -77,4 +77,4 @@ def test_owner_summary_counts_active_records(client, make_user, academy):
     teacher, _ = make_user("teacher"); student, _ = make_user("student")
     academy.enroll(student, academy.course("Flute", teacher), teacher)
     after = client.get("/api/owner/summary", headers=academy.headers).json()
-    assert {k: after[k] - before[k] for k in before} == {"teachers": 1, "students": 1, "courses": 1, "active_enrollments": 1}
+    assert {k: after[k] - before[k] for k in before} == {"teachers": 1, "students": 1, "courses": 1, "active_enrollments": 1, "active_batches": 0}
