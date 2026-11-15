@@ -27,3 +27,8 @@ R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID", "")
 R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID", "")
 R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY", "")
 R2_BUCKET = os.getenv("R2_BUCKET", "")
+# Where assignment files live. "local" keeps them on this server's disk behind the same
+# presigned-URL protocol as R2, so switching is configuration only. Default: r2 when configured.
+STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "r2" if all((R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET)) else "local")
+STORAGE_DIR = os.getenv("STORAGE_DIR", "data/storage")  # relative paths resolve against apps/, like DATABASE_URL
+API_PUBLIC_URL = os.getenv("API_PUBLIC_URL", f"http://localhost:{API_PORT}")  # base URL browsers use to reach this API

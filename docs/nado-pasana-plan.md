@@ -268,7 +268,7 @@ Each phase ends with all existing tests passing, new tests for the phase, a buil
 - The web app has no assignments screen yet; assignments stay API-only until Riyaz management is designed.
 
 **Phase 5: manual Riyaz assignments with files**: done on 2026-11-16.
-- Decided: files are stored in a private Cloudflare R2 bucket and opened only through short-lived signed links; only the assignment's teacher (not the Owner) can open a student's answer files; deleting an assignment deletes its files; video limit 300 MB; links (YouTube, Drive) are allowed as attachments.
+- Decided: files are stored behind short-lived signed links: on the API server's disk for now (same presigned-URL protocol), and in a private Cloudflare R2 bucket once configured; only the assignment's teacher (not the Owner) can open a student's answer files; deleting an assignment deletes its files; video limit 300 MB; links (YouTube, Drive) are allowed as attachments.
 - Teacher Assignments page: create for chosen students of one course (or a whole batch), attach files and links, review answers with feedback.
 - Student Assignments page in the practice studio: teacher files play inline; answer with a note and recordings, save a draft, submit, read feedback.
 
@@ -299,6 +299,6 @@ Each phase ends with all existing tests passing, new tests for the phase, a buil
 - [ ] Editing, pausing and deleting a batch updates the calendar without a reload and persists after a reload.
 - [ ] The whole calendar flow works with the keyboard alone and at 375 px width.
 - [ ] The student sees the batch in their timetable without other students' names.
-- [ ] With R2 configured, `python3 apps/api/run.py check-storage` succeeds; a teacher uploads a PDF and a 200 MB video; an assigned student opens both; another student cannot.
+- [ ] With the API running, `python3 apps/api/run.py check-storage` succeeds (local disk now, R2 later); a teacher uploads a PDF and a 200 MB video; an assigned student opens both; another student cannot.
 - [ ] A student records on a phone, uploads the recording to a draft, submits it; the teacher plays it inline and saves feedback; the student sees the feedback.
 - [ ] Deleting the assignment removes its files from the R2 bucket.

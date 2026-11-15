@@ -1,8 +1,13 @@
-# SwarSadhak
+# NadoPasana (नादोपासना)
 
-SwarSadhak is a multilingual vocal practice studio for Hindustani classical and general singing. The project is being built as a local-first, deterministic-first application for the Frontier Buildathon 2026.
+NadoPasana is a music academy platform built on SwarSadhak, a multilingual (English, Marathi, Hindi) vocal practice studio for Hindustani classical and general singing. It runs in two modes:
 
-## Phase 1–5 status
+- **Offline studio:** local-first, deterministic pitch practice in the browser, with no account or server.
+- **Academy platform:** an optional API adds Owner, Teacher and Student accounts, courses and enrollments, weekly batch calendars, student timetables, and manual Riyaz assignments with audio, video and PDF files.
+
+It is being built for the Frontier Buildathon 2026. Jump to [How to run](#how-to-run).
+
+## Practice studio status (original SwarSadhak phases 1–5)
 
 The repository now contains:
 
@@ -33,26 +38,68 @@ Use the Routine planner to select a starter routine or create a custom routine, 
 
 ### Local persistence and privacy
 
-Only versioned, derived session summaries are stored in browser `localStorage` under `swar-practice-sessions-v1`. Raw microphone audio and PCM samples are never stored. The optional backend stores only derived summaries, routines, users, and explicit assignments. The frontend remains usable without an account, network, paid service, or cloud database.
+Only versioned, derived session summaries are stored in browser `localStorage` under `swar-practice-sessions-v1`. Raw microphone audio and PCM samples are never stored. The optional backend stores derived summaries, routines, users, academy records (courses, enrollments, batches) and assignments. The only audio it keeps is a file a student or teacher deliberately attaches to an assignment. The frontend remains usable without an account, network, paid service, or cloud database.
 
 Small sample sizes are intentionally not presented as statistically meaningful trends, and no overall singing score, voice-type inference, health claim, or ranking is shown.
 
 ## Requirements
 
-- Node.js 22.19.0 (see `.nvmrc`)
-- npm
-- Docker, for container verification
-- Python 3.11.11, only for the optional API (see `.python-version`)
+- Node.js 22.19.0 (see `.nvmrc`) and npm
+- Python 3.11 (see `.python-version`), only for the academy platform (API)
+- Docker, only for container verification
 
-## Setup
+## How to run
+
+There are two ways to run the project. Both start from the repository root.
+
+### A. Offline practice studio only (no accounts, no server)
 
 ```bash
 cp .env.example .env
 npm ci
+npm run dev
 ```
 
-`npm ci` uses the committed `package-lock.json`; it does not resolve floating
-dependency ranges. No paid API or external AI service is required.
+Open `http://localhost:5173`. Everything runs in the browser and is stored in browser storage.
+
+### B. Full academy platform (accounts, portals, batches, assignments)
+
+Run the API and the web app in two terminals.
+
+**Terminal 1: API** (`http://localhost:8020`)
+
+```bash
+python3 -m venv .venv            # Python 3.11 or newer
+. .venv/bin/activate
+pip install -r apps/api/requirements.txt
+cp apps/api/.env.example apps/api/.env      # optional: the defaults work for local use
+python3 apps/api/run.py create-owner owner --display-name "Academy Owner"   # once; asks for a password
+npm run api
+```
+
+**Terminal 2: web app** (`http://localhost:5173`)
+
+```bash
+npm ci
+echo "VITE_API_URL=http://localhost:8020" > apps/web/.env.local
+npm run dev
+```
+
+Vite reads `VITE_*` settings from `apps/web/`, not from the repository root, so `VITE_API_URL` must go in `apps/web/.env.local` (or be passed as `VITE_API_URL=http://localhost:8020 npm run dev`). Open the app at `http://localhost:5173`, not `127.0.0.1`, because the API allows only the origins in `CORS_ORIGINS`.
+
+**First steps after signing in as the Owner**
+
+1. Accounts: create a teacher and a student (set their first passwords).
+2. Courses: create a course and assign the teacher to it.
+3. Enrollments: enroll the student in the course with that teacher.
+4. Sign in as the teacher: create a batch from the weekly calendar, then an assignment on the Assignments page with a file or link.
+5. Sign in as the student: see the batch on Timetable, open the assignment, record or attach an answer and submit it.
+
+**Where data lives**
+
+- Database: `apps/data/swar_sadhak.db` (SQLite, created on first start; change with `DATABASE_URL`).
+- Assignment files: `apps/data/storage/` by default. The local store uses the same mechanism as Cloudflare R2: the API hands out short-lived signed upload and download links, and the browser sends and fetches the file directly at `/storage/<bucket>/<key>`. Check it with `python3 apps/api/run.py check-storage` while the API runs.
+- To move files to Cloudflare R2, fill in `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET` in `apps/api/.env` and restart. The storage backend switches to R2 automatically, and nothing else changes. See `docs/backend-and-collaboration.md`.
 
 ### Optional AI and privacy
 
@@ -60,36 +107,15 @@ Phase 5 is deterministic-first and works offline. `AI_PROVIDER=disabled` is the 
 
 The optional Gemini adapter uses model `gemini-2.5-flash-lite` and is disabled unless `AI_PROVIDER=gemini` is explicitly configured in the backend environment. No Gemini request is made by offline automated tests. The previously exposed key is treated as revoked and must not be reused.
 
-### Optional API
+### What each role can do (NadoPasana)
 
-```bash
-python3.11 -m venv .venv
-. .venv/bin/activate
-pip install -r apps/api/requirements.txt
-python3 apps/api/run.py
-```
+There is no public sign-up; the Owner creates every account, and the first Owner comes from `create-owner` (academy name defaults to "NadoPasana" and timezone to `Asia/Kolkata`; change them with `--academy-name` and `--timezone`). With `VITE_API_URL` set, the web app shows a sign-in screen and each user lands in the portal for their role. Users with several roles get a portal switcher.
 
-The API runs at `http://localhost:8020`; health is `GET /api/health`. The canonical startup command is also available as `npm run api`. Set `VITE_API_URL=http://localhost:8020` to enable the frontend client, or leave it empty for offline/local-only use. Run API tests with `python -m pytest apps/api/tests`. Authentication is local username/password with signed one-hour tokens; production OAuth, password recovery, cloud databases, and deployment are deferred.
+- **Owner:** creates teacher, student and owner accounts; manages courses and which teachers teach them; enrolls each student with one teacher per course; sees every batch on a read-only Batches page.
+- **Teacher:** sees only their own actively enrolled students; schedules recurring weekly batches on a calendar (click a free slot, or Create batch; overlapping their own active batches is blocked, a student clash is a warning only); shares manual Riyaz assignments with instructions, audio, video, PDF, images or links; reviews each student's answer with feedback.
+- **Student:** uses the practice studio as before, plus a Timetable of their weekly classes and an Assignments page where they answer with a note and their own recordings.
 
-### Accounts and portals (NadoPasana)
-
-There is no public sign-up. Create the first Owner, and the academy record, from the command line:
-
-```bash
-python3 apps/api/run.py create-owner <username> --display-name "Your Name"
-```
-
-It prompts for a password (at least 8 characters). The academy defaults to the name "NadoPasana" and timezone `Asia/Kolkata`; change them with `--academy-name` and `--timezone`.
-
-With `VITE_API_URL` set, the web app shows a sign-in screen. Each user lands in the portal for their role. Users with several roles get a portal switcher. The Owner creates teacher, student and owner accounts on the Accounts page, manages the course catalog and each course's teachers on the Courses page, and enrolls students with one teacher per course on the Enrollments page. Teachers see only their own actively enrolled students, per course, on their dashboard, plus a weekly batch calendar: click a free slot (or use Create batch) to schedule a recurring batch for one course and its enrolled students, then click a batch to edit, pause or delete it. Overlapping your own active batches is blocked; a student who already has another batch at that time is a warning only. The Owner sees every batch on a read-only Batches page. Students get a Timetable page in the practice studio listing their weekly classes with course, teacher and time. Teachers share manual Riyaz assignments (instructions, audio, video, PDF, images or links) with students of a course, and students answer with a note and their own recordings; the teacher reviews each answer with feedback. Files are stored in an optional private Cloudflare R2 bucket (see `docs/backend-and-collaboration.md`). Changing a password, roles or active status signs that user out everywhere, and five failed sign-ins for one username block it for 15 minutes. "Practise without an account" keeps the offline studio available. Without `VITE_API_URL`, the app opens straight into the offline studio as before.
-
-## Development
-
-```bash
-npm run dev
-```
-
-The Vite development server prints its local URL, normally `http://localhost:5173`.
+Changing a password, roles or active status signs that user out everywhere, and five failed sign-ins for one username block it for 15 minutes. "Practise without an account" keeps the offline studio available. Without `VITE_API_URL`, the app opens straight into the offline studio.
 
 ## Build and preview
 
@@ -101,10 +127,11 @@ npm start
 ## Test
 
 ```bash
-npm test
+npm test                          # web, packages and localization (Node)
+python -m pytest apps/api/tests   # API, with the virtual environment active
 ```
 
-This is the single project test command. The tests verify the pinned manifest,
+`npm test` runs the Node tests; they verify the pinned manifest,
 locale parity, metric/session validation, persistence fallback, and
 recommendation boundaries. Browser microphone behavior is not claimed or
 tested in Node.
@@ -142,10 +169,12 @@ The Dockerfile remains frontend-only. Docker is not required for the offline flo
 ## Repository layout
 
 ```text
-apps/web                 React/Vite application
-packages/localization    Locale inventory and translation contract
+apps/web                 React/Vite application (studio, sign-in, Owner/Teacher/Student portals)
+apps/api                 Optional FastAPI + SQLite API (accounts, academy, batches, assignments, file storage)
+apps/data                Local database and stored files (created at run time, not committed)
+packages/*               Shared workspaces: localization, api-client, exercises, routines, practice-domain, ...
 test                     Offline Node tests
-research_notes            Existing buildathon research notes
+docs                     Plan, backend, privacy and design notes (start with docs/nado-pasana-plan.md)
 ```
 
 ## Optional Tanpura accompaniment

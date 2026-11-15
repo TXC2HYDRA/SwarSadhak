@@ -10,6 +10,7 @@ MB = 1024 * 1024
 @pytest.fixture
 def r2(monkeypatch):
     """Storage switched on with fake credentials; HEAD and DELETE are faked, signing is real."""
+    monkeypatch.setattr(config, "STORAGE_BACKEND", "r2")
     for name, value in {"R2_ACCOUNT_ID": "acct", "R2_ACCESS_KEY_ID": "key", "R2_SECRET_ACCESS_KEY": "secret", "R2_BUCKET": "nadopasana"}.items():
         monkeypatch.setattr(config, name, value)
     class Fake:
@@ -156,7 +157,8 @@ def test_submission_files_are_private_to_the_student_and_their_teacher(client, s
     assert len(r2.deleted) == 1
 
 
-def test_links_work_without_storage_and_must_be_https(client, setup):
+def test_links_work_without_storage_and_must_be_https(client, setup, monkeypatch):
+    monkeypatch.setattr(config, "STORAGE_BACKEND", "r2")  # selected but not configured
     th = setup["th"]
     a = setup["create"]().json()
     assert client.post("/api/files/uploads", json={"assignment_id": a["id"], "name": "f", "content_type": "audio/mp4", "size": MB}, headers=th).status_code == 503
