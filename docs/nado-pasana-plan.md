@@ -1,6 +1,6 @@
 # Nado Pasana: audit and incremental plan
 
-Status: Phase 0 is done (see section 7). Phases 1 and later are a draft for approval. Discovery is ongoing, and Riyaz management is intentionally undesigned.
+Status: Phases 0 and 1 are done (see section 7). Later phases are in progress. Discovery is ongoing, and Riyaz management is intentionally undesigned.
 
 ## 1. What exists today (audit)
 
@@ -67,8 +67,6 @@ Status: Phase 0 is done (see section 7). Phases 1 and later are a draft for appr
 
 - Fix audit findings 1, 2 and 5 as part of the first phase, because they are security or correctness defects.
 - Add an `active` flag on users so the Owner can deactivate accounts without deleting history.
-- Add a `token_version` on users so password or role changes invalidate old tokens.
-- Add a simple login attempt limit (in-memory per username) before any public deployment.
 - Later: per-occurrence exceptions (cancel or reschedule one class) once attendance exists. Until then, edits apply to the whole series.
 - Later: hash-based URLs (`#/teacher/calendar`) for deep links and the back button. This needs no router dependency.
 
@@ -79,14 +77,17 @@ Decided on 2026-11-16:
 - **Account creation**: the Owner creates all teacher and student accounts. Public registration is removed. The first Owner is created from the CLI.
 - **Batch–course link**: every batch belongs to one course. The student picker shows only students actively enrolled with this teacher in that course.
 - **Student overlap**: show a warning naming the clashing student and batch, and allow the save. Teacher overlaps are always blocked.
+- **Brand**: "NadoPasana" in English and "नादोपासना" in Marathi and Hindi.
+- **Academy defaults**: name "NadoPasana", timezone `Asia/Kolkata`. Both are set by the CLI Owner bootstrap.
+- **Session safety**: add a `token_version` on users so password or role changes log out old sessions, plus a simple in-memory limit on repeated failed logins. Both are in Phase 1.
+- **Initial passwords**: the Owner sets each account's first password. There is no forced change at first login.
 
 Still open:
 
 1. **Timezone display**: always show times in the academy timezone, or in each viewer's local timezone (needed for students abroad)?
 2. **Calendar grain and hours**: 30-minute or 15-minute slots? Which visible hours (for example 6 AM–10 PM)?
-3. **Brand in Marathi/Hindi**: is "नादोपासना" the correct spelling? Is the English form "Nado Pasana" or "Nadopasana"?
-4. **Design system**: keep the current dark/gold token set and extend it, or propose a new visual direction first? Is light mode required now?
-5. **Riyaz management**: see section 8.
+3. **Design system**: keep the current dark/gold token set and extend it, or propose a new visual direction first? Is light mode required now?
+4. **Riyaz management**: see section 8.
 
 ## 4. Architecture
 
@@ -222,15 +223,25 @@ Each phase ends with all existing tests passing, new tests for the phase, a buil
 - Add the `PRAGMA user_version` migration runner, with a test that migrates a copy of the current schema.
 - Fix the DB path in the docs.
 
-**Phase 1: identity and roles**
-- Add the `user_roles`, `users.active` and `academy` migration and the CLI Owner bootstrap.
+**Phase 1: identity and roles**: done on 2026-11-16. Audit findings 1, 4 and 5 are resolved; local session sync also now maps sessions to the API shape, which it previously never did.
+- Add the `user_roles`, `users.active`, `users.token_version` and `academy` migration. Existing `admin` users become `owner`.
+- CLI Owner bootstrap: `python3 apps/api/run.py create-owner <username>`, which also creates the academy row (default name "NadoPasana", timezone `Asia/Kolkata`).
 - Remove public registration.
-- `require_role` reads `user_roles`; `/api/me` returns `roles`.
-- Frontend: login screen (only when `VITE_API_URL` is set), portal shell, role switcher, and the brand rename in strings.
+- `require_role` reads `user_roles` and rejects deactivated users. Routine and assignment writes require `teacher`, because the Owner is not a teaching role.
+- `/api/auth/login` and `/api/me` return `roles`. Tokens carry `token_version`; a password or role change invalidates older tokens. Repeated failed logins for one username are briefly refused.
+- Owner account API: `GET/POST/PATCH /api/owner/users` (create with roles and initial password, rename, change roles, deactivate or reactivate).
+- Frontend:
+  - Login screen, only when `VITE_API_URL` is set. Without it, the app opens straight into practice as today.
+  - Portal shell with a role switcher for multi-role users, and log out.
+  - Student portal: the existing practice app. Owner portal: Users page. Teacher portal: placeholder dashboard.
+  - Brand rename in user-visible strings ("NadoPasana" / "नादोपासना"), in all three languages.
 - Fix the optional sync bugs: routine upsert, and no routine POST for students.
 - Tests:
   - Role isolation per prefix and deactivated user rejected.
   - A user with Owner + Teacher roles can call both prefixes; a single-role user gets 403 on the other.
+  - Migration of an old database with an `admin` user, without data loss.
+  - Owner account create, role change and deactivate; old tokens rejected after a password or role change; failed-login limit.
+  - Login screen hidden without `VITE_API_URL`; each role lands in its portal.
 
 **Phase 2: courses and enrollments (Owner portal)**
 - Add courses, course_teachers and enrollments. Owner pages: Users, Courses, Enrollments, Summary.

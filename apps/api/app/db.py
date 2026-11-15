@@ -25,6 +25,16 @@ MIGRATIONS = [
         CREATE TABLE IF NOT EXISTS routines (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', routine_json TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS assignments (id TEXT PRIMARY KEY, teacher_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, routine_id TEXT NOT NULL REFERENCES routines(id) ON DELETE CASCADE, title TEXT NOT NULL, instructions TEXT NOT NULL DEFAULT '', due_at TEXT, status TEXT NOT NULL DEFAULT 'assigned', created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
         ''',
+        # 2: multi-role users, account deactivation, token revocation, single academy record.
+        # Existing 'admin' users become 'owner'; users.role is replaced by user_roles.
+        '''
+        CREATE TABLE user_roles (user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, role TEXT NOT NULL CHECK (role IN ('owner','teacher','student')), PRIMARY KEY (user_id, role));
+        INSERT INTO user_roles SELECT id, CASE role WHEN 'admin' THEN 'owner' ELSE role END FROM users;
+        ALTER TABLE users DROP COLUMN role;
+        ALTER TABLE users ADD COLUMN active INTEGER NOT NULL DEFAULT 1;
+        ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0;
+        CREATE TABLE academy (id INTEGER PRIMARY KEY CHECK (id = 1), name TEXT NOT NULL, timezone TEXT NOT NULL);
+        ''',
 ]
 
 def init_db():

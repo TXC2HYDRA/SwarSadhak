@@ -95,7 +95,22 @@ class CoachOutput(BaseModel):
     def safe_output(self):
         if self.reasonKey and self.reasonKey != self.messageKey: raise ValueError("reason key mismatch")
         return self
-class UserCreate(BaseModel): username: str = Field(min_length=2, max_length=80); password: str = Field(min_length=8); display_name: str = Field(min_length=1, max_length=120); role: Literal["student", "teacher"] = "student"
+Role = Literal["owner", "teacher", "student"]
+def unique_roles(roles):
+    if roles is not None and len(set(roles)) != len(roles): raise ValueError("roles must be unique")
+    return roles
+class OwnerUserCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    username: str = Field(min_length=2, max_length=80, pattern=r"^[A-Za-z0-9._-]+$"); password: str = Field(min_length=8, max_length=200); display_name: str = Field(min_length=1, max_length=120); roles: list[Role] = Field(min_length=1, max_length=3)
+    @field_validator("roles")
+    @classmethod
+    def roles_unique(cls, v): return unique_roles(v)
+class OwnerUserUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    display_name: str | None = Field(default=None, min_length=1, max_length=120); password: str | None = Field(default=None, min_length=8, max_length=200); roles: list[Role] | None = Field(default=None, min_length=1, max_length=3); active: bool | None = None
+    @field_validator("roles")
+    @classmethod
+    def roles_unique(cls, v): return unique_roles(v)
 class Login(BaseModel): username: str; password: str
 class Practice(BaseModel):
     model_config = ConfigDict(extra="forbid")
