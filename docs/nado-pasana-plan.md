@@ -1,6 +1,6 @@
 # Nado Pasana: audit and incremental plan
 
-Status: Phases 0 and 1 are done (see section 7). Later phases are in progress. Discovery is ongoing, and Riyaz management is intentionally undesigned.
+Status: Phases 0 to 2 are done (see section 7). Later phases are in progress. Discovery is ongoing, and Riyaz management is intentionally undesigned.
 
 ## 1. What exists today (audit)
 
@@ -243,7 +243,7 @@ Each phase ends with all existing tests passing, new tests for the phase, a buil
   - Owner account create, role change and deactivate; old tokens rejected after a password or role change; failed-login limit.
   - Login screen hidden without `VITE_API_URL`; each role lands in its portal.
 
-**Phase 2: courses and enrollments (Owner portal)**
+**Phase 2: courses and enrollments (Owner portal)**: done on 2026-11-16. Audit finding 2 is resolved: assignments require an active enrollment with the teacher.
 - Add courses, course_teachers and enrollments. Owner pages: Users, Courses, Enrollments, Summary.
 - Teacher: "My students" count and list.
 - Tighten assignment creation to enrolled students.

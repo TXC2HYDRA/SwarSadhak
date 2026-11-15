@@ -17,6 +17,7 @@ before(async () => {
     ...(await server.ssrLoadModule('/src/AccountRoot.jsx')),
     ...(await server.ssrLoadModule('/src/OwnerPortal.jsx')),
     ...(await server.ssrLoadModule('/src/optionalSync.js')),
+    ...(await server.ssrLoadModule('/src/TeacherPortal.jsx')),
   };
 });
 after(async () => { await server?.close(); });
@@ -107,4 +108,48 @@ test('sign-in and owner account screens render in every locale', () => {
     assert.match(users, new RegExp(t.portal.users.loading));
     for (const role of ['owner', 'teacher', 'student']) assert.match(users, new RegExp(t.portal.roles[role]));
   }
+});
+
+const pending = () => new Promise(() => {});
+const stubClient = { owner: { summary: pending, users: { list: pending }, courses: { list: pending }, enrollments: { list: pending } }, teacher: { summary: pending, courses: pending, students: pending } };
+
+test('owner academy pages and the teacher dashboard render in every locale', () => {
+  for (const locale of supportedLocales) {
+    const t = getTranslations(locale); const p = t.portal;
+    const render = (Component) => renderToStaticMarkup(React.createElement(Component, { t, client: stubClient }));
+    assert.match(render(web.OverviewPage), new RegExp(p.overview.title));
+    assert.match(render(web.CoursesPage), new RegExp(p.courses.create));
+    const enrollments = render(web.EnrollmentsPage);
+    assert.match(enrollments, new RegExp(p.enrollments.create));
+    assert.match(enrollments, new RegExp(p.enrollments.choose));
+    const dashboard = render(web.TeacherDashboard);
+    assert.match(dashboard, new RegExp(p.teacher.studentCount));
+    assert.match(dashboard, new RegExp(p.teacher.allCourses));
+  }
+});
+
+test('teacher student filter matches name or username within a course', () => {
+  const students = [
+    { id: 'a', display_name: 'Asha Patil', username: 'asha', courses: [{ id: 'vocal' }] },
+    { id: 'b', display_name: 'Bilal', username: 'b.khan', courses: [{ id: 'tabla' }, { id: 'vocal' }] },
+  ];
+  assert.deepEqual(web.filterStudents(students, 'pat').map((s) => s.id), ['a']);
+  assert.deepEqual(web.filterStudents(students, 'KHAN').map((s) => s.id), ['b']);
+  assert.deepEqual(web.filterStudents(students, '', 'tabla').map((s) => s.id), ['b']);
+  assert.deepEqual(web.filterStudents(students, 'asha', 'tabla'), []);
+});
+
+test('API client builds course, enrollment and teacher requests', async () => {
+  const calls = [];
+  const client = createApiClient({ baseUrl: 'http://api.test', token: 't', fetchImpl: async (url, options) => { calls.push([url, options.method || 'GET', options.body]); return new Response('{}'); } });
+  await client.owner.courses.setTeachers('c1', ['t1']);
+  await client.owner.enrollments.remove('e1');
+  await client.teacher.students({ q: 'a b', courseId: 'c1' });
+  await client.teacher.students();
+  assert.deepEqual(calls, [
+    ['http://api.test/api/owner/courses/c1/teachers', 'PUT', '{"teacher_ids":["t1"]}'],
+    ['http://api.test/api/owner/enrollments/e1', 'DELETE', undefined],
+    ['http://api.test/api/teacher/students?q=a+b&course_id=c1', 'GET', undefined],
+    ['http://api.test/api/teacher/students?q=', 'GET', undefined],
+  ]);
 });

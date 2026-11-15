@@ -4,8 +4,8 @@ import { localeNames, supportedLocales } from '@swarsadhak/localization';
 import { Brand } from './main.jsx';
 import { apiErrorKey } from './auth.js';
 
-// Shared list loader: { data, error, reload } with error as a translated message.
-export function useApiList(t, load, deps = []) {
+// Shared GET loader: { data, error, reload }, with error as a translated message.
+export function useApi(t, load, deps = []) {
   const [state, setState] = useState({ data: null, error: '' });
   const reload = async () => {
     const result = await load();
@@ -13,6 +13,14 @@ export function useApiList(t, load, deps = []) {
   };
   useEffect(() => { reload(); }, deps);
   return { ...state, reload };
+}
+
+export function LoadState({ t, state, empty }) {
+  const u = t.portal.users;
+  if (state.error) return <div className="notice error" role="alert">{state.error} <button className="button quiet" onClick={state.reload}>{u.retry}</button></div>;
+  if (!state.data) return <p role="status">{u.loading}</p>;
+  if (Array.isArray(state.data) && state.data.length === 0 && empty) return <p>{empty}</p>;
+  return null;
 }
 
 export function LanguagePicker({ t, locale, onLocale }) {

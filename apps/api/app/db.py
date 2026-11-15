@@ -35,6 +35,14 @@ MIGRATIONS = [
         ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0;
         CREATE TABLE academy (id INTEGER PRIMARY KEY CHECK (id = 1), name TEXT NOT NULL, timezone TEXT NOT NULL);
         ''',
+        # 3: Owner-managed course catalog, teachers per course, and per-course enrollments.
+        # An enrollment is the teacher-student relationship: one teacher per student per course.
+        '''
+        CREATE TABLE courses (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE, description TEXT NOT NULL DEFAULT '', active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+        CREATE TABLE course_teachers (course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE, teacher_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, PRIMARY KEY (course_id, teacher_id));
+        CREATE TABLE enrollments (id TEXT PRIMARY KEY, student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE, teacher_id TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','paused','ended')), created_at TEXT NOT NULL, updated_at TEXT NOT NULL, UNIQUE (student_id, course_id), FOREIGN KEY (course_id, teacher_id) REFERENCES course_teachers(course_id, teacher_id));
+        CREATE INDEX enrollments_teacher ON enrollments(teacher_id, status);
+        ''',
 ]
 
 def init_db():

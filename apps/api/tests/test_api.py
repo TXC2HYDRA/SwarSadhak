@@ -35,9 +35,11 @@ def test_routine_resync_updates_instead_of_failing(client, make_user):
     assert client.get('/api/routines/r-sync',headers=h).json()['name']=='Evening'
     assert client.post('/api/routines',json=routine('r-sync'),headers=other).status_code==409
 
-def test_teacher_assigns_owned_routine_to_student_only(client, make_user):
-    _, th = make_user('teacher'); student, sh = make_user('student'); other_teacher, _ = make_user('teacher')
+def test_teacher_assigns_owned_routine_to_enrolled_student_only(client, make_user, academy):
+    teacher, th = make_user('teacher'); student, sh = make_user('student'); other_teacher, _ = make_user('teacher'); stranger, _ = make_user('student')
+    academy.enroll(student, academy.course('Vocal', teacher), teacher)
     assert client.post('/api/routines',json=routine('r-assign'),headers=th).status_code==201
+    assert client.post('/api/assignments',json={'student_id':stranger['id'],'routine_id':'r-assign','title':'x'},headers=th).status_code==403
     created = client.post('/api/assignments',json={'student_id':student['id'],'routine_id':'r-assign','title':'Daily Sa'},headers=th)
     assert created.status_code==201
     assert client.post('/api/assignments',json={'student_id':other_teacher['id'],'routine_id':'r-assign','title':'x'},headers=th).status_code==403

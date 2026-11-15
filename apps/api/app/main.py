@@ -7,13 +7,14 @@ from .ai_coach import coach as ai_coach
 from .db import connect, init_db
 from .accounts import public_user
 from .dependencies import current_user, require_role, user_roles
-from .routers import owner
+from .routers import owner, teacher
 from .schemas import Login, Practice, Routine, AssignmentCreate, AssignmentUpdate, CoachPayload
 from .security import clear_login_failures, issue_token, login_blocked, record_login_failure, verify_password
 
 app = FastAPI(title="NadoPasana API", version=API_VERSION)
 app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS, allow_credentials=False, allow_methods=["GET","POST","PATCH","DELETE"], allow_headers=["Authorization","Content-Type"])
 app.include_router(owner.router)
+app.include_router(teacher.router)
 init_db()
 def now(): return datetime.now(timezone.utc).isoformat()
 
@@ -102,8 +103,8 @@ def assignments(user=Depends(current_user)):
 def assign(data:AssignmentCreate,user=Depends(require_role("teacher"))):
     aid=str(uuid.uuid4()); stamp=now()
     with connect() as c:
-        routine=c.execute("SELECT id FROM routines WHERE id=? AND owner_id=?",(data.routine_id,user["id"])).fetchone(); student=c.execute("SELECT user_id FROM user_roles WHERE user_id=? AND role='student'",(data.student_id,)).fetchone()
-        if not routine or not student: raise HTTPException(403,"teacher may assign owned routines to students only")
+        routine=c.execute("SELECT id FROM routines WHERE id=? AND owner_id=?",(data.routine_id,user["id"])).fetchone(); student=c.execute("SELECT 1 FROM enrollments WHERE teacher_id=? AND student_id=? AND status='active'",(user["id"],data.student_id)).fetchone()
+        if not routine or not student: raise HTTPException(403,"teacher may assign owned routines only to their actively enrolled students")
         c.execute("INSERT INTO assignments VALUES (?,?,?,?,?,?,?,?,?,?)",(aid,user["id"],data.student_id,data.routine_id,data.title,data.instructions,data.due_at.isoformat() if data.due_at else None,"assigned",stamp,stamp))
     return {"id":aid,**data.model_dump(mode="json"),"teacher_id":user["id"],"status":"assigned","created_at":stamp,"updated_at":stamp}
 @app.patch("/api/assignments/{aid}")

@@ -124,3 +124,18 @@ class Routine(BaseModel): id: str; name: str = Field(min_length=1, max_length=12
 class AssignmentCreate(BaseModel): student_id: str; routine_id: str; title: str = Field(min_length=1, max_length=120); instructions: str = Field(default="", max_length=2000); due_at: datetime | None = None
 class AssignmentUpdate(BaseModel):
     status: Literal["assigned", "in_progress", "completed", "cancelled"] | None = None
+class CourseCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=120); description: str = Field(default="", max_length=1000)
+class CourseUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = Field(default=None, min_length=1, max_length=120); description: str | None = Field(default=None, max_length=1000); active: bool | None = None
+class CourseTeachers(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    teacher_ids: list[str] = Field(max_length=200)
+class EnrollmentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    student_id: str; course_id: str; teacher_id: str
+class EnrollmentUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    status: Literal["active", "paused", "ended"] | None = None; teacher_id: str | None = None
