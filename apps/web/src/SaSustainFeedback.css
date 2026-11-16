@@ -1,9 +1,9 @@
-.sa-feedback { display: flex; align-items: center; justify-content: space-between; gap: 20px; max-width: 720px; margin: 24px auto 0; padding: 18px 22px; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 16px; }
+.sa-feedback { display: flex; align-items: center; justify-content: space-between; gap: 20px; max-width: 720px; margin: 24px auto 0; padding: 18px 22px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-panel); }
 .sa-feedback > div { display: flex; flex-direction: column; gap: 5px; }
-.sa-feedback-label { color: var(--text-subtle); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.sa-feedback-label { color: var(--text-muted); font-size: 11px; font-weight: 700; }
 .sa-feedback-result { align-items: flex-end; }
 .sa-feedback-result span { font-size: 18px; font-weight: 700; }
-.sa-feedback-result .sa-feedback-octave { color: var(--text-subtle); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.sa-feedback-result .sa-feedback-octave { color: var(--text-muted); font-size: 11px; }
 .sa-feedback-result small { color: var(--text-muted); }
 .sa-feedback-in-tune { background: color-mix(in srgb, var(--pitch-tune) 10%, transparent); border-color: color-mix(in srgb, var(--pitch-tune) 40%, transparent); }
 .sa-feedback-in-tune .sa-feedback-result span { color: var(--pitch-tune); }
@@ -11,6 +11,6 @@
 .sa-feedback-flat .sa-feedback-result span { color: var(--pitch-flat); }
 .sa-feedback-sharp { background: color-mix(in srgb, var(--pitch-sharp) 10%, transparent); border-color: color-mix(in srgb, var(--pitch-sharp) 40%, transparent); }
 .sa-feedback-sharp .sa-feedback-result span { color: var(--pitch-sharp); }
-.sa-feedback-clipped { background: color-mix(in srgb, var(--error) 10%, transparent); border-color: color-mix(in srgb, var(--error) 40%, transparent); }
-.sa-feedback-clipped .sa-feedback-result span { color: var(--error); }
+.sa-feedback-clipped { background: color-mix(in srgb, var(--danger) 10%, transparent); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.sa-feedback-clipped .sa-feedback-result span { color: var(--danger); }
 @media (max-width: 560px) { .sa-feedback { margin: 20px 0 0; padding: 16px; align-items: flex-start; flex-direction: column; } .sa-feedback-result { align-items: flex-start; } }

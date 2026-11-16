@@ -1,15 +1,15 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ClipboardList, LogIn, Music2 } from 'lucide-react';
+import { CalendarDays, ClipboardList, LogIn } from 'lucide-react';
 import { createApiClient } from '@swarsadhak/api-client';
 import { getTranslations } from '@swarsadhak/localization';
 import { App, Brand } from './main.jsx';
+import { BrandMark } from './AppShell.jsx';
 import { readPreference, writePreference } from './navigation.js';
 import { GUEST_KEY, PORTAL_KEY, choosePortal, clearSession, loginErrorKey, readSession, writeSession } from './auth.js';
 import { startOptionalSync } from './optionalSync.js';
 import { AccountMenu, LanguagePicker, PortalShell } from './PortalShell.jsx';
 import { ThemeToggle } from './theme.jsx';
 import { roleFromPath } from './router.js';
-import { PAGE_TERMS, PageCrest, RagaHour } from './darbar.jsx';
 import { StudentTimetable, StudentToday } from './StudentTimetable.jsx';
 import { StudentAssignments } from './Assignments.jsx';
 import './portal.css';
@@ -89,12 +89,10 @@ export function LoginPage({ t, locale, onLocale, notice, onSubmit, onGuest }) {
     if (key) setError(p.errors[key] || p.errors.generic);
   };
   return <div className="login-shell">
-    <div className="login-top"><div className="brand"><span className="brand-mark"><Music2 size={20} aria-hidden="true" /></span><Brand t={t} /></div><div className="login-tools"><LanguagePicker t={t} locale={locale} onLocale={onLocale} /><ThemeToggle t={t} /></div></div>
-    <main className="login-card panel">
-      <PageCrest term={PAGE_TERMS.home} />
+    <div className="login-top"><div className="brand"><span className="brand-mark"><BrandMark /></span><Brand t={t} /></div><div className="login-tools"><LanguagePicker t={t} locale={locale} onLocale={onLocale} /><ThemeToggle t={t} /></div></div>
+    <main className="login-card">
       <h1>{p.signInTitle}</h1>
       <p className="page-lede">{p.signInLede}</p>
-      <RagaHour t={t} line />
       {notice && <p className="notice" role="status">{notice}</p>}
       <form className="portal-form" onSubmit={submit}>
         <label className="field-label">{p.username}<input name="username" autoComplete="username" required value={username} onChange={(event) => setUsername(event.target.value)} /></label>

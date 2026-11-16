@@ -307,7 +307,7 @@ test('API client builds batch and academy requests', async () => {
   ]);
 });
 
-test('student home shows today and work still to hand in; Home renders the academy panel under the hero', () => {
+test('student home shows today and work still to hand in; Home puts the next step first, then the academy sections', () => {
   const items = [{ id: 'a1', title: 'Yaman', submission: null }, { id: 'a2', title: 'Bhairav', submission: { status: 'draft' } }, { id: 'a3', title: 'Done', submission: { status: 'submitted' } }, { id: 'a4', title: 'Seen', submission: { status: 'reviewed' } }];
   assert.deepEqual(web.openAssignments(items).map((item) => item.id), ['a1', 'a2']);
   const t = getTranslations('en');
@@ -322,7 +322,9 @@ test('student home shows today and work still to hand in; Home renders the acade
     assert.ok(html.includes(lt.portal.student.openWork) && html.includes(lt.portal.teacher.classesToday), locale);
   }
   const home = renderToStaticMarkup(React.createElement(web.App, { account: { id: 'u1', roles: ['student'] }, home: () => React.createElement('p', null, 'ACADEMY-PANEL') }));
-  assert.ok(home.indexOf('ACADEMY-PANEL') > home.indexOf('dashboard-hero'));
+  assert.ok(home.indexOf('ACADEMY-PANEL') > home.indexOf('class="home-next"'));
+  assert.doesNotMatch(home, /hero-panel|is-offline/);
+  assert.match(renderToStaticMarkup(React.createElement(web.App, {})), /class="page home-page"|landing-shell/);
 });
 
 test('the student timetable groups batches by weekday and the student app links to it', () => {

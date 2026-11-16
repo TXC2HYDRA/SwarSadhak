@@ -99,7 +99,7 @@ It holds the Phase 0 audit, the design system (tokens, type, components), the pl
 
 ## 2. Design brief and visual direction
 
-> Superseded on 2026-11-16 by the Darbar theme (section 11) after the first review asked for a stronger classical feel.
+> Superseded on 2026-11-16, first by the Darbar theme (section 11) and then by Counterpoint (section 12).
 
 **Concept: "Rehearsal room at dusk."** Warm ivory paper and burgundy ink by day; a deep plum-black room lit by brass by night. Editorial serif headlines give the academy a cultural, printed-programme feel; a quiet sans keeps forms, tables and the calendar easy to scan.
 
@@ -344,6 +344,7 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 ## 10. Progress log
 
+- **Counterpoint step 1:** foundation, shell and Student Home (section 12). Darbar layer, crests and raga hour removed. Checked: `npm test`, `npm run build`, 90-shot matrix.
 - **Darbar part 2 (raga time of day):** prahar chip in the top bar, raga line on the student hero and sign-in, prahar-driven accent (section 11). Checked: `npm test` 159/159, `npm run build`, screenshots `ui-redesign/darbar/raga-*.jpg`.
 - **Darbar part 1 (classical redesign):** palette, bands, jaali/toran motifs, gold-leaf frames, domed tops, Tiro Devanagari titles and Devanagari page crests, all in a new `darbar.css` loaded after the base styles (section 11). Checked: `npm test` 158/158, `npm run build`, 90-shot matrix with no overflow.
 - **Phase 6:** QA, accessibility and performance.
@@ -397,6 +398,8 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 ## 11. Darbar theme (classical redesign)
 
+> Superseded on 2026-11-16 by Counterpoint (section 12). Review: over-decorated, looked AI-generated, no smoothness. Removed: palette, jaali/toran motifs, gold frames, domed cards, Devanagari crests, raga-hour chip and accent.
+
 After Phases 0-6 the review was: the UI does not feel classical. Decisions on 2026-11-16: the **Darbar / haveli** direction, **bold on every screen** (including Owner tables), with **Devanagari headings**, **motif patterns** and **raga time of day**.
 
 **Concept: "Haveli by day, darbar by night."** Sandstone and cream with indigo ink by day; an indigo night by dark. Saffron for actions, gold leaf for frames and rules, sindoor red for eyebrows and table headings.
@@ -420,3 +423,31 @@ After Phases 0-6 the review was: the UI does not feel classical. Decisions on 20
 - **Devanagari headings:** every page has a crest with its classical name (`src/darbar.jsx`): दरबार (overview), सदस्य, पाठ्यक्रम, प्रवेश, वर्ग, गुरु कक्ष (teacher), रियाज़ कार्य, समय सारिणी, स्वागतम् (home and sign in), रियाज़, अभ्यास संग्रह, साधना क्रम, प्रगति, व्यवस्था. In English, nav items show the Devanagari name under the label and the brand shows नादोपासना.
 - **Raga time of day** (`src/raga.js`): the day is split into the eight three-hour prahars (निशीथ 0-3, उषःकाल 3-6, प्रातःकाल 6-9, पूर्वाह्न 9-12, मध्याह्न 12-15, अपराह्न 15-18, सायंकाल 18-21, प्रदोष 21-24, local time). The top bar shows the current prahar as a chip (desktop); the student hero and the sign-in card show a line with the prahar, the time of day and three ragas traditionally sung then (e.g. dusk: Yaman, Puriya Dhanashri, Marwa). `<html data-prahar>` drives a decorative `--raga` accent (one `--prahar-*` token per prahar) used for the dot, the crest stars and the hero glow. It refreshes every minute. Text colour never depends on it. Strings in en/mr/hi.
 - Screenshots: `ui-redesign/darbar/` (key screens, plus `matrix-*.jpg` contact sheets of seven screens at six widths in both themes and Marathi/Hindi at 360 px).
+
+---
+
+## 12. Counterpoint (simple UI, rich UX)
+
+Review of Darbar: "simple UI but rich UX", new palette, smoother, nothing that looks generated. The design spec the user brought (`docs/NadoPasana_Counterpoint_Design_Spec.md` and `docs/NadoPasana_Counterpoint_Tokens.css`, user files, not committed) chose **Counterpoint: a quiet digital instrument**. Identity comes from time, pitch and teacher feedback, not ornament.
+
+**Rollout** (the spec asks for a quality gate after the foundation and one student screen):
+
+| Step | Scope | Status |
+| --- | --- | --- |
+| 1 | Foundation (tokens, fonts, controls, motion), shell, Student Home | Done |
+| 2 | Practice studio: held Sa line, honest mic states, tala ruler | After review |
+| 3 | Teacher dashboard: calendar first, metric strip, assignment feedback loop | After review |
+| 4 | Owner tables and drawers, sign-in, landing | After review |
+| 5 | QA matrix, axe, reduced motion, 200% zoom | After review |
+
+**Palette** (all values and contrast matrices: spec section 2). Mineral `#F4F6F5` canvas, fog `#EDF1F0` surface, white raised surface, ink `#14282D` text, deep tide `#155D67` actions. Dark: night `#101C21`, `#F2F6F4` text, `#96DDE3` actions. Citron `#D8EE84` (`--live`, with `--on-live` text) is a fill used only for the rare live moment, today the "Next class" badge. Every text token is at least 4.5:1 on all three surfaces in both themes.
+
+**Type**: Instrument Sans (Latin) with Anek Devanagari (Marathi, Hindi) in one stack, so mixed course names fall back per glyph. Headings 600, no serif, tabular digits for times. Devanagari pages get line height 1.7 and no negative tracking.
+
+**Shape and space**: 4 px spacing scale. Radii 4 (chips), 8 (controls, buttons), 12 (panels), 16 (dialogs); no pill buttons. Borders before shadows; shadows only on drawers and dialogs. A card is used only for a self-contained object (the next step, one class, one assignment); sections are plain headings on the canvas.
+
+**Motion**: tokens `--motion-fast` 90 ms (press), `--motion-ui` 160 ms (hover, nav), `--motion-surface` 240 ms (sheets, drawer), `--motion-page` 320 ms (page change), easing `cubic-bezier(.2,0,0,1)` / `(.22,1,.36,1)`. Page content fades up 6 px inside a fixed shell; buttons press to 0.985; the active nav bar grows in; sheets rise 8 px; the next-step card draws a tide line on hover or focus. `prefers-reduced-motion` turns all of it off.
+
+**Brand mark**: a voice moving over a held reference line (the studio's Sa line), drawn as an inline SVG in `AppShell.jsx` (`BrandMark`). The wordmark is "**Nado**Pasana" by weight, not colour.
+
+**Student Home** (spec 7A): "Today" with the date; the next-step card (recommended exercise, real reason, Start and Alankar); classes today; work to hand in; the saved routine; the last real session. The hero, the level/XP tiles and the decorative orbit are gone from Home (Progress keeps the participation numbers). Phones stack in that order; desktop uses two columns.
