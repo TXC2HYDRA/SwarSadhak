@@ -9,23 +9,26 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "@fontsource-variable/fraunces": "5.3.0",
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource-variable/noto-sans-devanagari": "5.3.0",
+    "@fontsource-variable/noto-serif-devanagari": "5.3.0",
+    "@swarsadhak/ai-coach": "*",
+    "@swarsadhak/api-client": "*",
     "@swarsadhak/audio-engine": "*",
-    "@swarsadhak/musical-core": "*",
     "@swarsadhak/exercises": "*",
+    "@swarsadhak/gamification": "*",
     "@swarsadhak/localization": "*",
-    "@vitejs/plugin-react": "6.1.2",
-    "vite": "8.3.4",
-    "typescript": "7.0.2",
-    "react": "19.3.1",
-    "react-dom": "19.3.1",
-    "lucide-react": "1.57.0",
+    "@swarsadhak/musical-core": "*",
+    "@swarsadhak/persistence": "*",
     "@swarsadhak/practice-domain": "*",
     "@swarsadhak/recommendations": "*",
-    "@swarsadhak/persistence": "*"
-    ,"@swarsadhak/routines": "*"
-    ,"@swarsadhak/gamification": "*"
-    ,"@swarsadhak/api-client": "*"
-    ,"@swarsadhak/ai-coach": "*"
-  },
-  "devDependencies": {}
+    "@swarsadhak/routines": "*",
+    "@vitejs/plugin-react": "6.1.2",
+    "lucide-react": "1.57.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
 }

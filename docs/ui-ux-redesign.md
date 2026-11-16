@@ -7,8 +7,8 @@ It holds the Phase 0 audit, the design system (tokens, type, components), the pl
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 0 | Repository audit, UX inventory, plan | Done (this document) |
-| 1 | Design tokens, light/dark theme, fonts, colour refactor | Next |
-| 2 | Shared shell and navigation (sidebar, bottom nav, URL routes) | Planned |
+| 1 | Design tokens, light/dark theme, fonts, colour refactor | Done |
+| 2 | Shared shell and navigation (sidebar, bottom nav, URL routes) | Next |
 | 3 | Teacher workspace and batch calendar (flagship) | Planned |
 | 4 | Owner command center | Planned |
 | 5 | Student Riyaz studio | Planned |
@@ -189,6 +189,7 @@ Status is never shown by colour alone: badges carry a word, paused batches use a
 - First visit follows the system setting (`prefers-color-scheme`).
 - The theme button switches light/dark and stores the choice in `localStorage` (`nadopasana-theme`).
 - With no stored choice, the page follows live system changes.
+- Once a theme is chosen it stays until changed; there is no separate "follow system" option yet (clearing site data restores it). Add a three-way choice in Settings if people ask for it.
 - An inline script in `index.html` sets `data-theme` before the first paint, so there is no flash of the wrong theme. It also sets `<meta name="theme-color">`.
 - `color-scheme` follows the theme, so native controls, scrollbars and date pickers match.
 
@@ -312,8 +313,29 @@ Before the redesign (dark theme only), captured with headless Chrome against a s
 | Student timetable, 390 px | `ui-redesign/before/12-student-timetable-390.jpg` |
 | Student assignments, 1280 px | `ui-redesign/before/13-student-assignments-1280.jpg` |
 
+After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
+
+| Screen | File |
+| --- | --- |
+| Sign in, 390 px, light | `ui-redesign/phase1/light-login-390.jpg` |
+| Teacher dashboard, 1440 px, light / dark | `ui-redesign/phase1/light-teacher-1440.jpg`, `ui-redesign/phase1/dark-teacher-1440.jpg` |
+| Teacher dashboard in Marathi, 1024 px, light | `ui-redesign/phase1/light-teacher-mr-1024.jpg` |
+| Owner accounts, 1280 px, light / dark | `ui-redesign/phase1/light-owner-users-1280.jpg`, `ui-redesign/phase1/dark-owner-users-1280.jpg` |
+| Student home, 1280 px, light / dark | `ui-redesign/phase1/light-student-home-1280.jpg`, `ui-redesign/phase1/dark-student-home-1280.jpg` |
+| Student assignments, 1280 px, dark | `ui-redesign/phase1/dark-student-assign-1280.jpg` |
+| Landing, 1280 px, light | `ui-redesign/phase1/light-landing-1280.jpg` |
+| Student timetable, 768 px, light | `ui-redesign/phase1/light-timetable-768.jpg` |
+
 ---
 
 ## 10. Progress log
 
 - **Phase 0:** audit, token specification with contrast checks, sitemap, component inventory and phased plan written; baseline screenshots captured.
+- **Phase 1:** design system foundation.
+  - Light and dark tokens from section 3 are in `styles.css`. All 145 hard-coded colours in `styles.css`, `portal.css` and `SaSustainFeedback.css` are replaced by tokens or `color-mix()` tints, and a test keeps it that way.
+  - `index.html` picks the theme before the first paint. `src/theme.jsx` adds `ThemeToggle` to the sign-in page, the portal header, the studio top bar and the landing page, and follows live system changes until the person chooses.
+  - Fraunces, Inter, Noto Sans Devanagari and Noto Serif Devanagari are self-hosted. Headings, brand and stat numbers use the display face. Devanagari headings drop negative tracking.
+  - Primary actions are burgundy. Calendar blocks are tinted with a burgundy edge; today, selected slots and pressed day toggles use the primary colour. Course chips are gold. Decorative orbits use gold and rose instead of violet and teal.
+  - `<html lang>` now follows the chosen language on the sign-in, Owner and Teacher screens.
+  - Checked: `npm test` 151/151 (4 new theme tests), API 57/57, `npm run build`, web Docker image build. In headless Chrome: system light, toggle to dark, reload, still dark, with matching `theme-color`.
+  - Known and left for later phases: the Teacher/Owner header still wraps to three rows on phones (Phase 2). Calendar block titles clip descenders at small sizes (Phase 3). The JS bundle is just over Vite's 500 kB warning (code splitting in Phase 6).
