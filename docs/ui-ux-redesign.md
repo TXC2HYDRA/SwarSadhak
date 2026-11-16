@@ -344,6 +344,7 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 ## 10. Progress log
 
+- **Darbar part 2 (raga time of day):** prahar chip in the top bar, raga line on the student hero and sign-in, prahar-driven accent (section 11). Checked: `npm test` 159/159, `npm run build`, screenshots `ui-redesign/darbar/raga-*.jpg`.
 - **Darbar part 1 (classical redesign):** palette, bands, jaali/toran motifs, gold-leaf frames, domed tops, Tiro Devanagari titles and Devanagari page crests, all in a new `darbar.css` loaded after the base styles (section 11). Checked: `npm test` 158/158, `npm run build`, 90-shot matrix with no overflow.
 - **Phase 6:** QA, accessibility and performance.
   - Matrix: 90 screenshots of seven screens at 360, 390, 768, 1024, 1280 and 1440 px in both themes, plus Marathi and Hindi at 360 px. The harness flags any visible element that ends past the right edge of the viewport and is not inside a scroll container. No screen overflows.
@@ -417,5 +418,5 @@ After Phases 0-6 the review was: the UI does not feel classical. Decisions on 20
 - **Frames:** panels, stat tiles and sheets get an inner gold-leaf border like a miniature painting. The hero, the sign-in card, today panels and sheets have a domed (arched) top like a haveli doorway.
 - **Type:** Tiro Devanagari Marathi (one classical face for Latin and Devanagari) for titles, brand, table headings and stat numbers, at regular weight. Inter / Noto Sans Devanagari stay for UI text. Fraunces and Noto Serif Devanagari were removed.
 - **Devanagari headings:** every page has a crest with its classical name (`src/darbar.jsx`): दरबार (overview), सदस्य, पाठ्यक्रम, प्रवेश, वर्ग, गुरु कक्ष (teacher), रियाज़ कार्य, समय सारिणी, स्वागतम् (home and sign in), रियाज़, अभ्यास संग्रह, साधना क्रम, प्रगति, व्यवस्था. In English, nav items show the Devanagari name under the label and the brand shows नादोपासना.
-- **Raga time of day** is a separate change (Darbar part 2).
+- **Raga time of day** (`src/raga.js`): the day is split into the eight three-hour prahars (निशीथ 0-3, उषःकाल 3-6, प्रातःकाल 6-9, पूर्वाह्न 9-12, मध्याह्न 12-15, अपराह्न 15-18, सायंकाल 18-21, प्रदोष 21-24, local time). The top bar shows the current prahar as a chip (desktop); the student hero and the sign-in card show a line with the prahar, the time of day and three ragas traditionally sung then (e.g. dusk: Yaman, Puriya Dhanashri, Marwa). `<html data-prahar>` drives a decorative `--raga` accent (one `--prahar-*` token per prahar) used for the dot, the crest stars and the hero glow. It refreshes every minute. Text colour never depends on it. Strings in en/mr/hi.
 - Screenshots: `ui-redesign/darbar/` (key screens, plus `matrix-*.jpg` contact sheets of seven screens at six widths in both themes and Marathi/Hindi at 360 px).
