@@ -53,7 +53,7 @@ test('colours come from tokens, and dark overrides every light colour token', ()
   const colourTokens = (block) => new Set([...block.matchAll(/(--[\w-]+):\s*(#|rgb)/g)].map((m) => m[1]));
   assert.deepEqual([...colourTokens(light)].filter((name) => !colourTokens(dark).has(name)), []);
   const rules = css.slice(css.indexOf('}', css.indexOf(':root[data-theme="dark"]')) + 1);
-  for (const [name, text] of [['styles.css', rules], ['portal.css', web('src/portal.css')], ['SaSustainFeedback.css', web('src/SaSustainFeedback.css')]]) {
+  for (const [name, text] of [['styles.css', rules], ['portal.css', web('src/portal.css')], ['SaSustainFeedback.css', web('src/SaSustainFeedback.css')], ['darbar.css', web('src/darbar.css')]]) {
     assert.deepEqual(text.match(/#[0-9a-f]{3,8}\b|rgba?\(/gi) || [], [], name);
   }
 });

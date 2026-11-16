@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Menu, Music2, X } from 'lucide-react';
+import { BRAND_DEVANAGARI, PAGE_TERMS, PageCrest, isDevanagari } from './darbar.jsx';
 
 export const Brand = ({ t }) => <span>{t.brand.first}<span>{t.brand.second}</span></span>;
 
@@ -30,13 +31,13 @@ export function AppShell({ t, kicker, note, items, active, focusKey = active, on
   const hidden = (isMobile && !menuOpen) || collapsed;
   const closeMenu = () => { setMenuOpen(false); mainRef.current?.querySelector('.menu-button')?.focus(); };
   const navButton = (item, className) => <button key={item.key} className={`${className} ${item.key === active ? 'active' : ''}`} aria-current={item.key === active ? 'page' : undefined} onClick={() => go(item.key)}>
-    <item.Icon size={className === 'nav-item' ? 19 : 21} aria-hidden="true" /><span>{item.label}</span>{className === 'nav-item' && item.key === active && <span className="nav-active-mark" aria-hidden="true" />}
+    <item.Icon size={className === 'nav-item' ? 19 : 21} aria-hidden="true" />{className === 'nav-item' && !isDevanagari(item.label) && PAGE_TERMS[item.key] ? <span className="nav-label">{item.label}<small className="nav-term" lang="hi" aria-hidden="true">{PAGE_TERMS[item.key]}</small></span> : <span>{item.label}</span>}{className === 'nav-item' && item.key === active && <span className="nav-active-mark" aria-hidden="true" />}
   </button>;
 
   return <div className="app-shell">
     <a className="skip-link" href="#main-content">{t.portal.skipToContent}</a>
     <aside id="primary-navigation" className={`sidebar ${menuOpen ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`} aria-label={t.nav} inert={hidden ? true : undefined} onKeyDown={(event) => { if (event.key === 'Escape') closeMenu(); }}>
-      <div className="sidebar-header"><div className="brand"><span className="brand-mark"><Music2 size={20} aria-hidden="true" /></span><Brand t={t} /></div><button className="icon-button close-menu" aria-label={t.close} onClick={closeMenu}><X size={20} aria-hidden="true" /></button></div>
+      <div className="sidebar-header"><div className="brand"><span className="brand-mark"><Music2 size={20} aria-hidden="true" /></span><span><Brand t={t} />{!isDevanagari(t.brand.first) && <small className="brand-devanagari" lang="mr">{BRAND_DEVANAGARI}</small>}</span></div><button className="icon-button close-menu" aria-label={t.close} onClick={closeMenu}><X size={20} aria-hidden="true" /></button></div>
       {kicker && <div className="sidebar-intro"><span className="sidebar-kicker">{kicker}</span>{note && <span className="sidebar-note">{note}</span>}</div>}
       <nav aria-label={t.nav}>{items.map((item) => navButton(item, 'nav-item'))}</nav>
       <div className="sidebar-footer">{footer}{account && <div className="sidebar-account">{account}</div>}</div>
@@ -49,7 +50,7 @@ export function AppShell({ t, kicker, note, items, active, focusKey = active, on
         <strong className="topbar-title">{title}</strong>
         <div className="topbar-tools">{tools}</div>
       </header>
-      <main id="main-content" tabIndex={-1}>{children}</main>
+      <main id="main-content" tabIndex={-1}><PageCrest term={PAGE_TERMS[focusKey] || PAGE_TERMS[active]} />{children}</main>
     </div>
     <nav className="bottom-nav" aria-label={t.nav}>
       {items.slice(0, 4).map((item) => navButton(item, 'bottom-nav-item'))}
