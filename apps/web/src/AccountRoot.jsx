@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ClipboardList, LogIn } from 'lucide-react';
+import { CalendarDays, ClipboardList, Eye, EyeOff, LogIn } from 'lucide-react';
 import { createApiClient } from '@swarsadhak/api-client';
 import { getTranslations } from '@swarsadhak/localization';
 import { App, Brand } from './main.jsx';
@@ -81,6 +81,8 @@ export function LoginPage({ t, locale, onLocale, notice, onSubmit, onGuest }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [shown, setShown] = useState(false);
+  const [caps, setCaps] = useState(false);
   const submit = async (event) => {
     event.preventDefault();
     setBusy(true); setError('');
@@ -96,7 +98,12 @@ export function LoginPage({ t, locale, onLocale, notice, onSubmit, onGuest }) {
       {notice && <p className="notice" role="status">{notice}</p>}
       <form className="portal-form" onSubmit={submit}>
         <label className="field-label">{p.username}<input name="username" autoComplete="username" required value={username} onChange={(event) => setUsername(event.target.value)} /></label>
-        <label className="field-label">{p.password}<input name="password" type="password" autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+        <label className="field-label" htmlFor="login-password">{p.password}</label>
+        <div className="password-field">
+          <input id="login-password" name="password" type={shown ? 'text' : 'password'} autoComplete="current-password" required value={password} onChange={(event) => setPassword(event.target.value)} onKeyUp={(event) => setCaps(event.getModifierState?.('CapsLock') ?? false)} aria-describedby={caps ? 'caps-hint' : undefined} />
+          <button type="button" className="icon-button" onClick={() => setShown(!shown)} aria-label={shown ? p.hidePassword : p.showPassword} aria-pressed={shown}>{shown ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}</button>
+        </div>
+        {caps && <p id="caps-hint" className="field-hint" role="status">{p.capsLock}</p>}
         {error && <p className="notice error" role="alert">{error}</p>}
         <button className="button primary wide" type="submit" disabled={busy}><LogIn size={17} aria-hidden="true" />{busy ? p.signingIn : p.signIn}</button>
       </form>

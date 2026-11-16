@@ -8,7 +8,7 @@ export const brandUi = {
 export const portalUi = {
   en: {
     theme: { light: 'Switch to light theme', dark: 'Switch to dark theme' }, more: 'More', skipToContent: 'Skip to main content',
-    signIn: 'Sign in', signInTitle: 'Sign in to NadoPasana', signInLede: 'Use the account your academy created for you.',
+    showPassword: 'Show password', hidePassword: 'Hide password', capsLock: 'Caps Lock is on.', signIn: 'Sign in', signInTitle: 'Sign in to NadoPasana', signInLede: 'Use the account your academy created for you.',
     username: 'Username', password: 'Password', signingIn: 'Signing in…',
     continueOffline: 'Practise without an account', offlineNote: 'Practice without an account is saved only in this browser.',
     signOut: 'Sign out', switchPortal: 'Choose portal', account: 'Account',
@@ -29,7 +29,7 @@ export const portalUi = {
       initialPassword: 'Initial password', newPassword: 'New password (optional)',
       usernameHelp: 'Letters, numbers, dot, dash or underscore.', passwordHelp: 'At least 8 characters. Share it with the person privately.',
       rolesRequired: 'Choose at least one role.', usernameTaken: 'That username is already taken.',
-      save: 'Save changes', cancel: 'Cancel', deactivate: 'Deactivate', reactivate: 'Reactivate',
+      save: 'Save changes', cancel: 'Cancel', deactivate: 'Deactivate', reactivate: 'Reactivate', confirmDeactivate: 'Deactivate {name}? They cannot sign in until you reactivate the account.',
       active: 'Active', inactive: 'Deactivated', status: 'Status', actions: 'Actions',
       loading: 'Loading…', empty: 'No accounts yet.', created: 'Account created.', saved: 'Changes saved.', retry: 'Try again', you: 'You',
     },
@@ -102,7 +102,7 @@ export const portalUi = {
   },
   mr: {
     theme: { light: 'लाइट थीम वापरा', dark: 'डार्क थीम वापरा' }, more: 'अधिक', skipToContent: 'मुख्य मजकुराकडे जा',
-    signIn: 'साइन इन करा', signInTitle: 'नादोपासना मध्ये साइन इन करा', signInLede: 'तुमच्या अकॅडमीने तयार केलेले खाते वापरा.',
+    showPassword: 'पासवर्ड दाखवा', hidePassword: 'पासवर्ड लपवा', capsLock: 'Caps Lock सुरू आहे.', signIn: 'साइन इन करा', signInTitle: 'नादोपासना मध्ये साइन इन करा', signInLede: 'तुमच्या अकॅडमीने तयार केलेले खाते वापरा.',
     username: 'वापरकर्तानाव', password: 'पासवर्ड', signingIn: 'साइन इन होत आहे…',
     continueOffline: 'खात्याशिवाय सराव करा', offlineNote: 'खात्याशिवाय केलेला सराव फक्त या ब्राउझरमध्ये जतन होतो.',
     signOut: 'साइन आउट', switchPortal: 'पोर्टल निवडा', account: 'खाते',
@@ -123,7 +123,7 @@ export const portalUi = {
       initialPassword: 'सुरुवातीचा पासवर्ड', newPassword: 'नवीन पासवर्ड (ऐच्छिक)',
       usernameHelp: 'अक्षरे, अंक, बिंदू, डॅश किंवा अंडरस्कोअर.', passwordHelp: 'किमान ८ अक्षरे. तो त्या व्यक्तीला खाजगीरित्या कळवा.',
       rolesRequired: 'किमान एक भूमिका निवडा.', usernameTaken: 'हे वापरकर्तानाव आधीच वापरात आहे.',
-      save: 'बदल जतन करा', cancel: 'रद्द करा', deactivate: 'निष्क्रिय करा', reactivate: 'पुन्हा सक्रिय करा',
+      save: 'बदल जतन करा', cancel: 'रद्द करा', deactivate: 'निष्क्रिय करा', reactivate: 'पुन्हा सक्रिय करा', confirmDeactivate: '{name} यांचे खाते निष्क्रिय करायचे? पुन्हा सक्रिय करेपर्यंत त्यांना साइन इन करता येणार नाही.',
       active: 'सक्रिय', inactive: 'निष्क्रिय', status: 'स्थिती', actions: 'कृती',
       loading: 'लोड होत आहे…', empty: 'अद्याप कोणतीही खाती नाहीत.', created: 'खाते तयार झाले.', saved: 'बदल जतन झाले.', retry: 'पुन्हा प्रयत्न करा', you: 'तुम्ही',
     },
@@ -196,7 +196,7 @@ export const portalUi = {
   },
   hi: {
     theme: { light: 'लाइट थीम पर जाएं', dark: 'डार्क थीम पर जाएं' }, more: 'और', skipToContent: 'मुख्य सामग्री पर जाएं',
-    signIn: 'साइन इन करें', signInTitle: 'नादोपासना में साइन इन करें', signInLede: 'अपनी अकादमी द्वारा बनाया गया खाता इस्तेमाल करें।',
+    showPassword: 'पासवर्ड दिखाएँ', hidePassword: 'पासवर्ड छिपाएँ', capsLock: 'Caps Lock चालू है।', signIn: 'साइन इन करें', signInTitle: 'नादोपासना में साइन इन करें', signInLede: 'अपनी अकादमी द्वारा बनाया गया खाता इस्तेमाल करें।',
     username: 'उपयोगकर्ता नाम', password: 'पासवर्ड', signingIn: 'साइन इन हो रहा है…',
     continueOffline: 'बिना खाते के अभ्यास करें', offlineNote: 'बिना खाते का अभ्यास केवल इसी ब्राउज़र में सहेजा जाता है।',
     signOut: 'साइन आउट', switchPortal: 'पोर्टल चुनें', account: 'खाता',
@@ -217,7 +217,7 @@ export const portalUi = {
       initialPassword: 'प्रारंभिक पासवर्ड', newPassword: 'नया पासवर्ड (वैकल्पिक)',
       usernameHelp: 'अक्षर, अंक, बिंदु, डैश या अंडरस्कोर।', passwordHelp: 'कम से कम 8 अक्षर। इसे व्यक्ति को निजी तौर पर बताएँ।',
       rolesRequired: 'कम से कम एक भूमिका चुनें।', usernameTaken: 'यह उपयोगकर्ता नाम पहले से लिया जा चुका है।',
-      save: 'बदलाव सहेजें', cancel: 'रद्द करें', deactivate: 'निष्क्रिय करें', reactivate: 'फिर सक्रिय करें',
+      save: 'बदलाव सहेजें', cancel: 'रद्द करें', deactivate: 'निष्क्रिय करें', reactivate: 'फिर सक्रिय करें', confirmDeactivate: '{name} का खाता निष्क्रिय करें? दोबारा सक्रिय करने तक वे साइन इन नहीं कर पाएँगे।',
       active: 'सक्रिय', inactive: 'निष्क्रिय', status: 'स्थिति', actions: 'कार्य',
       loading: 'लोड हो रहा है…', empty: 'अभी कोई खाता नहीं है।', created: 'खाता बन गया।', saved: 'बदलाव सहेजे गए।', retry: 'फिर प्रयास करें', you: 'आप',
     },

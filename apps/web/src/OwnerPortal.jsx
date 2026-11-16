@@ -54,7 +54,7 @@ export function OverviewPage({ t, locale = 'en', client, now, onNavigate = () =>
   return <div className="page portal-page">
     <h1>{o.title}</h1><p className="page-lede">{o.lede}</p>
     <LoadState t={t} state={summary} />
-    {summary.data && <section className="stats-grid portal-stats" aria-label={o.title}>{stats.map(([key, label, page]) => <button type="button" className="stat-card stat-link" key={key} onClick={() => onNavigate(page)}><strong>{summary.data[key]}</strong><small>{label}<ArrowRight size={14} aria-hidden="true" /></small></button>)}</section>}
+    {summary.data && <div className="summary-row"><dl className="metric-strip">{stats.map(([key, label, page]) => <div key={key}><dt>{label}</dt><dd><button type="button" className="metric-link" onClick={() => onNavigate(page)} aria-label={`${label}: ${summary.data[key]}`}>{summary.data[key]}<ArrowRight size={16} aria-hidden="true" /></button></dd></div>)}</dl></div>}
     <div className="workspace-grid owner-grid">
       <TodayPanel t={t} locale={locale} batches={batches.data} today={todayIn(timezone, now)} clock={nowIn(timezone, now)} onBatch={() => onNavigate('batches')} />
       <section className="panel attention-panel" aria-labelledby="attention-title">
@@ -105,7 +105,7 @@ export function CoursesPage({ t, client }) {
   return <div className="page portal-page">
     <Heading title={c.title} lede={c.lede} action={c.create} onAction={() => show(empty)} />
     {!open && <Notice message={message} />}
-    <section className="panel" aria-label={c.title}>
+    <section className="table-section" aria-label={c.title}>
       <TableSearch t={t} value={query} onChange={setQuery} />
       <LoadState t={t} state={courses} empty={c.empty} />
       {courses.data?.length > 0 && !rows.length && <p>{p.noMatches}</p>}
@@ -174,7 +174,7 @@ export function EnrollmentsPage({ t, client }) {
   return <div className="page portal-page">
     <Heading title={e.title} lede={e.lede} action={e.create} onAction={() => { setForm(empty); setMessage(noMessage); setOpen(true); }} />
     {!open && <Notice message={message} />}
-    <section className="panel" aria-label={e.title}>
+    <section className="table-section" aria-label={e.title}>
       <TableSearch t={t} value={query} onChange={setQuery} />
       <LoadState t={t} state={enrollments} empty={e.empty} />
       {enrollments.data?.length > 0 && !rows.length && <p>{p.noMatches}</p>}
@@ -227,13 +227,15 @@ export function UsersPage({ t, client, me }) {
     setBusy(false);
     if (report(result, form.id ? u.saved : u.created)) { setOpen(false); users.reload(); }
   };
-  const setActive = async (account, active) => { if (report(await client.owner.users.update(account.id, { active }), u.saved)) users.reload(); };
+  const setActive = async (account, active) => {
+    if (!active && !globalThis.confirm?.(u.confirmDeactivate.replace('{name}', account.display_name))) return;
+    if (report(await client.owner.users.update(account.id, { active }), u.saved)) users.reload(); };
   const rows = (users.data || []).filter((account) => matches(query, account.display_name, account.username, ...account.roles.map((role) => p.roles[role])));
 
   return <div className="page portal-page">
     <Heading title={u.title} lede={u.lede} action={u.create} onAction={() => show(emptyForm)} />
     {!open && <Notice message={message} />}
-    <section className="panel" aria-label={u.title}>
+    <section className="table-section" aria-label={u.title}>
       <TableSearch t={t} value={query} onChange={setQuery} />
       <LoadState t={t} state={users} empty={u.empty} />
       {users.data?.length > 0 && !rows.length && <p>{p.noMatches}</p>}
@@ -243,7 +245,7 @@ export function UsersPage({ t, client, me }) {
           <td><strong>{account.display_name}</strong><small>{account.username}{account.id === me.id ? ` · ${u.you}` : ''}</small></td>
           <td data-label={u.roles}>{account.roles.map((role) => p.roles[role]).join(', ')}</td>
           <td data-label={u.status}><span className={`status-badge ${account.active ? 'success' : 'neutral'}`}>{account.active ? u.active : u.inactive}</span></td>
-          <td className="row-actions"><button className="button quiet" onClick={() => show({ id: account.id, username: account.username, display_name: account.display_name, password: '', roles: account.roles })} aria-label={`${u.editAction}: ${account.display_name}`}>{u.editAction}</button>{account.id !== me.id && <button className="button quiet" onClick={() => setActive(account, !account.active)} aria-label={`${account.active ? u.deactivate : u.reactivate}: ${account.display_name}`}>{account.active ? u.deactivate : u.reactivate}</button>}</td>
+          <td className="row-actions"><button className="button quiet" onClick={() => show({ id: account.id, username: account.username, display_name: account.display_name, password: '', roles: account.roles })} aria-label={`${u.editAction}: ${account.display_name}`}>{u.editAction}</button>{account.id !== me.id && <button className={`button quiet${account.active ? ' danger' : ''}`} onClick={() => setActive(account, !account.active)} aria-label={`${account.active ? u.deactivate : u.reactivate}: ${account.display_name}`}>{account.active ? u.deactivate : u.reactivate}</button>}</td>
         </tr>)}</tbody>
       </table></div>}
     </section>
@@ -268,7 +270,7 @@ export function BatchesPage({ t, locale = 'en', client }) {
   const rows = (batches.data || []).filter((batch) => matches(query, batch.name, batch.teacher_name, batch.course_name));
   return <div className="page portal-page">
     <h1>{b.ownerTitle}</h1><p className="page-lede">{b.ownerLede}</p>
-    <section className="panel" aria-label={b.ownerTitle}>
+    <section className="table-section" aria-label={b.ownerTitle}>
       <TableSearch t={t} value={query} onChange={setQuery} />
       <LoadState t={t} state={batches} empty={b.empty} />
       {batches.data?.length > 0 && !rows.length && <p>{t.portal.noMatches}</p>}

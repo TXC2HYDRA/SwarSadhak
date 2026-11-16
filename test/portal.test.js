@@ -24,6 +24,7 @@ before(async () => {
     ...(await server.ssrLoadModule('/src/StudentTimetable.jsx')),
     ...(await server.ssrLoadModule('/src/Assignments.jsx')),
     App: (await server.ssrLoadModule('/src/main.jsx')).App,
+    LandingPage: (await server.ssrLoadModule('/src/main.jsx')).LandingPage,
   };
 });
 after(async () => { await server?.close(); });
@@ -458,4 +459,16 @@ test('answer history shows only the stored states and dates of a submission', ()
   const again = trail({ status: 'submitted', submitted_at: '2026-11-14T09:00:00Z', reviewed_at: '2026-11-12T09:00:00Z' });
   assert.match(again, new RegExp(`${a.trail.sentAgain}</span><small>Nov 14</small>`));
   assert.ok(!again.includes(a.trail.tryAgain));
+});
+
+test('sign-in offers a labelled password toggle and the landing page carries no ornament or fake audio', () => {
+  for (const locale of supportedLocales) {
+    const t = getTranslations(locale);
+    const login = renderToStaticMarkup(React.createElement(web.LoginPage, { t, locale, onLocale() {}, onSubmit() {}, onGuest() {} }));
+    assert.match(login, new RegExp(`aria-label="${t.portal.showPassword}" aria-pressed="false"`));
+    assert.match(login, /id="login-password" type="password"/);
+    const landing = renderToStaticMarkup(React.createElement(web.LandingPage, { t, locale, onLocaleChange() {}, onStart() {}, onExplore() {}, onNavigate() {} }));
+    assert.match(landing, new RegExp(t.landing.heroTitle));
+    for (const pattern of ['orbit', 'sound-wave', 'eyebrow', 'preview-pitch-line', 'empty-progress-visual', 'feature-card']) assert.ok(!landing.includes(pattern), pattern);
+  }
 });

@@ -344,6 +344,7 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 ## 10. Progress log
 
+- **Counterpoint step 4:** owner tables and drawer, sign-in, landing (section 12). Checked: `npm test` 162/162, `npm run build` (main bundle 494.0 kB), owner, sign-in and landing screenshots at 1440, 1280, 1024, 390 and Marathi 360 px, no overflow.
 - **Counterpoint step 3:** teacher dashboard and the answer history (section 12). Checked: `npm test` 161/161, `npm run build` (main bundle 496.9 kB), teacher screenshots at 1440, 1280, 768 and 390 px, Marathi at 390 px dark, no overflow.
 - **Counterpoint step 2:** practice studio (section 12): held-Sa trace, studio grid with a pinned transport on phones, beat ruler, tanpura in the control column. Checked: `npm test` 160/160, `npm run build` (main bundle 495.3 kB), studio screenshots with a synthetic voice fed into the real pitch pipeline.
 - **Counterpoint step 1:** foundation, shell and Student Home (section 12). Darbar layer, crests and raga hour removed. Checked: `npm test`, `npm run build`, 90-shot matrix.
@@ -439,7 +440,7 @@ Review of Darbar: "simple UI but rich UX", new palette, smoother, nothing that l
 | 1 | Foundation (tokens, fonts, controls, motion), shell, Student Home | Done |
 | 2 | Practice studio: held Sa line, honest mic states, tala ruler | Done |
 | 3 | Teacher dashboard: calendar first, metric strip, assignment feedback loop | Done |
-| 4 | Owner tables and drawers, sign-in, landing | After review |
+| 4 | Owner tables and drawers, sign-in, landing | Done |
 | 5 | QA matrix, axe, reduced motion, 200% zoom | After review |
 
 **Palette** (all values and contrast matrices: spec section 2). Mineral `#F4F6F5` canvas, fog `#EDF1F0` surface, white raised surface, ink `#14282D` text, deep tide `#155D67` actions. Dark: night `#101C21`, `#F2F6F4` text, `#96DDE3` actions. Citron `#D8EE84` (`--live`, with `--on-live` text) is a fill used only for the rare live moment, today the "Next class" badge. Every text token is at least 4.5:1 on all three surfaces in both themes.
@@ -465,3 +466,10 @@ Review of Darbar: "simple UI but rich UX", new palette, smoother, nothing that l
 
 **Answer history** (spec signature moment 03, the guru-shishya loop, `AnswerTrail` in `Assignments.jsx`): each sent answer shows its steps from stored data only: Submitted (with `submitted_at`), then Waiting for review or Reviewed (with `reviewed_at`), then "Practise and send again" as a dashed next step once reviewed. A resubmission after review reads Reviewed → Sent again → Waiting for review. Drafts show nothing. Dates are the stored ones; there are no timestamp annotations because the app has none. It appears on the student's assignment card and on each answer in the teacher's review list, where answers are now ruled rows instead of cards inside a card.
 - Screenshots: `ui-redesign/counterpoint/teacher-*.jpg`, `assign-*.jpg`.
+
+**Owner** (spec 7D): the overview's five stat cards became the same metric strip as the teacher's (each number links to its page); today's classes and "Needs attention" stay as the two self-contained panels. Accounts, Courses, Enrollments and Batches tables sit on the canvas with ruled rows, not inside a panel. Create and edit open as a 460 px drawer from the right on tablets and up (sliding in 24 px, actions pinned to the bottom); phones keep the full-height sheet. The teacher's batch dialog uses the same drawer. On phones each row is a ruled list entry instead of a card. "Deactivate" is a danger-coloured text button and asks for confirmation naming the person (new string in en/mr/hi); "Reactivate" stays quiet.
+
+**Sign-in** (spec 7E): a password visibility toggle with an accessible label and `aria-pressed`, and a "Caps Lock is on" hint read from the key event. Desktop centres the 460 px form a little lower; no card, no hero.
+
+**Landing**: the decorative orbit, sound-wave bars, the fake practice preview, the empty progress bars, the icon-chip feature cards and every eyebrow are gone. What remains: the headline, one line, Start and Explore, the privacy line, then the held Sa reference line drawn once (static, `aria-hidden`, off under reduced motion). Features are a ruled three-column list; "How it works" is a five-beat time ruler with the first beat heavier (vertical on phones); privacy is a plain list. Phones hide the nav Start button (the hero has one) so the bar fits at 360 px.
+- Screenshots: `ui-redesign/counterpoint/owner-*.jpg`, `login-*.jpg`, `landing-*.jpg`.
