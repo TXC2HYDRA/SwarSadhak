@@ -65,3 +65,6 @@ export function batchFormErrors(form) {
   if (!form.start_time || !form.end_time || form.end_time <= form.start_time) errors.push('endAfterStart');
   return errors;
 }
+
+// "Due 20 Nov 2026" for an assignment's due date (shared by the student timetable strip and the assignments pages).
+export const due = (a, date, locale) => (date ? a.dueOn.replace('{date}', formatDate(date, locale, { day: 'numeric', month: 'short', year: 'numeric' })) : '');
