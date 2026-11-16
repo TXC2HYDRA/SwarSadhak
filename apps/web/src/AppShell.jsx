@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Menu, Music2, X } from 'lucide-react';
-import { BRAND_DEVANAGARI, PAGE_TERMS, PageCrest, isDevanagari } from './darbar.jsx';
+import { BRAND_DEVANAGARI, PAGE_TERMS, PageCrest, RagaHour, isDevanagari } from './darbar.jsx';
 
 export const Brand = ({ t }) => <span>{t.brand.first}<span>{t.brand.second}</span></span>;
 
@@ -48,7 +48,7 @@ export function AppShell({ t, kicker, note, items, active, focusKey = active, on
         <button className="icon-button menu-button" aria-label={hidden ? t.openMenu : t.close} aria-controls="primary-navigation" aria-expanded={!hidden} onClick={() => (isMobile ? setMenuOpen((open) => !open) : setCollapsed((value) => !value))}><Menu size={22} aria-hidden="true" /></button>
         <span className="brand-mark topbar-mark" aria-hidden="true"><Music2 size={16} /></span>
         <strong className="topbar-title">{title}</strong>
-        <div className="topbar-tools">{tools}</div>
+        <RagaHour t={t} /><div className="topbar-tools">{tools}</div>
       </header>
       <main id="main-content" tabIndex={-1}><PageCrest term={PAGE_TERMS[focusKey] || PAGE_TERMS[active]} />{children}</main>
     </div>

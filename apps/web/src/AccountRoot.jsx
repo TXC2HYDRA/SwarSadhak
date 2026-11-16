@@ -9,7 +9,7 @@ import { startOptionalSync } from './optionalSync.js';
 import { AccountMenu, LanguagePicker, PortalShell } from './PortalShell.jsx';
 import { ThemeToggle } from './theme.jsx';
 import { roleFromPath } from './router.js';
-import { PAGE_TERMS, PageCrest } from './darbar.jsx';
+import { PAGE_TERMS, PageCrest, RagaHour } from './darbar.jsx';
 import { StudentTimetable, StudentToday } from './StudentTimetable.jsx';
 import { StudentAssignments } from './Assignments.jsx';
 import './portal.css';
@@ -94,6 +94,7 @@ export function LoginPage({ t, locale, onLocale, notice, onSubmit, onGuest }) {
       <PageCrest term={PAGE_TERMS.home} />
       <h1>{p.signInTitle}</h1>
       <p className="page-lede">{p.signInLede}</p>
+      <RagaHour t={t} line />
       {notice && <p className="notice" role="status">{notice}</p>}
       <form className="portal-form" onSubmit={submit}>
         <label className="field-label">{p.username}<input name="username" autoComplete="username" required value={username} onChange={(event) => setUsername(event.target.value)} /></label>

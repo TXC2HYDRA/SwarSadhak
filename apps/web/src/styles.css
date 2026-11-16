@@ -47,6 +47,15 @@
   --band-border: #3d4a8a;
   --band-accent: #f2b36b;
   --band-gold: #d9b45e;
+  /* Raga-hour accents (decorative only): one per prahar, used for glows, dots and crest stars. */
+  --prahar-nishith: #6f8cf0;
+  --prahar-ushah: #e78fb3;
+  --prahar-pratah: #f4a259;
+  --prahar-purvahna: #f2c14e;
+  --prahar-madhyahna: #f0d36a;
+  --prahar-aparahna: #e0874a;
+  --prahar-sayam: #e5604d;
+  --prahar-pradosh: #a58be8;
   --focus: #1f2d6b;
   --overlay: rgb(17 19 42 / .5);
   --glass: color-mix(in srgb, var(--bg) 82%, transparent);
@@ -110,6 +119,15 @@
   --band-border: #2c3163;
   --band-accent: #f2b36b;
   --band-gold: #d9b45e;
+  /* Raga-hour accents (decorative only): one per prahar, used for glows, dots and crest stars. */
+  --prahar-nishith: #6f8cf0;
+  --prahar-ushah: #e78fb3;
+  --prahar-pratah: #f4a259;
+  --prahar-purvahna: #f2c14e;
+  --prahar-madhyahna: #f0d36a;
+  --prahar-aparahna: #e0874a;
+  --prahar-sayam: #e5604d;
+  --prahar-pradosh: #a58be8;
   --focus: #e2c27a;
   --overlay: rgb(5 6 18 / .74);
   --shadow-sm: 0 8px 24px rgb(0 0 0 / .28);
