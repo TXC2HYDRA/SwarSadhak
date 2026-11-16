@@ -9,14 +9,14 @@ import { ALANKARS, alankarDisplayGroups, alankarGroups } from '../packages/exerc
 import { createAlankarTimeline, getAlankarBeatAt } from '../packages/practice-domain/src/index.js';
 
 let server;
-let AlankarPracticeDisplay;
+let AlankarPracticeDisplay, TALAS, talaMatras;
 before(async () => {
   server = await createServer({
     root: fileURLToPath(new URL('../apps/web', import.meta.url)),
     server: { middlewareMode: true, watch: null, hmr: false, ws: false },
     appType: 'custom',
   });
-  ({ AlankarPracticeDisplay } = await server.ssrLoadModule('/src/AlankarPracticeDisplay.jsx'));
+  ({ AlankarPracticeDisplay, TALAS, talaMatras } = await server.ssrLoadModule('/src/AlankarPracticeDisplay.jsx'));
 });
 after(async () => { await server?.close(); });
 
@@ -126,4 +126,27 @@ test('the held-Sa trace draws only real readings and shows the beat ruler on the
   const beat = getAlankarBeatAt(timeline.countInBeats * timeline.beatDurationMs + timeline.beatDurationMs * 2, timeline);
   const html = renderToStaticMarkup(React.createElement(AlankarPracticeDisplay, { beat, timeline, groups, progress: 50, phase: 'running', t, groupKey: 'g' }));
   assert.match(html, /<ol class="beat-ruler" aria-hidden="true"><li>1<\/li><li>2<\/li><li class="is-on">3<\/li><li>4<\/li><\/ol>/);
+});
+
+test('the opt-in tala ruler counts practice beats around the chosen cycle with that tala\'s claps and waves', () => {
+  const t = getTranslations('en');
+  const lengths = { keherwa: 8, dadra: 6, rupak: 7, jhaptaal: 10, ektaal: 12, teentaal: 16 };
+  for (const [id, tala] of Object.entries(TALAS)) {
+    assert.equal(tala.vibhag.reduce((sum, n) => sum + n, 0), lengths[id], id);
+    assert.equal(tala.marks.length, tala.vibhag.length, id);
+    assert.ok(t.studioUi.talas[id], id);
+  }
+  assert.deepEqual(talaMatras('jhaptaal').filter((m) => m.mark).map((m) => [m.n, m.mark]), [[1, 'X'], [3, '2'], [6, '0'], [8, '3']]);
+  assert.equal(talaMatras(''), null);
+  const groups = [['Sa', 'Re', 'Ga']];
+  const timeline = createAlankarTimeline({ groups, bpm: 60, loops: 6 });
+  // Practice beat 18 (0-based) in Teentaal is matra 3 of the second cycle.
+  const beat = getAlankarBeatAt((timeline.countInBeats + 18) * timeline.beatDurationMs, timeline);
+  const html = renderToStaticMarkup(React.createElement(AlankarPracticeDisplay, { beat, timeline, groups, progress: 50, phase: 'running', t, groupKey: 'g', tala: 'teentaal' }));
+  assert.match(html, /<ol class="beat-ruler is-tala" style="--matras:16" aria-hidden="true"><li class="is-sam"><span class="tala-mark">X<\/span>1<\/li><li>2<\/li><li class="is-on">3<\/li>/);
+  assert.match(html, /<li class="is-vibhag"><span class="tala-mark is-khali">0<\/span>9<\/li>/);
+  assert.match(html, /Matra 3 \/ 16/);
+  const countIn = getAlankarBeatAt(0, timeline);
+  const lead = renderToStaticMarkup(React.createElement(AlankarPracticeDisplay, { beat: countIn, timeline, groups, progress: 0, phase: 'count-in', t, groupKey: 'g', tala: 'teentaal' }));
+  assert.ok(!lead.includes('is-on') && !lead.includes('Matra'));
 });

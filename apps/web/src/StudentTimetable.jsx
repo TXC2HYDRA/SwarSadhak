@@ -2,8 +2,7 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { LoadState, useApi } from './PortalShell.jsx';
 import { TodayPanel, timeRange } from './BatchCalendar.jsx';
-import { due } from './Assignments.jsx';
-import { DAYS, nextClass, nowIn, todayIn } from './schedule.js';
+import { DAYS, due, nextClass, nowIn, todayIn } from './schedule.js';
 import './portal.css';
 
 export const timetableDays = (batches) => DAYS.map((day, index) => ({ day, index, items: batches.filter((batch) => batch.days.includes(day)) })).filter((day) => day.items.length);

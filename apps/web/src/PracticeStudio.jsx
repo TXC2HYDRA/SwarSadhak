@@ -5,7 +5,10 @@ import { targetFrequency } from '@swarsadhak/musical-core';
 import { createPracticeSession } from './practiceSession.js';
 import { alankarSetup, livePitch, octaveKey, timeLabel } from './practiceSetup.js';
 import { createBeatPlayer } from './beatPlayer.js';
-import { AlankarPracticeDisplay } from './AlankarPracticeDisplay.jsx';
+import { AlankarPracticeDisplay, TALAS, talaMatras } from './AlankarPracticeDisplay.jsx';
+import { readPreference, writePreference } from './navigation.js';
+
+const TALA_KEY = 'swar-tala-v1';
 import { TanpuraPlayer } from './TanpuraPlayer.jsx';
 import { TONICS } from './tonics.js';
 import './practiceStudio.css';
@@ -153,6 +156,8 @@ export function AlankarPractice({ t, pattern, tonic, setTonic, onFinish, onBack,
   const [loops, setLoops] = useState(initialSettings?.loops || 1);
   const [clickEnabled, setClickEnabled] = useState(true);
   const [clickError, setClickError] = useState(false);
+  // Opt-in tala ruler (visual; the beat sound accents its sam). Remembered on this device; off shows the 4-beat ruler.
+  const [tala, setTala] = useState(() => { const saved = readPreference(TALA_KEY, ''); return TALAS[saved] ? saved : ''; });
   const setup = useMemo(() => alankarSetup(pattern, { direction, bpm, loops, durationSeconds }), [pattern, direction, bpm, loops, durationSeconds]);
   const { groups, octaveGroups, timeline, targetAt, durationMs, countInMs } = setup;
   const session = usePracticeSession({ tonic, exerciseId: 'sa-re-ga', durationMs, countInMs, targetAt,
@@ -168,7 +173,8 @@ export function AlankarPractice({ t, pattern, tonic, setTonic, onFinish, onBack,
     if (beat.index === lastBeat.current || !['count-in', 'practice'].includes(beat.phase)) return;
     lastBeat.current = beat.index;
     beatPlayer.current ??= createBeatPlayer();
-    if (!beatPlayer.current.play(beat.accent)) setClickError(true);
+    const accent = TALAS[tala] && beat.phase === 'practice' ? beat.beatIndex % talaMatras(tala).length === 0 : beat.accent;
+    if (!beatPlayer.current.play(accent)) setClickError(true);
   }, [state.phase, state.startedAt, beat.index, clickEnabled]);
   useEffect(() => () => beatPlayer.current?.stop(), []);
   const practiceMs = Math.max(0, state.elapsedMs - countInMs);
@@ -188,11 +194,14 @@ export function AlankarPractice({ t, pattern, tonic, setTonic, onFinish, onBack,
         {locked && <p className="evidence-note">{t.studioUi.settingsLocked}</p>}
         <label className="beat-toggle"><input type="checkbox" checked={clickEnabled} onChange={(event) => { setClickEnabled(event.target.checked); setClickError(false); }} />{t.studioUi.click}</label>
         {clickError && <p role="status">{t.studioUi.clickUnavailable}</p>}
+        <label className="tala-select">{t.studioUi.talaRuler}<select value={tala} onChange={(event) => { setTala(event.target.value); writePreference(TALA_KEY, event.target.value); }}>
+          <option value="">{t.studioUi.talaOff}</option>{Object.keys(TALAS).map((id) => <option key={id} value={id}>{t.studioUi.talas[id]}</option>)}
+        </select></label>
         {!['completed', 'error'].includes(state.phase) && <TanpuraPlayer key={session.attempt} t={t} tonic={tonic} setTonic={setTonic} settingsLocked={locked} compact />}
       </section>
       <section className="studio-stage" aria-labelledby="stage-title">
         <div className="stage-head"><h2 id="stage-title" className="sr-only">{t.measurement}</h2><SessionStatus t={t} state={state} countIn={countIn} /><div className="elapsed"><span>{timeLabel(practiceMs)}</span><small>{t.studioUi.activeTime}</small></div></div>
-        <AlankarPracticeDisplay beat={beat} timeline={timeline} groups={groups} octaveGroups={octaveGroups} progress={progress} phase={countIn ? 'count-in' : state.phase} t={t} groupKey={`${pattern.id}-${direction}`} />
+        <AlankarPracticeDisplay beat={beat} timeline={timeline} groups={groups} octaveGroups={octaveGroups} progress={progress} phase={countIn ? 'count-in' : state.phase} t={t} groupKey={`${pattern.id}-${direction}`} tala={tala} />
         <PitchTrace t={t} state={state} target={liveTarget} />
         <PitchReadout t={t} state={state} target={liveTarget} tonic={tonic} />
         <p className="evidence-note">{t.studioUi.countInNote} {t.studioUi.evidencePolicy}</p>

@@ -3,12 +3,12 @@ import { ExternalLink, FileAudio, FileText, FileVideo, Image as ImageIcon, Link2
 import { LoadState, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
 import { ACCEPT, attachmentKind, checkFile, fileErrorKey, formatSize, uploadFile } from './files.js';
-import { formatDate } from './schedule.js';
+import { due } from './schedule.js';
 import './portal.css';
 
 const fill = (text, values) => Object.entries(values).reduce((out, [key, value]) => out.replace(`{${key}}`, value), text);
 const ICONS = { audio: FileAudio, video: FileVideo, pdf: FileText, image: ImageIcon, link: Link2 };
-export const due = (a, date, locale) => date ? fill(a.dueOn, { date: formatDate(date, locale, { day: 'numeric', month: 'short', year: 'numeric' }) }) : '';
+export { due };
 
 // Files open with a short-lived link fetched on click: audio and video play inline, images show inline, PDFs open in a new tab.
 export function AttachmentList({ t, locale = 'en', client, attachments = [], userId, onChange }) {

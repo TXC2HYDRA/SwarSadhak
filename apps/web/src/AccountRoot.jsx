@@ -11,12 +11,13 @@ import { AccountMenu, LanguagePicker, PortalShell } from './PortalShell.jsx';
 import { ThemeToggle } from './theme.jsx';
 import { roleFromPath } from './router.js';
 import { StudentTimetable, StudentToday } from './StudentTimetable.jsx';
-import { StudentAssignments } from './Assignments.jsx';
 import './portal.css';
 
 // Staff portals load on demand: students and guests never download them.
 const OwnerPortal = lazy(() => import('./OwnerPortal.jsx').then((module) => ({ default: module.OwnerPortal })));
 const TeacherPortal = lazy(() => import('./TeacherPortal.jsx').then((module) => ({ default: module.TeacherPortal })));
+// Assignments (uploads, players, the answer form) load when a student opens them; Teacher's chunk shares the module.
+const StudentAssignments = lazy(() => import('./Assignments.jsx').then((module) => ({ default: module.StudentAssignments })));
 
 const readLocale = () => readPreference('swar-locale', 'en') || 'en';
 
@@ -67,7 +68,7 @@ export function AccountRoot({ apiUrl = import.meta.env.VITE_API_URL || '' }) {
   const shell = { t, locale, onLocale: changeLocale, accountBar };
   if (portal === 'student') return <App account={session.user} accountBar={accountBar} home={(appT, appLocale, go) => <StudentToday t={appT} locale={appLocale} client={client} onTimetable={() => go('timetable')} onAssignments={() => go('assignments')} />} pages={[
     { key: 'timetable', Icon: CalendarDays, label: (appT) => appT.portal.student.nav, render: (appT, appLocale) => <StudentTimetable t={appT} locale={appLocale} client={client} /> },
-    { key: 'assignments', Icon: ClipboardList, label: (appT) => appT.portal.assignments.nav, render: (appT, appLocale) => <StudentAssignments t={appT} locale={appLocale} client={client} user={session.user} /> },
+    { key: 'assignments', Icon: ClipboardList, label: (appT) => appT.portal.assignments.nav, render: (appT, appLocale) => <Suspense fallback={<p className="page" role="status">{appT.portal.users.loading}</p>}><StudentAssignments t={appT} locale={appLocale} client={client} user={session.user} /></Suspense> },
   ]} />;
   const loading = <p className="page" role="status">{t.portal.users.loading}</p>;
   if (portal === 'owner') return <Suspense fallback={loading}><OwnerPortal shell={shell} client={client} user={session.user} /></Suspense>;
