@@ -10,8 +10,8 @@
 .pitch-target, .pitch-actual { display: grid; align-content: start; gap: 12px; }
 .pitch-readout span, .pitch-readout small { color: var(--text-muted); }
 .pitch-readout strong { font-size: clamp(1.6rem, 4vw, 3rem); line-height: 1.3; font-variant-numeric: tabular-nums; }
-.pitch-target strong { color: var(--accent-strong); }
-.pitch-guidance { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-height: 70px; padding: 16px; background: var(--surface-soft); border-radius: var(--radius-sm); }
+.pitch-target strong { color: var(--primary); }
+.pitch-guidance { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; min-height: 70px; padding: 16px; background: var(--surface); border-radius: var(--radius-control); }
 .pitch-guidance svg { flex-shrink: 0; }
 .pitch-guidance.inTune { color: var(--success); }
 .pitch-guidance.flat { color: var(--pitch-flat); }

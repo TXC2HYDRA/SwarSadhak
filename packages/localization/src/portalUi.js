@@ -15,7 +15,6 @@ export const portalUi = {
     noAccess: 'This account has no role yet. Contact your academy.',
     roles: { owner: 'Owner', teacher: 'Teacher', student: 'Student' },
     search: 'Search', noMatches: 'Nothing matches your search.',
-    raga: { hour: 'Raga hour', names: { nishith: 'Nishith', ushah: 'Usha', pratah: 'Pratah', purvahna: 'Purvahna', madhyahna: 'Madhyahna', aparahna: 'Aparahna', sayam: 'Sayam', pradosh: 'Pradosh' }, when: { nishith: 'midnight', ushah: 'before dawn', pratah: 'dawn', purvahna: 'morning', madhyahna: 'midday', aparahna: 'afternoon', sayam: 'dusk', pradosh: 'night' }, ragas: { nishith: 'Malkauns, Darbari Kanada, Chandrakauns', ushah: 'Lalit, Sohini, Paraj', pratah: 'Bhairav, Ramkali, Jogiya', purvahna: 'Todi, Bilawal, Jaunpuri', madhyahna: 'Brindavani Sarang, Gaud Sarang, Shuddh Sarang', aparahna: 'Multani, Bhimpalasi, Patdeep', sayam: 'Yaman, Puriya Dhanashri, Marwa', pradosh: 'Bihag, Kedar, Desh' } },
     nav: { users: 'Accounts', dashboard: 'Dashboard', overview: 'Overview', courses: 'Courses', enrollments: 'Enrollments', batches: 'Batches' },
     errors: {
       invalidCredentials: 'Username or password is incorrect.', tooManyAttempts: 'Too many failed attempts. Wait 15 minutes and try again.',
@@ -109,7 +108,6 @@ export const portalUi = {
     noAccess: 'या खात्याला अद्याप कोणतीही भूमिका दिलेली नाही. तुमच्या अकॅडमीशी संपर्क साधा.',
     roles: { owner: 'मालक', teacher: 'शिक्षक', student: 'विद्यार्थी' },
     search: 'शोधा', noMatches: 'शोधाशी जुळणारे काही नाही.',
-    raga: { hour: 'रागाची वेळ', names: { nishith: 'निशीथ', ushah: 'उषःकाल', pratah: 'प्रातःकाल', purvahna: 'पूर्वाह्न', madhyahna: 'मध्याह्न', aparahna: 'अपराह्न', sayam: 'सायंकाळ', pradosh: 'प्रदोष' }, when: { nishith: 'मध्यरात्र', ushah: 'पहाटेपूर्वी', pratah: 'पहाट', purvahna: 'सकाळ', madhyahna: 'दुपार', aparahna: 'दुपारनंतर', sayam: 'संध्याकाळ', pradosh: 'रात्र' }, ragas: { nishith: 'मालकंस, दरबारी कानडा, चंद्रकंस', ushah: 'ललित, सोहनी, परज', pratah: 'भैरव, रामकली, जोगिया', purvahna: 'तोडी, बिलावल, जौनपुरी', madhyahna: 'वृंदावनी सारंग, गौड सारंग, शुद्ध सारंग', aparahna: 'मुलतानी, भीमपलासी, पटदीप', sayam: 'यमन, पूरिया धनाश्री, मारवा', pradosh: 'बिहाग, केदार, देस' } },
     nav: { users: 'खाती', dashboard: 'डॅशबोर्ड', overview: 'आढावा', courses: 'अभ्यासक्रम', enrollments: 'प्रवेश', batches: 'बॅच' },
     errors: {
       invalidCredentials: 'वापरकर्तानाव किंवा पासवर्ड चुकीचा आहे.', tooManyAttempts: 'खूप अयशस्वी प्रयत्न झाले. १५ मिनिटांनी पुन्हा प्रयत्न करा.',
@@ -203,7 +201,6 @@ export const portalUi = {
     noAccess: 'इस खाते को अभी कोई भूमिका नहीं दी गई है। अपनी अकादमी से संपर्क करें।',
     roles: { owner: 'मालिक', teacher: 'शिक्षक', student: 'विद्यार्थी' },
     search: 'खोजें', noMatches: 'खोज से कुछ मेल नहीं खाता।',
-    raga: { hour: 'राग का समय', names: { nishith: 'निशीथ', ushah: 'उषःकाल', pratah: 'प्रातःकाल', purvahna: 'पूर्वाह्न', madhyahna: 'मध्याह्न', aparahna: 'अपराह्न', sayam: 'सायंकाल', pradosh: 'प्रदोष' }, when: { nishith: 'आधी रात', ushah: 'भोर से पहले', pratah: 'भोर', purvahna: 'सुबह', madhyahna: 'दोपहर', aparahna: 'तीसरा पहर', sayam: 'संध्या', pradosh: 'रात' }, ragas: { nishith: 'मालकौंस, दरबारी कान्हड़ा, चंद्रकौंस', ushah: 'ललित, सोहनी, परज', pratah: 'भैरव, रामकली, जोगिया', purvahna: 'तोड़ी, बिलावल, जौनपुरी', madhyahna: 'वृंदावनी सारंग, गौड़ सारंग, शुद्ध सारंग', aparahna: 'मुलतानी, भीमपलासी, पटदीप', sayam: 'यमन, पूरिया धनाश्री, मारवा', pradosh: 'बिहाग, केदार, देस' } },
     nav: { users: 'खाते', dashboard: 'डैशबोर्ड', overview: 'सारांश', courses: 'पाठ्यक्रम', enrollments: 'नामांकन', batches: 'बैच' },
     errors: {
       invalidCredentials: 'उपयोगकर्ता नाम या पासवर्ड गलत है।', tooManyAttempts: 'बहुत अधिक असफल प्रयास हुए। 15 मिनट बाद फिर प्रयास करें।',

@@ -163,7 +163,7 @@ export function BatchDialog({ t, locale, state, courses, students, onClose, onSa
 }
 
 // Today's classes in academy time, marked finished / live / next, plus the next class on a later day. Shared by every role.
-export function TodayPanel({ t, locale, batches, today, clock, onBatch }) {
+export function TodayPanel({ t, locale, batches, today, clock, onBatch, dated = true }) {
   const p = t.portal.teacher; const b = t.portal.batches;
   const todays = batches ? classesOn(batches, today) : [];
   const upNext = todays.find(({ batch }) => batch.start_time > clock);
@@ -171,7 +171,7 @@ export function TodayPanel({ t, locale, batches, today, clock, onBatch }) {
   const later = upcoming && upcoming.date !== today ? upcoming : null;
   const state = (item) => (item.batch.end_time <= clock ? 'finished' : item.batch.start_time <= clock ? 'live' : item === upNext ? 'upNext' : '');
   return <section className="panel today-panel" aria-labelledby="today-title">
-    <p className="eyebrow">{p.today} · {formatDate(today, locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+    {dated && <p className="eyebrow">{p.today} · {formatDate(today, locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>}
     <h2 id="today-title">{p.classesToday}</h2>
     {batches && !todays.length && <p>{p.todayEmpty}</p>}
     {todays.length > 0 && <ol className="today-list">{todays.map((item) => {
@@ -179,7 +179,7 @@ export function TodayPanel({ t, locale, batches, today, clock, onBatch }) {
       return <li key={item.batch.id} className={status ? `is-${status}` : undefined}><button type="button" onClick={() => onBatch(item.batch)}>
         <span className="today-time">{timeRange(item.batch, locale)}</span>
         <span className="today-name"><strong>{item.batch.name}</strong><small>{item.batch.course_name}{item.batch.teacher_name ? ` · ${item.batch.teacher_name}` : ''}{item.batch.student_ids ? ` · ${b.studentCount.replace('{count}', item.batch.student_ids.length)}` : ''}</small></span>
-        {status && <span className={`status-badge ${status === 'live' ? 'success' : status === 'upNext' ? 'warning' : ''}`}>{p[status]}</span>}
+        {status && <span className={`status-badge ${status === 'live' ? 'success' : status === 'upNext' ? 'next' : ''}`}>{p[status]}</span>}
       </button></li>;
     })}</ol>}
     {later && <p className="today-next"><span>{p.nextClass}:</span> <strong>{b.dayLong[DAYS[later.dayIndex]]} {formatDate(later.date, locale, { day: 'numeric', month: 'short' })}, {timeRange(later.batch, locale)}</strong> · {later.batch.name}</p>}

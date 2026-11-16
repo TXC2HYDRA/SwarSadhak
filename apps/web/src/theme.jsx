@@ -3,7 +3,7 @@ import { Moon, Sun } from 'lucide-react';
 
 // index.html sets data-theme before the first paint (no flash); this module keeps it in sync afterwards.
 export const THEME_KEY = 'nadopasana-theme';
-const META_COLORS = { light: '#f8f3ea', dark: '#19151b' };
+const META_COLORS = { light: '#f4f6f5', dark: '#101c21' };
 
 export function storedTheme() {
   try { const value = globalThis.localStorage?.getItem(THEME_KEY); return value === 'light' || value === 'dark' ? value : null; } catch { return null; }

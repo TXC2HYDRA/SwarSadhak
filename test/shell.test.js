@@ -8,7 +8,6 @@ import { createServer } from 'vite';
 import { Home, Users } from 'lucide-react';
 import { getTranslations, supportedLocales } from '@swarsadhak/localization';
 import { pageFromPath, pagePath, roleFromPath, showPath } from '../apps/web/src/router.js';
-import { PRAHARS, praharAt } from '../apps/web/src/raga.js';
 
 let server, AppShell;
 before(async () => {
@@ -68,17 +67,11 @@ test('staff portals stay out of the main bundle (loaded on demand)', () => {
   }
 });
 
-test('raga hour follows the eight three-hour prahars, named with their ragas in every locale', () => {
-  const at = (hour) => praharAt(new Date(2026, 10, 16, hour, 30));
-  assert.deepEqual([0, 3, 5, 6, 9, 12, 15, 18, 20, 21, 23].map(at), ['nishith', 'ushah', 'ushah', 'pratah', 'purvahna', 'madhyahna', 'aparahna', 'sayam', 'sayam', 'pradosh', 'pradosh']);
-  for (const locale of supportedLocales) {
-    const r = getTranslations(locale).portal.raga;
-    assert.ok(r.hour, locale);
-    for (const key of PRAHARS) assert.ok(r.names[key] && r.when[key] && r.ragas[key], `${locale} ${key}`);
-  }
+
+test('shell has no ornament layer: plain labels, one brand mark, no crest', () => {
   const t = getTranslations('en');
-  const html = renderToStaticMarkup(React.createElement(AppShell, { t, items: [], active: 'overview', onNavigate() {}, title: 'Overview', tools: null }, 'x'));
-  assert.match(html, /class="raga-chip"/);
-  assert.ok(html.includes(t.portal.raga.names[praharAt()]));
-  assert.match(html, /class="page-crest" lang="hi" aria-hidden="true"><span>दरबार<\/span>/);
+  const html = renderToStaticMarkup(React.createElement(AppShell, { t, items: [{ key: 'overview', label: 'Overview', Icon: Home }], active: 'overview', onNavigate() {}, title: 'Overview', tools: null }, 'x'));
+  assert.match(html, /class="brand-name">NadoPasana<\/span>|class="brand-name">Nado<span>Pasana<\/span><\/span>/);
+  assert.doesNotMatch(html, /page-crest|nav-term|raga/);
+  assert.match(html, /<button class="nav-item active" aria-current="page"><svg[^>]*><\/svg>|<button class="nav-item active" aria-current="page"><svg/);
 });

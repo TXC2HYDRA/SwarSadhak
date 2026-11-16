@@ -10,8 +10,7 @@ import { recommend } from '@swarsadhak/recommendations';
 import './styles.css';
 import { AlankarList } from './AlankarList.jsx';
 import { ThemeToggle } from './theme.jsx';
-import { AppShell, Brand } from './AppShell.jsx';
-import { RagaHour } from './darbar.jsx';
+import { AppShell, Brand, BrandMark } from './AppShell.jsx';
 import { pageFromPath, pagePath, showPath } from './router.js';
 import { Practice, AlankarPractice } from './PracticeStudio.jsx';
 import { Results } from './Results.jsx';
@@ -125,10 +124,9 @@ export function App({ account = null, accountBar = null, pages = [], home = null
   if (route === 'landing') return <LandingPage t={t} locale={locale} onLocaleChange={changeLocale} onStart={() => go('home')} onExplore={() => go('library')} onNavigate={go} />;
   const items = navItems.map(([key, Icon]) => ({ key, Icon, label: key === 'routines' ? t.planner : pages.find((page) => page.key === key)?.label(t) ?? t[key] }));
   const tools = <><div className="language-picker"><Languages size={16} aria-hidden="true" /><select value={locale} aria-label={t.language} onChange={(event) => changeLocale(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></div><ThemeToggle t={t} /></>;
-  const footer = <><div className="practice-tip"><Radio size={17} aria-hidden="true" /><strong>{t.tanpuraTitle}</strong><span>{t.tanpuraDescription}</span></div><small>{t.privacy}</small></>;
-  return <AppShell t={t} kicker={t.studio} note={t.ready} items={items} active={PARENT[route] || route} focusKey={route} onNavigate={go} title={routeLabel} tools={tools} footer={footer} account={accountBar}>
+  return <AppShell t={t} kicker={t.studio} items={items} active={PARENT[route] || route} focusKey={route} onNavigate={go} title={routeLabel} tools={tools} account={accountBar}>
         {notice && <div className="notice" role="status">{notice}</div>}
-        {route === 'home' && <HomePage t={t} sessions={sessions} routines={routines} activeRoutine={activeRoutine} rewards={derivedRewards} achievements={achievements} level={level} recommendation={recommendation} recommendedExercise={recommendedExercise} onStart={() => go('practice')} onSelectExercise={chooseExercise} onAlankar={() => chooseExercise(getExercise('sa-re-ga'))} onRoutine={openRoutine} onProgress={() => go('progress')} academy={home?.(t, locale, go)} />}
+        {route === 'home' && <HomePage t={t} locale={locale} sessions={sessions} routines={routines} activeRoutine={activeRoutine} recommendation={recommendation} recommendedExercise={recommendedExercise} onStart={() => go('practice')} onSelectExercise={chooseExercise} onAlankar={() => chooseExercise(getExercise('sa-re-ga'))} onRoutine={openRoutine} onProgress={() => go('progress')} academy={home?.(t, locale, go)} />}
         {pages.map((page) => route === page.key && <React.Fragment key={page.key}>{page.render(t, locale)}</React.Fragment>)}
       {route === 'practice' && <Practice key={`${selected.id}-${activeRoutine?.current?.id || 'single'}`} t={t} exercise={selected} durationSeconds={activeRoutine?.current?.durationSeconds} tonic={tonic} setTonic={setTonic} onFinish={saveSession} onBack={() => go(activeRoutine?.current ? 'routine' : 'library')} />}
       {route === 'results' && <Results t={t} session={sessions.at(-1)} saved={resultSaved} onSaveAgain={() => { setResultSaved(persist(KEYS.sessions, sessions)); persist(KEYS.rewards, derivedRewards); }} onRetry={retrySession} onNext={() => chooseExercise(recommendedExercise)} onRoutine={sessions.at(-1)?.routineId && activeRoutine ? () => go('routine') : undefined} onBack={() => go(sessions.at(-1)?.completion?.alankarId ? 'alankars' : 'library')} />}
@@ -150,7 +148,7 @@ function LandingPage({ t, locale, onLocaleChange, onStart, onExplore, onNavigate
   const featureCards = [[Music2, t.landing.features.pitch, t.landing.features.pitchDesc], [Sparkles, t.landing.features.swara, t.landing.features.swaraDesc], [Route, t.landing.features.routines, t.landing.features.routinesDesc], [BarChart3, t.landing.features.progress, t.landing.features.progressDesc], [Target, t.landing.features.coaching, t.landing.features.coachingDesc], [LockKeyhole, t.landing.features.local, t.landing.features.localDesc]];
   const steps = [[BookOpen, t.landing.steps.chooseTitle, t.landing.steps.chooseDesc], [Target, t.landing.steps.tonicTitle, t.landing.steps.tonicDesc], [Mic2, t.landing.steps.practiceTitle, t.landing.steps.practiceDesc], [BarChart3, t.landing.steps.reviewTitle, t.landing.steps.reviewDesc], [ArrowRight, t.landing.steps.continueTitle, t.landing.steps.continueDesc]];
   return <div className="landing-shell">
-    <header className="landing-nav"><button className="landing-brand" onClick={() => window.scrollTo(0, 0)} aria-label={t.brand.name}><span className="brand-mark"><Music2 size={20} /></span><Brand t={t} /></button><nav aria-label={t.accessibility.publicNavigation}><a href="#features">{t.landing.featureTitle}</a><a href="#how-it-works">{t.landing.howTitle}</a><a href="#privacy">{t.landing.privacyTitle}</a></nav><div className="landing-nav-actions"><label className="landing-language"><Languages size={16} aria-hidden="true" /><span className="sr-only">{t.landing.languageLabel}</span><select aria-label={t.landing.languageLabel} value={locale} onChange={(event) => onLocaleChange(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></label><ThemeToggle t={t} /><button className="button primary" onClick={onStart}>{t.landing.start}<ArrowRight size={16} aria-hidden="true" /></button></div></header>
+    <header className="landing-nav"><button className="landing-brand" onClick={() => window.scrollTo(0, 0)} aria-label={t.brand.name}><span className="brand-mark"><BrandMark /></span><Brand t={t} /></button><nav aria-label={t.accessibility.publicNavigation}><a href="#features">{t.landing.featureTitle}</a><a href="#how-it-works">{t.landing.howTitle}</a><a href="#privacy">{t.landing.privacyTitle}</a></nav><div className="landing-nav-actions"><label className="landing-language"><Languages size={16} aria-hidden="true" /><span className="sr-only">{t.landing.languageLabel}</span><select aria-label={t.landing.languageLabel} value={locale} onChange={(event) => onLocaleChange(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></label><ThemeToggle t={t} /><button className="button primary" onClick={onStart}>{t.landing.start}<ArrowRight size={16} aria-hidden="true" /></button></div></header>
     <main>
       <section className="landing-hero"><div className="landing-hero-copy"><p className="eyebrow"><Music2 size={15} aria-hidden="true" /> {t.landing.eyebrow}</p><h1>{t.landing.heroTitle}</h1><p className="landing-hero-description">{t.landing.heroDescription}</p><div className="landing-actions"><button className="button primary" onClick={onStart}><Play size={17} aria-hidden="true" />{t.landing.start}</button><button className="button quiet" onClick={onExplore}>{t.landing.explore}<ChevronRight size={16} aria-hidden="true" /></button></div><p className="landing-privacy-note"><ShieldCheck size={16} aria-hidden="true" /> {t.landing.privacyNote}</p></div><div className="landing-sound-orbit" aria-label={t.landing.previewLabel}><div className="sound-wave"><span /><span /><span /><span /><span /><span /><span /></div><div className="orbit-note orbit-note-sa">{t.swaras.Sa}</div><div className="orbit-note orbit-note-re">{t.swaras.Re}</div><div className="orbit-note orbit-note-ga">{t.swaras.Ga}</div><div className="orbit-core"><Music2 size={24} aria-hidden="true" /><small>{t.landing.previewState}</small></div></div></section>
       <section className="landing-section" id="features"><div className="landing-section-heading"><p className="eyebrow"><Sparkles size={15} aria-hidden="true" /> {t.studio}</p><h2>{t.landing.featureTitle}</h2><p>{t.landing.featureDescription}</p></div><div className="feature-grid">{featureCards.map(([Icon, title, description]) => <article className="feature-card" key={title}><span className="feature-icon"><Icon size={20} aria-hidden="true" /></span><h3>{title}</h3><p>{description}</p></article>)}</div></section>
@@ -159,25 +157,46 @@ function LandingPage({ t, locale, onLocaleChange, onStart, onExplore, onNavigate
       <section className="landing-section progress-preview-section" aria-label={t.accessibility.progressPreview}><div className="progress-preview-card"><div><p className="eyebrow"><BarChart3 size={15} aria-hidden="true" /> {t.landing.progressTitle}</p><h2>{t.landing.progressTitle}</h2><p>{t.landing.progressEmpty}</p></div><div className="empty-progress-visual" aria-hidden="true"><span /><span /><span /><span /><span /></div></div></section>
       <section className="landing-section privacy-section" id="privacy"><div className="landing-section-heading"><p className="eyebrow"><ShieldCheck size={15} aria-hidden="true" /> {t.landing.privacyTitle}</p><h2>{t.landing.privacyTitle}</h2><p>{t.landing.privacyDescription}</p></div><div className="privacy-grid">{Object.values(t.landing.privacyItems).map((item) => <div className="privacy-item" key={item}><ShieldCheck size={17} aria-hidden="true" /><span>{item}</span></div>)}</div></section>
     </main>
-    <footer className="landing-footer"><div><div className="landing-brand"><span className="brand-mark"><Music2 size={20} /></span><Brand t={t} /></div><h2>{t.landing.footerTitle}</h2><p>{t.landing.footerDescription}</p></div><nav aria-label={t.accessibility.publicNavigation}><button onClick={onStart}>{t.landing.footerStart}</button><button onClick={onExplore}>{t.landing.footerExercises}</button><button onClick={() => onNavigate('routines')}>{t.landing.footerRoutines}</button><button onClick={() => onNavigate('progress')}>{t.landing.footerProgress}</button><button onClick={() => onNavigate('settings')}>{t.landing.footerSettings}</button></nav></footer>
+    <footer className="landing-footer"><div><div className="landing-brand"><span className="brand-mark"><BrandMark /></span><Brand t={t} /></div><h2>{t.landing.footerTitle}</h2><p>{t.landing.footerDescription}</p></div><nav aria-label={t.accessibility.publicNavigation}><button onClick={onStart}>{t.landing.footerStart}</button><button onClick={onExplore}>{t.landing.footerExercises}</button><button onClick={() => onNavigate('routines')}>{t.landing.footerRoutines}</button><button onClick={() => onNavigate('progress')}>{t.landing.footerProgress}</button><button onClick={() => onNavigate('settings')}>{t.landing.footerSettings}</button></nav></footer>
   </div>;
 }
 
-export function HomePage({ t, sessions, routines, activeRoutine, rewards, achievements, level, recommendation, recommendedExercise, onStart, onSelectExercise, onAlankar, onRoutine, onProgress, academy = null }) {
+// Answers "what do I do next, when is my class, what is due" before anything else. academy: classes and work (signed in only).
+export function HomePage({ t, locale = 'en', sessions, routines, activeRoutine, recommendation, recommendedExercise, onSelectExercise, onAlankar, onRoutine, onProgress, academy = null }) {
   const latest = sessions.at(-1);
   const routine = activeRoutine || routines[0];
   const routineState = routineRunState(routine);
   const routineAction = routineState.empty ? t.planner : routineState.completed ? t.finishRoutine : activeRoutine ? t.dashboard.continueRoutine : t.dashboard.startRoutine;
   const routineDescription = routineState.empty ? t.routinesEmpty : routineState.completed ? t.finishRoutine : activeRoutine ? `${t.dashboard.routineProgress}: ${routineState.index + 1} / ${routineState.items.length}` : textAt(t, routine.descriptionKey);
   const exerciseName = textAt(t, recommendedExercise.nameKey);
-  const xp = rewards.reduce((sum, item) => sum + item.xp, 0);
-  const hasSessions = sessions.length > 0;
-  return <div className="page dashboard-page">
-    <section className="hero-panel dashboard-hero"><div className="hero-copy"><p className="eyebrow"><Music2 size={15} aria-hidden="true" /> {hasSessions ? t.dashboard.returnEyebrow : t.dashboard.newEyebrow}</p><h1>{hasSessions ? t.greeting : t.dashboard.newTitle}</h1><p className="hero-subtitle">{hasSessions ? t.dashboard.returnDescription : t.dashboard.newDescription}</p><RagaHour t={t} line /><div className="top-actions"><button className="button primary" onClick={onStart}><Play size={17} aria-hidden="true" />{t.start}</button><button className="button quiet" onClick={onAlankar}>{t.alankar.name}<ChevronRight size={16} aria-hidden="true" /></button></div></div><div className="hero-orbit" aria-hidden="true"><span>{t.swaras.Sa}</span><span>{t.swaras.Re}</span><span>{t.swaras.Ga}</span></div></section>
-    {academy}
-    <div className="dashboard-grid dashboard-grid-main"><Surface className="next-step-panel"><SectionHeader eyebrow={t.dashboard.nextAction} title={exerciseName} /><div className="next-step"><span className="icon-tile"><Target size={20} aria-hidden="true" /></span><div><strong>{t.dashboard.recommendedReason}</strong><p>{textAt(t, recommendation.reasonKey)}</p>{hasSessions && sessions.length < 2 && <small className="honest-note">{t.dashboard.smallSample}</small>}</div><button className="icon-button subtle" aria-label={`${t.start}: ${exerciseName}`} onClick={() => onSelectExercise(recommendedExercise)}><ChevronRight size={18} aria-hidden="true" /></button></div></Surface><Surface className="recent-panel"><SectionHeader eyebrow={t.dashboard.recentSummary} title={hasSessions ? t.dashboard.recentLatest : t.ready} />{latest ? <><div className="recent-summary"><StatusBadge tone="success" icon={CheckCircle2}>{t.complete}</StatusBadge><strong>{sessions.length}</strong><span>{t.dashboard.sessionsCompleted}</span></div><div className="recent-detail"><span>{t.dashboard.lastExercise}</span><strong>{textAt(t, getExercise(latest.exerciseId)?.nameKey || 'exercises.saSustain.name')}</strong><span>{t.reliableMatch}: {latest.metrics?.reliablePitchMatchPercent ?? t.noAudio}%</span></div></> : <div className="empty-state"><StatusBadge tone="neutral" icon={Clock3}>{t.ready}</StatusBadge><p>{t.empty}</p></div>}</Surface></div>
-    <div className="dashboard-grid dashboard-grid-secondary"><Surface><SectionHeader eyebrow={t.dashboard.noRoutine} title={routineAction} /><div className="routine-summary"><span className="icon-tile"><Route size={20} aria-hidden="true" /></span><div><strong>{routine ? textAt(t, routine.nameKey) : t.planner}</strong><p>{routineDescription}</p></div><button className="button" onClick={onRoutine}>{routineAction}</button></div></Surface><Surface><SectionHeader eyebrow={t.dashboard.currentLevel} title={`${t.levelLabel} ${level.level}`} /><div className="level-summary"><div><strong>{xp}</strong><span>{t.dashboard.xp}</span></div><div><strong>{achievements.length}</strong><span>{t.dashboard.achievementPreview}</span></div><button className="button quiet" onClick={onProgress}>{t.view}</button></div>{achievements.length === 0 && <p className="empty-copy">{t.dashboard.noAchievements}</p>}</Surface></div>
-    <div className="dashboard-privacy-note"><ShieldCheck size={16} aria-hidden="true" /><span>{t.privacy}</span></div>
+  const match = latest?.metrics?.reliablePitchMatchPercent;
+  return <div className="page home-page">
+    <header className="home-head"><h1>{t.portal.student.today}</h1><p className="home-date">{new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date())}</p></header>
+    <div className={`home-grid${academy ? '' : ' is-offline'}`}>
+      <section className="home-next" aria-labelledby="next-title">
+        <p className="home-label">{t.dashboard.nextAction}</p>
+        <h2 id="next-title">{exerciseName}</h2>
+        <p>{textAt(t, recommendation.reasonKey)}</p>
+        {sessions.length === 1 && <small className="honest-note">{t.dashboard.smallSample}</small>}
+        <div className="home-actions"><button className="button primary" aria-label={`${t.start}: ${exerciseName}`} onClick={() => onSelectExercise(recommendedExercise)}><Play size={16} aria-hidden="true" />{t.start}</button><button className="button quiet" onClick={onAlankar}>{t.alankar.name}<ChevronRight size={16} aria-hidden="true" /></button></div>
+      </section>
+      {academy}
+      <section className="home-routine" aria-labelledby="routine-title">
+        <h2 id="routine-title">{routine ? textAt(t, routine.nameKey) : t.planner}</h2>
+        <p>{routineDescription}</p>
+        <button className="button" onClick={onRoutine}>{routineAction}</button>
+      </section>
+      <section className="home-recent" aria-labelledby="recent-title">
+        <h2 id="recent-title">{t.dashboard.recentSummary}</h2>
+        {latest ? <dl className="home-facts">
+          <div><dt>{t.dashboard.lastExercise}</dt><dd>{textAt(t, getExercise(latest.exerciseId)?.nameKey || 'exercises.saSustain.name')}</dd></div>
+          <div><dt>{t.dashboard.sessionsCompleted}</dt><dd>{sessions.length}</dd></div>
+          <div><dt>{t.reliableMatch}</dt><dd>{match == null ? t.noAudio : `${match}%`}</dd></div>
+        </dl> : <p>{t.empty}</p>}
+        <button className="button quiet" onClick={onProgress}>{t.progress}<ChevronRight size={16} aria-hidden="true" /></button>
+      </section>
+    </div>
+    <p className="dashboard-privacy-note"><ShieldCheck size={16} aria-hidden="true" /><span>{t.privacy}</span></p>
   </div>;
 }
 

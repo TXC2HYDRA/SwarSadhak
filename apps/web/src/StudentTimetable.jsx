@@ -39,7 +39,7 @@ export function StudentTimetable({ t, locale = 'en', client, now }) {
   </div>;
 }
 
-// The academy half of the student home: today's classes and work still to hand in. Practice stays local-first below.
+// The academy half of the student home: today's classes and work still to hand in. Practice stays local-first.
 export function StudentToday({ t, locale = 'en', client, now, onTimetable, onAssignments }) {
   const s = t.portal.student; const a = t.portal.assignments;
   const batches = useApi(t, () => client.student.batches());
@@ -47,10 +47,10 @@ export function StudentToday({ t, locale = 'en', client, now, onTimetable, onAss
   const assignments = useApi(t, () => client.student.assignments.list());
   const timezone = academy.data?.timezone || 'Asia/Kolkata';
   const open = openAssignments(assignments.data || []);
-  return <div className="workspace-grid owner-grid student-today">
-    <TodayPanel t={t} locale={locale} batches={batches.data} today={todayIn(timezone, now)} clock={nowIn(timezone, now)} onBatch={onTimetable} />
-    <section className="panel" aria-labelledby="open-work-title">
-      <p className="eyebrow">{a.nav}</p>
+  // Two sections laid out by the home grid (classes on the left, work on the right).
+  return <>
+    <TodayPanel t={t} locale={locale} batches={batches.data} today={todayIn(timezone, now)} clock={nowIn(timezone, now)} onBatch={onTimetable} dated={false} />
+    <section className="home-work" aria-labelledby="open-work-title">
       <h2 id="open-work-title">{s.openWork}</h2>
       {!assignments.data ? <LoadState t={t} state={assignments} /> : !open.length ? <p>{s.noOpenWork}</p>
         : <ul className="attention-list is-plain">{open.slice(0, 3).map((item) => <li key={item.id}><button type="button" onClick={onAssignments}>
@@ -58,5 +58,5 @@ export function StudentToday({ t, locale = 'en', client, now, onTimetable, onAss
         </button></li>)}</ul>}
       {open.length > 3 && <button type="button" className="button quiet" onClick={onAssignments}>{s.allWork.replace('{count}', open.length)}</button>}
     </section>
-  </div>;
+  </>;
 }
