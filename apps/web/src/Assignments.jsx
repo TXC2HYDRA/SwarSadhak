@@ -191,6 +191,19 @@ export function TeacherAssignments({ t, locale = 'en', client, user }) {
   </div>;
 }
 
+// The guru-shishya loop for one answer, from its stored state and dates only: sent, reviewed, sent again.
+export function AnswerTrail({ t, locale, submission }) {
+  const a = t.portal.assignments;
+  if (!submission || submission.status === 'draft') return null;
+  const day = (iso) => (iso ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short' }).format(new Date(iso)) : '');
+  const reviewed = submission.status === 'reviewed';
+  const again = submission.status === 'submitted' && submission.reviewed_at && submission.submitted_at > submission.reviewed_at;
+  const steps = again
+    ? [[a.status.reviewed, day(submission.reviewed_at), 'done'], [a.trail.sentAgain, day(submission.submitted_at), 'done'], [a.trail.awaiting, '', 'current']]
+    : [[a.status.submitted, day(submission.submitted_at), 'done'], [reviewed ? a.status.reviewed : a.trail.awaiting, reviewed ? day(submission.reviewed_at) : '', reviewed ? 'done' : 'current'], ...(reviewed ? [[a.trail.tryAgain, '', 'next']] : [])];
+  return <ol className="answer-trail" aria-label={a.trail.label}>{steps.map(([label, date, state]) => <li key={label} className={`is-${state}`} aria-current={state === 'current' ? 'step' : undefined}><span>{label}</span>{date && <small>{date}</small>}</li>)}</ol>;
+}
+
 function Answers({ t, locale, client, assignment, onChange }) {
   const a = t.portal.assignments;
   const answers = useApi(t, () => client.teacher.assignments.submissions(assignment.id), [assignment.id]);
@@ -211,6 +224,7 @@ function Answer({ t, locale, client, item, onSaved }) {
   };
   return <article className="answer" aria-label={item.student_name}>
     <div className="assignment-head"><strong>{item.student_name}</strong><span className="chip">{a.status[item.status]}</span></div>
+    <AnswerTrail t={t} locale={locale} submission={item} />
     {item.note && <p className="assignment-text">{item.note}</p>}
     <AttachmentList t={t} locale={locale} client={client} attachments={item.attachments} />
     <label className="field-label">{a.feedback}<textarea className="portal-input" rows={3} maxLength={4000} value={feedback} onChange={(event) => setFeedback(event.target.value)} /></label>
@@ -252,6 +266,7 @@ export function StudentAssignment({ t, locale, client, user, item, onChange }) {
     </div>
     {item.instructions && <p className="assignment-text">{item.instructions}</p>}
     <AttachmentList t={t} locale={locale} client={client} attachments={item.attachments} />
+    <AnswerTrail t={t} locale={locale} submission={mine} />
     {mine?.feedback && <div className="feedback-box"><strong>{a.teacherFeedback}</strong><p className="assignment-text">{mine.feedback}</p></div>}
     <h3>{a.myAnswer}</h3>
     <label className="field-label">{a.note}<textarea className="portal-input" rows={3} maxLength={4000} value={note} onChange={(event) => setNote(event.target.value)} /></label>

@@ -16,7 +16,8 @@ export const timeRange = (batch, locale) => `${formatTime(batch.start_time, loca
 export function BatchCalendar({ t, locale, batches, timezone, today, now, selected, onSlot, onBatch }) {
   const b = t.portal.batches;
   const [monday, setMonday] = useState(() => mondayOf(today));
-  const [view, setView] = useState('week');
+  // Phones open on the agenda: seven columns never fit 360 px.
+  const [view, setView] = useState(() => (globalThis.matchMedia?.('(max-width: 599px)').matches ? 'list' : 'week'));
   const [cursor, setCursor] = useState(() => ({ day: (new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7, row: 0 }));
   const colors = courseColors(batches);
   const nowRow = now && (toMinutes(now) - visibleRange(batches).start) / SLOT_MINUTES;
