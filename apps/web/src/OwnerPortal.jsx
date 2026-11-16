@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ArrowRight, BookOpen, CalendarRange, LayoutDashboard, Plus, UserCheck, Users } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, BookOpen, CalendarRange, LayoutDashboard, Plus, UserCheck, Users } from 'lucide-react';
 import { useUrlPage } from './router.js';
-import { LoadState, PortalShell, Sheet, TableSearch, matches, useApi } from './PortalShell.jsx';
+import { LoadState, PortalShell, Sheet, TableSearch, Toast, matches, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
 import { TodayPanel, timeRange } from './BatchCalendar.jsx';
 import { nowIn, todayIn } from './schedule.js';
@@ -201,6 +201,20 @@ export function EnrollmentsPage({ t, client }) {
   </div>;
 }
 
+// Accounts after search, role and status filters, sorted by one column (name by default).
+export function accountRows(accounts, { query = '', role = '', status = '', sort = { key: 'name', dir: 1 } }, p) {
+  const value = { name: (a) => a.display_name, roles: (a) => a.roles.map((item) => p.roles[item]).join(', '), status: (a) => (a.active ? 0 : 1) };
+  return accounts
+    .filter((a) => matches(query, a.display_name, a.username, ...a.roles.map((item) => p.roles[item])) && (!role || a.roles.includes(role)) && (!status || (status === 'active') === a.active))
+    .sort((a, b) => sort.dir * (String(value[sort.key](a)).localeCompare(String(value[sort.key](b)), undefined, { numeric: true, sensitivity: 'base' }) || a.display_name.localeCompare(b.display_name)));
+}
+
+const SortHeader = ({ label, column, sort, onSort }) => {
+  const on = sort.key === column;
+  const Icon = on ? (sort.dir > 0 ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return <th scope="col" aria-sort={on ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none'}><button type="button" className={`sort-button${on ? ' is-on' : ''}`} onClick={() => onSort({ key: column, dir: on ? -sort.dir : 1 })}>{label}<Icon size={14} aria-hidden="true" /></button></th>;
+};
+
 export function UsersPage({ t, client, me }) {
   const p = t.portal; const u = p.users;
   const users = useApi(t, () => client.owner.users.list());
@@ -209,6 +223,10 @@ export function UsersPage({ t, client, me }) {
   const [query, setQuery] = useState('');
   const [message, setMessage] = useState(noMessage);
   const [busy, setBusy] = useState(false);
+  const [role, setRole] = useState('');
+  const [status, setStatus] = useState('');
+  const [sort, setSort] = useState({ key: 'name', dir: 1 });
+  const [toast, setToast] = useState(null);
   const field = (name) => ({ value: form[name], onChange: (event) => setForm({ ...form, [name]: event.target.value }) });
   const toggleRole = (role) => setForm({ ...form, roles: form.roles.includes(role) ? form.roles.filter((item) => item !== role) : [...form.roles, role] });
   const show = (next) => { setForm(next); setMessage(noMessage); setOpen(true); };
@@ -225,22 +243,32 @@ export function UsersPage({ t, client, me }) {
       ? await client.owner.users.update(form.id, { display_name: form.display_name.trim(), roles: form.roles, ...(form.password ? { password: form.password } : {}) })
       : await client.owner.users.create({ username: form.username.trim(), display_name: form.display_name.trim(), password: form.password, roles: form.roles });
     setBusy(false);
+    if (!form.id && result.ok) {
+      const account = result.data;
+      setOpen(false); users.reload(); setMessage(noMessage);
+      setToast({ text: u.created, action: account?.id ? { label: u.viewAccount, run: () => { setToast(null); show({ id: account.id, username: account.username, display_name: account.display_name, password: '', roles: account.roles }); } } : null });
+      return;
+    }
     if (report(result, form.id ? u.saved : u.created)) { setOpen(false); users.reload(); }
   };
   const setActive = async (account, active) => {
     if (!active && !globalThis.confirm?.(u.confirmDeactivate.replace('{name}', account.display_name))) return;
     if (report(await client.owner.users.update(account.id, { active }), u.saved)) users.reload(); };
-  const rows = (users.data || []).filter((account) => matches(query, account.display_name, account.username, ...account.roles.map((role) => p.roles[role])));
+  const rows = accountRows(users.data || [], { query, role, status, sort }, p);
 
   return <div className="page portal-page">
     <Heading title={u.title} lede={u.lede} action={u.create} onAction={() => show(emptyForm)} />
     {!open && <Notice message={message} />}
     <section className="table-section" aria-label={u.title}>
-      <TableSearch t={t} value={query} onChange={setQuery} />
+      <div className="table-toolbar">
+        <TableSearch t={t} value={query} onChange={setQuery} />
+        <label><span className="sr-only">{u.roleFilter}</span><select aria-label={u.roleFilter} value={role} onChange={(event) => setRole(event.target.value)}><option value="">{u.allRoles}</option>{ROLES.map((item) => <option key={item} value={item}>{p.roles[item]}</option>)}</select></label>
+        <label><span className="sr-only">{u.statusFilter}</span><select aria-label={u.statusFilter} value={status} onChange={(event) => setStatus(event.target.value)}><option value="">{u.allStatuses}</option><option value="active">{u.active}</option><option value="inactive">{u.inactive}</option></select></label>
+      </div>
       <LoadState t={t} state={users} empty={u.empty} />
       {users.data?.length > 0 && !rows.length && <p>{p.noMatches}</p>}
       {rows.length > 0 && <div className="table-wrap"><table className="data-table">
-        <thead><tr><th scope="col">{u.displayName}</th><th scope="col">{u.roles}</th><th scope="col">{u.status}</th><th scope="col">{u.actions}</th></tr></thead>
+        <thead><tr><SortHeader label={u.displayName} column="name" sort={sort} onSort={setSort} /><SortHeader label={u.roles} column="roles" sort={sort} onSort={setSort} /><SortHeader label={u.status} column="status" sort={sort} onSort={setSort} /><th scope="col">{u.actions}</th></tr></thead>
         <tbody>{rows.map((account) => <tr key={account.id}>
           <td><strong>{account.display_name}</strong><small>{account.username}{account.id === me.id ? ` · ${u.you}` : ''}</small></td>
           <td data-label={u.roles}>{account.roles.map((role) => p.roles[role]).join(', ')}</td>
@@ -260,6 +288,7 @@ export function UsersPage({ t, client, me }) {
         <div className="form-actions"><button className="button primary" type="submit" disabled={busy}>{form.id ? u.save : u.create}</button><button className="button quiet" type="button" onClick={() => setOpen(false)}>{u.cancel}</button></div>
       </form>
     </Sheet>
+    <Toast toast={toast} dismiss={u.dismiss} onClose={() => setToast(null)} />
   </div>;
 }
 

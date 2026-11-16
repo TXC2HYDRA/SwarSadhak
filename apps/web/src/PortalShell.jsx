@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Languages, LogOut, Search } from 'lucide-react';
+import { Languages, LogOut, Search, X } from 'lucide-react';
 import { localeNames, supportedLocales } from '@swarsadhak/localization';
 import { AppShell } from './AppShell.jsx';
 import { apiErrorKey } from './auth.js';
@@ -41,6 +41,12 @@ export const matches = (query, ...values) => {
 };
 
 export const TableSearch = ({ t, value, onChange }) => <div className="filter-controls table-search"><label className="search-field"><Search size={16} aria-hidden="true" /><input type="search" value={value} onChange={(event) => onChange(event.target.value)} placeholder={t.portal.search} aria-label={t.portal.search} /></label></div>;
+
+// A polite live region that is always in the page, so the message is announced when it appears. It stays until
+// dismissed (no timer), and may carry one action.
+export const Toast = ({ toast, dismiss, onClose }) => <div className="toast-region" role="status" aria-live="polite">
+  {toast && <div className="toast"><span>{toast.text}</span>{toast.action && <button type="button" className="button quiet" onClick={toast.action.run}>{toast.action.label}</button>}<button type="button" className="icon-button" aria-label={dismiss} onClick={onClose}><X size={16} aria-hidden="true" /></button></div>}
+</div>;
 
 export function LanguagePicker({ t, locale, onLocale }) {
   return <label className="language-picker"><Languages size={16} aria-hidden="true" /><span className="sr-only">{t.language}</span><select value={locale} aria-label={t.language} onChange={(event) => onLocale(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></label>;

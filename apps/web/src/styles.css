@@ -389,7 +389,8 @@ select:disabled, input:disabled { opacity: .6; cursor: not-allowed; }
 @keyframes sheet-in { from { opacity: 0; transform: translateY(8px); } }
 @keyframes mark-in { from { transform: scaleY(.2); } }
 @keyframes mark-in-x { from { transform: scaleX(.2); } }
-main > .page { animation: page-in var(--motion-page) var(--ease-out) both; }
+/* backwards, not both: a held end transform would make .page the containing block for fixed elements (the toast). */
+main > .page { animation: page-in var(--motion-page) var(--ease-out) backwards; }
 
 /* Student home: the next step first, then today's classes and work to hand in. No hero. */
 .home-head { margin-bottom: clamp(24px, 3vw, 36px); }
