@@ -472,3 +472,20 @@ test('sign-in offers a labelled password toggle and the landing page carries no 
     for (const pattern of ['orbit', 'sound-wave', 'eyebrow', 'preview-pitch-line', 'empty-progress-visual', 'feature-card']) assert.ok(!landing.includes(pattern), pattern);
   }
 });
+
+test('accounts filter by role and status and sort by any column', () => {
+  const p = getTranslations('en').portal;
+  const accounts = [
+    { id: '1', display_name: 'Meera', username: 'meera', roles: ['teacher'], active: true },
+    { id: '2', display_name: 'aarav', username: 'aarav', roles: ['student'], active: false },
+    { id: '3', display_name: 'Kabir', username: 'kabir', roles: ['student'], active: true },
+  ];
+  const names = (options) => web.accountRows(accounts, options, p).map((a) => a.display_name);
+  assert.deepEqual(names({}), ['aarav', 'Kabir', 'Meera']);
+  assert.deepEqual(names({ sort: { key: 'name', dir: -1 } }), ['Meera', 'Kabir', 'aarav']);
+  assert.deepEqual(names({ role: 'student' }), ['aarav', 'Kabir']);
+  assert.deepEqual(names({ status: 'inactive' }), ['aarav']);
+  assert.deepEqual(names({ role: 'student', status: 'active' }), ['Kabir']);
+  assert.deepEqual(names({ sort: { key: 'status', dir: 1 } }), ['Kabir', 'Meera', 'aarav']);
+  assert.deepEqual(names({ query: 'teach' }), ['Meera']);
+});
