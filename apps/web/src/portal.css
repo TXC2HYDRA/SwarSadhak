@@ -134,7 +134,8 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .upload-progress { display: inline-flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; }
 .upload-progress progress { width: 140px; accent-color: var(--primary); }
 .answers { display: grid; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
-.answer { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-panel); }
+.answer { display: grid; gap: 10px; padding: 16px 0 4px; border-top: 1px solid var(--border); }
+.answers h3 + .answer { border-top: 0; }
 .feedback-box { display: grid; gap: 4px; padding: 12px 14px; color: var(--text); background: color-mix(in srgb, var(--success) 8%, transparent); border: 1px solid color-mix(in srgb, var(--success) 30%, transparent); border-radius: var(--radius-control); }
 
 /* Phase 3: teacher workspace. Today panel + stat tiles in a bento row; calendar views, legend, now line; phone sheet. */
@@ -219,3 +220,42 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .student-list li.is-next { border-color: color-mix(in srgb, var(--primary) 40%, transparent); box-shadow: inset 3px 0 var(--primary); }
 /* Phones always get the agenda; it must come after the view rules above. */
 @media (max-width: 700px) { .calendar-panel .calendar-grid, .view-toggle { display: none; } .calendar-panel .cal-agenda { display: grid; } }
+
+/* Summary row: counts as one strip with rules between them, then the class running now or next. */
+.summary-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px 32px; margin: 24px 0; padding: 14px 0; border-block: 1px solid var(--border); }
+.metric-strip { display: flex; flex-wrap: wrap; gap: 12px 0; margin: 0; }
+.metric-strip > div { display: flex; flex-direction: column-reverse; justify-content: flex-end; gap: 2px; padding: 0 28px; border-left: 1px solid var(--border); }
+.metric-strip > div:first-child { padding-left: 0; border-left: 0; }
+.metric-strip dt { color: var(--text-muted); font-size: 13px; }
+.metric-strip dd { margin: 0; font-size: 1.5rem; font-weight: 600; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.metric-link { display: flex; align-items: center; gap: 6px; padding: 0; line-height: inherit; color: var(--text); font: inherit; background: none; border: 0; cursor: pointer; transition: color var(--ease); }
+.metric-link.has-items, .metric-link:hover { color: var(--primary); }
+.metric-link svg { transition: transform var(--motion-ui) var(--ease-out); }
+.metric-link:hover svg { transform: translateX(3px); }
+.next-inline { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-height: 44px; margin: 0; padding: 8px 14px; color: var(--text-muted); font: inherit; font-size: 14px; text-align: left; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-control); cursor: pointer; transition: border-color var(--ease); }
+.next-inline strong { color: var(--text); }
+.next-inline:hover { border-color: var(--border-strong); }
+.next-inline.is-empty { cursor: default; background: none; border-style: dashed; }
+.teacher-students { margin-top: 40px; }
+.teacher-students h2 { margin: 0 0 12px; }
+.teacher-students .student-list { gap: 0; margin-top: 12px; }
+.teacher-students .student-list li { padding: 12px 0; background: none; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+
+/* Answer history: sent, reviewed, sent again; the current step is ringed, a next step is dashed. */
+.answer-trail { display: grid; max-width: 560px; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; margin: 12px 0 4px; padding: 0; list-style: none; }
+.answer-trail li { position: relative; display: grid; align-content: start; gap: 2px; padding: 20px 8px 0 0; font-size: 13px; }
+.answer-trail li::before { position: absolute; top: 4px; left: 0; width: 10px; height: 10px; content: ""; background: var(--primary); border: 2px solid var(--primary); border-radius: 50%; }
+.answer-trail li::after { position: absolute; top: 10px; right: 0; left: 18px; height: 2px; content: ""; background: var(--border); }
+.answer-trail li:last-child::after { display: none; }
+.answer-trail li.is-done::after { background: var(--primary); }
+.answer-trail li.is-current::before { background: var(--surface-raised); }
+.answer-trail li.is-next::before { background: none; border: 2px dashed var(--border-strong); }
+.answer-trail span { color: var(--text); font-weight: 600; }
+.answer-trail .is-next span { color: var(--text-muted); font-weight: 500; }
+.answer-trail small { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 600px) {
+  .summary-row { align-items: stretch; flex-direction: column; }
+  .metric-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .metric-strip > div { padding: 0 12px; }
+  .metric-strip dd { font-size: 1.25rem; }
+}

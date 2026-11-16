@@ -344,6 +344,7 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 ## 10. Progress log
 
+- **Counterpoint step 3:** teacher dashboard and the answer history (section 12). Checked: `npm test` 161/161, `npm run build` (main bundle 496.9 kB), teacher screenshots at 1440, 1280, 768 and 390 px, Marathi at 390 px dark, no overflow.
 - **Counterpoint step 2:** practice studio (section 12): held-Sa trace, studio grid with a pinned transport on phones, beat ruler, tanpura in the control column. Checked: `npm test` 160/160, `npm run build` (main bundle 495.3 kB), studio screenshots with a synthetic voice fed into the real pitch pipeline.
 - **Counterpoint step 1:** foundation, shell and Student Home (section 12). Darbar layer, crests and raga hour removed. Checked: `npm test`, `npm run build`, 90-shot matrix.
 - **Darbar part 2 (raga time of day):** prahar chip in the top bar, raga line on the student hero and sign-in, prahar-driven accent (section 11). Checked: `npm test` 159/159, `npm run build`, screenshots `ui-redesign/darbar/raga-*.jpg`.
@@ -437,7 +438,7 @@ Review of Darbar: "simple UI but rich UX", new palette, smoother, nothing that l
 | --- | --- | --- |
 | 1 | Foundation (tokens, fonts, controls, motion), shell, Student Home | Done |
 | 2 | Practice studio: held Sa line, honest mic states, tala ruler | Done |
-| 3 | Teacher dashboard: calendar first, metric strip, assignment feedback loop | After review |
+| 3 | Teacher dashboard: calendar first, metric strip, assignment feedback loop | Done |
 | 4 | Owner tables and drawers, sign-in, landing | After review |
 | 5 | QA matrix, axe, reduced motion, 200% zoom | After review |
 
@@ -459,3 +460,8 @@ Review of Darbar: "simple UI but rich UX", new palette, smoother, nothing that l
 - Alankar: a beat ruler of the four beats in the bar under the live metrics, sam drawn heavier, the current beat filled in tide (count-in beats in grey). The swara groups and the existing beat, swara and progress text are unchanged.
 - The tanpura has a compact form for the control column (`TanpuraPlayer compact`); its full panel is unchanged elsewhere.
 - Screenshots: `ui-redesign/counterpoint/studio-*.jpg`.
+
+**Teacher dashboard** (spec 7C): the title and "Create batch", then one summary row: a metric strip (students, active batches, answers to review, with rules between them instead of three cards; the review count links to Assignments) and the class running now or next as one inline button that opens it. The week calendar follows at full width and starts above the fold at 1280 × 800. The separate "Classes today" panel is gone from this page (today is the highlighted calendar column and the summary row). Phones under 600 px open the calendar on the agenda list. "My students" is a plain section with ruled rows, not a card per student.
+
+**Answer history** (spec signature moment 03, the guru-shishya loop, `AnswerTrail` in `Assignments.jsx`): each sent answer shows its steps from stored data only: Submitted (with `submitted_at`), then Waiting for review or Reviewed (with `reviewed_at`), then "Practise and send again" as a dashed next step once reviewed. A resubmission after review reads Reviewed → Sent again → Waiting for review. Drafts show nothing. Dates are the stored ones; there are no timestamp annotations because the app has none. It appears on the student's assignment card and on each answer in the teacher's review list, where answers are now ruled rows instead of cards inside a card.
+- Screenshots: `ui-redesign/counterpoint/teacher-*.jpg`, `assign-*.jpg`.

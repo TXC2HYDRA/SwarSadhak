@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { ArrowRight, CalendarPlus, ClipboardList, LayoutDashboard, Search } from 'lucide-react';
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
-import { BatchCalendar, BatchDialog, TodayPanel, timeRange } from './BatchCalendar.jsx';
+import { BatchCalendar, BatchDialog, timeRange } from './BatchCalendar.jsx';
 import { TeacherAssignments } from './Assignments.jsx';
 import { apiErrorKey } from './auth.js';
-import { nowIn, slotForm, todayIn } from './schedule.js';
+import { DAYS, formatDate, nextClass, nowIn, slotForm, todayIn } from './schedule.js';
 
 export function TeacherPortal({ shell, client, user }) {
   const [page, setPage] = useUrlPage('teacher', ['dashboard', 'assignments'], 'dashboard');
@@ -78,17 +78,25 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
     if (result.ok) finish(result, b.removed); else { close(); setNotice({ text: problem(result).text, error: true }); }
   };
   const activeCount = (batches.data || []).filter((batch) => batch.status === 'active').length;
+  const upcoming = batches.data ? nextClass(batches.data, today, clock) : null;
+  const live = upcoming?.date === today && upcoming.batch.start_time <= clock;
 
   return <div className="page portal-page teacher-page">
     <div className="page-heading-row"><div><h1>{p.title}</h1><p className="page-lede">{p.lede}</p></div>
       <button className="button primary create-batch" onClick={() => openCreate(null)}><CalendarPlus size={18} aria-hidden="true" />{b.create}</button></div>
-    <div className="workspace-grid">
-      <TodayPanel t={t} locale={locale} batches={batches.data} today={today} clock={clock} onBatch={openEdit} />
-      <section className="workspace-stats" aria-label={p.title}>
-        <div className="stat-card"><strong>{summary.data?.student_count ?? '–'}</strong><small>{p.studentCount}</small></div>
-        <div className="stat-card"><strong>{batches.data ? activeCount : '–'}</strong><small>{b.activeBatches}</small></div>
-        <button type="button" className={`stat-card stat-link${reviews ? ' has-items' : ''}`} onClick={onReviews}><strong>{reviews ?? '–'}</strong><small>{p.reviews}<ArrowRight size={14} aria-hidden="true" /></small></button>
-      </section>
+    {/* One summary row (counts, then the class running now or next) so the week calendar starts above the fold. */}
+    <div className="summary-row">
+      <dl className="metric-strip">
+        <div><dt>{p.studentCount}</dt><dd>{summary.data?.student_count ?? '–'}</dd></div>
+        <div><dt>{b.activeBatches}</dt><dd>{batches.data ? activeCount : '–'}</dd></div>
+        <div><dt>{p.reviews}</dt><dd><button type="button" className={`metric-link${reviews ? ' has-items' : ''}`} onClick={onReviews} aria-label={`${p.reviews}: ${reviews ?? '–'}`}>{reviews ?? '–'}<ArrowRight size={16} aria-hidden="true" /></button></dd></div>
+      </dl>
+      {upcoming && <button type="button" className="next-inline" onClick={() => openEdit(upcoming.batch)}>
+        <span className={`status-badge ${live ? 'success' : 'next'}`}>{live ? p.live : p.nextClass}</span>
+        <strong>{upcoming.batch.name}</strong>
+        <span>{upcoming.date === today ? p.today : `${b.dayLong[DAYS[upcoming.dayIndex]]} ${formatDate(upcoming.date, locale, { day: 'numeric', month: 'short' })}`}, {timeRange(upcoming.batch, locale)}</span>
+      </button>}
+      {batches.data && !upcoming && <p className="next-inline is-empty">{p.todayEmpty}</p>}
     </div>
     {notice && <div className={`notice ${notice.error ? 'error' : notice.warnings?.length ? 'warning' : 'success'}`} role={notice.error ? 'alert' : 'status'}><span>{notice.warnings?.length ? b.warning : notice.text}
       {(notice.warnings?.length > 0 || notice.conflicts?.length > 0) && <ul>{(notice.warnings || []).map((item) => <li key={`${item.student_id}-${item.batch_name}`}>{item.student_name}: {item.batch_name}, {item.days.map((day) => b.dayShort[day]).join(', ')} {timeRange(item, locale)}</li>)}
@@ -96,7 +104,7 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
     <LoadState t={t} state={batches} />
     {batches.data && <BatchCalendar t={t} locale={locale} batches={batches.data} timezone={timezone} today={today} now={clock} selected={selected} onSlot={openCreate} onBatch={openEdit} />}
     <BatchDialog t={t} locale={locale} state={dialog} courses={courseList} students={students.data || []} onClose={close} onSave={save} onRemove={remove} onToggle={toggle} />
-    <section className="panel" aria-labelledby="my-students-title">
+    <section className="teacher-students" aria-labelledby="my-students-title">
       <h2 id="my-students-title">{p.students}</h2>
       <div className="filter-controls">
         <label className="search-field"><Search size={16} aria-hidden="true" /><span className="sr-only">{p.search}</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={p.search} aria-label={p.search} /></label>

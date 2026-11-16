@@ -443,3 +443,19 @@ test('API client builds assignment and file requests', async () => {
     ['/api/files/f1', 'DELETE', undefined],
   ]);
 });
+
+test('answer history shows only the stored states and dates of a submission', () => {
+  const t = getTranslations('en'); const a = t.portal.assignments;
+  const trail = (submission) => renderToStaticMarkup(React.createElement(web.AnswerTrail, { t, locale: 'en', submission }));
+  assert.equal(trail(null), '');
+  assert.equal(trail({ status: 'draft', submitted_at: null, reviewed_at: null }), '');
+  const sent = trail({ status: 'submitted', submitted_at: '2026-11-10T09:00:00Z', reviewed_at: null });
+  assert.match(sent, new RegExp(`${a.status.submitted}</span><small>Nov 10</small>`));
+  assert.match(sent, new RegExp(`aria-current="step"><span>${a.trail.awaiting}</span></li></ol>`));
+  const reviewed = trail({ status: 'reviewed', submitted_at: '2026-11-10T09:00:00Z', reviewed_at: '2026-11-12T09:00:00Z' });
+  assert.match(reviewed, new RegExp(`${a.status.reviewed}</span><small>Nov 12</small>`));
+  assert.match(reviewed, new RegExp(`class="is-next"><span>${a.trail.tryAgain}</span></li>`));
+  const again = trail({ status: 'submitted', submitted_at: '2026-11-14T09:00:00Z', reviewed_at: '2026-11-12T09:00:00Z' });
+  assert.match(again, new RegExp(`${a.trail.sentAgain}</span><small>Nov 14</small>`));
+  assert.ok(!again.includes(a.trail.tryAgain));
+});
