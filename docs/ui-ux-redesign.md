@@ -344,6 +344,7 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 ## 10. Progress log
 
+- **Counterpoint step 2:** practice studio (section 12): held-Sa trace, studio grid with a pinned transport on phones, beat ruler, tanpura in the control column. Checked: `npm test` 160/160, `npm run build` (main bundle 495.3 kB), studio screenshots with a synthetic voice fed into the real pitch pipeline.
 - **Counterpoint step 1:** foundation, shell and Student Home (section 12). Darbar layer, crests and raga hour removed. Checked: `npm test`, `npm run build`, 90-shot matrix.
 - **Darbar part 2 (raga time of day):** prahar chip in the top bar, raga line on the student hero and sign-in, prahar-driven accent (section 11). Checked: `npm test` 159/159, `npm run build`, screenshots `ui-redesign/darbar/raga-*.jpg`.
 - **Darbar part 1 (classical redesign):** palette, bands, jaali/toran motifs, gold-leaf frames, domed tops, Tiro Devanagari titles and Devanagari page crests, all in a new `darbar.css` loaded after the base styles (section 11). Checked: `npm test` 158/158, `npm run build`, 90-shot matrix with no overflow.
@@ -435,7 +436,7 @@ Review of Darbar: "simple UI but rich UX", new palette, smoother, nothing that l
 | Step | Scope | Status |
 | --- | --- | --- |
 | 1 | Foundation (tokens, fonts, controls, motion), shell, Student Home | Done |
-| 2 | Practice studio: held Sa line, honest mic states, tala ruler | After review |
+| 2 | Practice studio: held Sa line, honest mic states, tala ruler | Done |
 | 3 | Teacher dashboard: calendar first, metric strip, assignment feedback loop | After review |
 | 4 | Owner tables and drawers, sign-in, landing | After review |
 | 5 | QA matrix, axe, reduced motion, 200% zoom | After review |
@@ -451,3 +452,10 @@ Review of Darbar: "simple UI but rich UX", new palette, smoother, nothing that l
 **Brand mark**: a voice moving over a held reference line (the studio's Sa line), drawn as an inline SVG in `AppShell.jsx` (`BrandMark`). The wordmark is "**Nado**Pasana" by weight, not colour.
 
 **Student Home** (spec 7A): "Today" with the date; the next-step card (recommended exercise, real reason, Start and Alankar); classes today; work to hand in; the saved routine; the last real session. The hero, the level/XP tiles and the decorative orbit are gone from Home (Progress keeps the participation numbers). Phones stack in that order; desktop uses two columns.
+
+**Practice studio** (spec 7B, the "Held Sa" moment):
+- Layout: a narrow control column (tonic, settings lock note, tanpura, instructions; for alankars also BPM, loops, direction and the beat sound) beside the stage. The transport (Start, Pause, Finish, Cancel) sits under the controls on desktop and is pinned above the bottom bar on phones, so it never scrolls away mid-take.
+- The stage holds the session status, the elapsed time, the trace and the pitch readout. The trace (`PitchTrace` in `PracticeStudio.jsx`) is a steady reference line for the current target with a ±50 cent band (the same tolerance `livePitch` uses for "In tune"). The voice is drawn as its deviation in cents over the last six seconds, from real `livePitch` readings only. Silence, unvoiced, clipped, stale or low-confidence frames leave a gap; a jump of more than 35 cents between two readings lifts the pen instead of drawing a spike; a reading more than a semitone away shows as a hollow marker at the edge. Idle, waiting, denied or paused: the line is dashed and nothing moves.
+- Alankar: a beat ruler of the four beats in the bar under the live metrics, sam drawn heavier, the current beat filled in tide (count-in beats in grey). The swara groups and the existing beat, swara and progress text are unchanged.
+- The tanpura has a compact form for the control column (`TanpuraPlayer compact`); its full panel is unchanged elsewhere.
+- Screenshots: `ui-redesign/counterpoint/studio-*.jpg`.
