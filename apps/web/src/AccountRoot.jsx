@@ -9,6 +9,7 @@ import { startOptionalSync } from './optionalSync.js';
 import { AccountMenu, LanguagePicker, PortalShell } from './PortalShell.jsx';
 import { ThemeToggle } from './theme.jsx';
 import { roleFromPath } from './router.js';
+import { PAGE_TERMS, PageCrest } from './darbar.jsx';
 import { StudentTimetable, StudentToday } from './StudentTimetable.jsx';
 import { StudentAssignments } from './Assignments.jsx';
 import './portal.css';
@@ -90,6 +91,7 @@ export function LoginPage({ t, locale, onLocale, notice, onSubmit, onGuest }) {
   return <div className="login-shell">
     <div className="login-top"><div className="brand"><span className="brand-mark"><Music2 size={20} aria-hidden="true" /></span><Brand t={t} /></div><div className="login-tools"><LanguagePicker t={t} locale={locale} onLocale={onLocale} /><ThemeToggle t={t} /></div></div>
     <main className="login-card panel">
+      <PageCrest term={PAGE_TERMS.home} />
       <h1>{p.signInTitle}</h1>
       <p className="page-lede">{p.signInLede}</p>
       {notice && <p className="notice" role="status">{notice}</p>}

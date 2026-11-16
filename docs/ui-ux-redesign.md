@@ -99,6 +99,8 @@ It holds the Phase 0 audit, the design system (tokens, type, components), the pl
 
 ## 2. Design brief and visual direction
 
+> Superseded on 2026-11-16 by the Darbar theme (section 11) after the first review asked for a stronger classical feel.
+
 **Concept: "Rehearsal room at dusk."** Warm ivory paper and burgundy ink by day; a deep plum-black room lit by brass by night. Editorial serif headlines give the academy a cultural, printed-programme feel; a quiet sans keeps forms, tables and the calendar easy to scan.
 
 - **Light theme:** ivory canvas, white cards, burgundy for primary actions and headings accents, antique gold as hairlines, rings and highlights only (never body text), muted rose as a secondary accent.
@@ -342,6 +344,7 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 ## 10. Progress log
 
+- **Darbar part 1 (classical redesign):** palette, bands, jaali/toran motifs, gold-leaf frames, domed tops, Tiro Devanagari titles and Devanagari page crests, all in a new `darbar.css` loaded after the base styles (section 11). Checked: `npm test` 158/158, `npm run build`, 90-shot matrix with no overflow.
 - **Phase 6:** QA, accessibility and performance.
   - Matrix: 90 screenshots of seven screens at 360, 390, 768, 1024, 1280 and 1440 px in both themes, plus Marathi and Hindi at 360 px. The harness flags any visible element that ends past the right edge of the viewport and is not inside a scroll container. No screen overflows.
   - Fixed: the sign-in page at 360 px was wider than the screen (the grid column grew to the header's width; the theme button and the card edge were cut). The column is now `minmax(0, 1fr)`, and the header language picker is compact on phones, like the app top bar.
@@ -388,3 +391,31 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
   - `<html lang>` now follows the chosen language on the sign-in, Owner and Teacher screens.
   - Checked: `npm test` 151/151 (4 new theme tests), API 57/57, `npm run build`, web Docker image build. In headless Chrome: system light, toggle to dark, reload, still dark, with matching `theme-color`.
   - Known and left for later phases: the Teacher/Owner header still wraps to three rows on phones (Phase 2). Calendar block titles clip descenders at small sizes (Phase 3). The JS bundle is just over Vite's 500 kB warning (code splitting in Phase 6).
+
+---
+
+## 11. Darbar theme (classical redesign)
+
+After Phases 0-6 the review was: the UI does not feel classical. Decisions on 2026-11-16: the **Darbar / haveli** direction, **bold on every screen** (including Owner tables), with **Devanagari headings**, **motif patterns** and **raga time of day**.
+
+**Concept: "Haveli by day, darbar by night."** Sandstone and cream with indigo ink by day; an indigo night by dark. Saffron for actions, gold leaf for frames and rules, sindoor red for eyebrows and table headings.
+
+| Token | Light | Dark | Contrast |
+| --- | --- | --- | --- |
+| `--bg` / `--surface` | `#F3EAD8` / `#FFFAF0` | `#11132A` / `#1B1E3D` | — |
+| `--text` | `#1D1B3A` (indigo ink) | `#F6EEDC` | 13.83 / 15.80 on canvas |
+| `--text-muted` / `--text-subtle` | `#4A4566` / `#5F5876` | `#CFC6B4` / `#ACA28F` | ≥ 5.06 on every surface |
+| `--primary` + `--on-primary` | `#E08A2C` saffron + `#1D1B3A` | `#F0A24A` + `#11132A` | 6.17 / 8.67 |
+| `--accent` (eyebrows, table heads) | `#A3311D` sindoor | `#F3A07F` | 5.83 / 8.82 on canvas |
+| `--accent-strong` (numbers) | `#8A5A10` | `#E2C27A` | 4.95 / 9.41 |
+| `--gold` (frames, rules, motifs) | `#C9A24E` | `#D9B45E` | decorative only |
+| `--border-strong` (controls) | `#8A7650` | `#8A86A8` | 3.67 / 3.94 |
+| `--band-*` (sidebar, heroes, phone bar) | indigo `#1C2559`, text `#F8F0DC`, muted `#D3CAB4`, accent `#F2B36B` | `#0B0D20`, same text | ≥ 7.6 |
+
+- **Bands:** the sidebar, the phone bottom bar and every hero sit on the indigo night in both themes. `darbar.css` remaps the colour tokens inside them, so every component works there unchanged.
+- **Motifs** are SVG masks painted with tokens: a jaali lattice (interlocking circles) behind the page, sidebar and heroes; a gold toran (scallops with drops) hanging under the top bar and across hero tops; gold-leaf rules with ✦ in the page crest.
+- **Frames:** panels, stat tiles and sheets get an inner gold-leaf border like a miniature painting. The hero, the sign-in card, today panels and sheets have a domed (arched) top like a haveli doorway.
+- **Type:** Tiro Devanagari Marathi (one classical face for Latin and Devanagari) for titles, brand, table headings and stat numbers, at regular weight. Inter / Noto Sans Devanagari stay for UI text. Fraunces and Noto Serif Devanagari were removed.
+- **Devanagari headings:** every page has a crest with its classical name (`src/darbar.jsx`): दरबार (overview), सदस्य, पाठ्यक्रम, प्रवेश, वर्ग, गुरु कक्ष (teacher), रियाज़ कार्य, समय सारिणी, स्वागतम् (home and sign in), रियाज़, अभ्यास संग्रह, साधना क्रम, प्रगति, व्यवस्था. In English, nav items show the Devanagari name under the label and the brand shows नादोपासना.
+- **Raga time of day** is a separate change (Darbar part 2).
+- Screenshots: `ui-redesign/darbar/` (key screens, plus `matrix-*.jpg` contact sheets of seven screens at six widths in both themes and Marathi/Hindi at 360 px).
