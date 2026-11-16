@@ -1,16 +1,25 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Pause, Play, Trash2 } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, List, Pause, Play, Trash2 } from 'lucide-react';
 import { DAYS, SLOT_MINUTES, addDays, batchFormErrors, formatDate, formatTime, mondayOf, toMinutes, visibleRange, weekDates, weekOccurrences } from './schedule.js';
+
+// Each course gets a chart colour (with its name in the legend and on every block, so colour is never the only cue).
+export function courseColors(batches) {
+  const courses = [...new Map(batches.map((batch) => [batch.course_id, batch.course_name])).entries()].sort((a, b) => String(a[1]).localeCompare(String(b[1])));
+  return new Map(courses.map(([id, name], index) => [id, { name, color: `var(--chart-${(index % 5) + 1})` }]));
+}
 
 const fill = (text, values) => Object.entries(values).reduce((out, [key, value]) => out.replace(`{${key}}`, value), text);
 export const timeRange = (batch, locale) => `${formatTime(batch.start_time, locale)} – ${formatTime(batch.end_time, locale)}`;
 
-// Days across, times down. Slots are buttons with a roving tabindex: arrow keys move, Enter creates.
-export function BatchCalendar({ t, locale, batches, timezone, today, selected, onSlot, onBatch }) {
+// Week view: days across, times down. Slots are buttons with a roving tabindex: arrow keys move, Enter creates.
+// List view (always on phones): the same week as an agenda, which also serves screen-reader users.
+export function BatchCalendar({ t, locale, batches, timezone, today, now, selected, onSlot, onBatch }) {
   const b = t.portal.batches;
   const [monday, setMonday] = useState(() => mondayOf(today));
-  const [focusDay, setFocusDay] = useState(() => (new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7);
-  const [cursor, setCursor] = useState({ day: focusDay, row: 0 });
+  const [view, setView] = useState('week');
+  const [cursor, setCursor] = useState(() => ({ day: (new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7, row: 0 }));
+  const colors = courseColors(batches);
+  const nowRow = now && (toMinutes(now) - visibleRange(batches).start) / SLOT_MINUTES;
   const gridRef = useRef(null);
   const dates = weekDates(monday);
   const range = visibleRange(batches);
@@ -21,11 +30,13 @@ export function BatchCalendar({ t, locale, batches, timezone, today, selected, o
     if (!step) return;
     event.preventDefault();
     const next = { day: Math.min(6, Math.max(0, day + step[0])), row: Math.min(rows - 1, Math.max(0, row + step[1])) };
-    setCursor(next); setFocusDay(next.day);
+    setCursor(next);
     gridRef.current?.querySelector(`[data-cell="${next.day}-${next.row}"]`)?.focus();
   };
   const weekLabel = `${formatDate(dates[0], locale, { day: 'numeric', month: 'short' })} – ${formatDate(dates[6], locale, { day: 'numeric', month: 'short', year: 'numeric' })}`;
-  return <section className="panel calendar-panel" aria-labelledby="calendar-title">
+  const blockLabel = (batch, dayIndex) => `${b.edit}: ${batch.name}, ${batch.course_name}, ${b.dayLong[DAYS[dayIndex]]} ${timeRange(batch, locale)}${batch.status === 'paused' ? `, ${b.paused}` : ''}`;
+  const blockDetail = (batch) => (batch.status === 'paused' ? b.paused : fill(b.studentCount, { count: batch.student_ids.length }));
+  return <section className={`panel calendar-panel view-${view}`} aria-labelledby="calendar-title">
     <div className="calendar-toolbar">
       <div><h2 id="calendar-title">{b.title}</h2><p className="calendar-note">{fill(b.timezoneNote, { timezone })}</p></div>
       <div className="calendar-nav">
@@ -33,13 +44,16 @@ export function BatchCalendar({ t, locale, batches, timezone, today, selected, o
         <button className="button quiet" onClick={() => setMonday(mondayOf(today))}>{b.thisWeek}</button>
         <button className="icon-button" onClick={() => setMonday(addDays(monday, 7))} aria-label={b.nextWeek}><ChevronRight size={18} aria-hidden="true" /></button>
         <strong aria-live="polite">{weekLabel}</strong>
+        <div className="view-toggle" role="group" aria-label={b.viewLabel}>
+          <button type="button" aria-pressed={view === 'week'} onClick={() => setView('week')}><CalendarDays size={16} aria-hidden="true" />{b.weekView}</button>
+          <button type="button" aria-pressed={view === 'list'} onClick={() => setView('list')}><List size={16} aria-hidden="true" />{b.listView}</button>
+        </div>
       </div>
     </div>
-    <div className="day-tabs">{DAYS.map((day, index) => <button key={day} className={index === focusDay ? 'active' : ''} aria-pressed={index === focusDay} onClick={() => setFocusDay(index)}>{b.dayShort[day]} <span>{formatDate(dates[index], locale, { day: 'numeric' })}</span></button>)}</div>
     {!batches.length && <p className="calendar-note">{b.empty}</p>}
     <div ref={gridRef} className="calendar-grid" role="group" aria-label={`${b.title}, ${weekLabel}`} style={{ '--rows': rows }}>
       <div className="cal-times" aria-hidden="true"><div className="cal-day-head" />{Array.from({ length: rows / 2 }, (_, hour) => <span key={hour} style={{ '--start': hour * 2 }}>{formatTime(`${String(range.start / 60 + hour).padStart(2, '0')}:00`, locale)}</span>)}</div>
-      {dates.map((date, dayIndex) => <div key={date} className={`cal-day${dayIndex === focusDay ? ' is-focus' : ''}${date === today ? ' is-today' : ''}`}>
+      {dates.map((date, dayIndex) => <div key={date} className={`cal-day${date === today ? ' is-today' : ''}`}>
         <div className="cal-day-head"><span>{b.dayShort[DAYS[dayIndex]]}</span><strong>{formatDate(date, locale, { day: 'numeric' })}</strong></div>
         <div className="cal-day-body">
           {Array.from({ length: rows }, (_, row) => {
@@ -49,18 +63,32 @@ export function BatchCalendar({ t, locale, batches, timezone, today, selected, o
               className={`cal-slot${selected?.date === date && selected.minutes === minutes ? ' is-selected' : ''}${row % 2 ? '' : ' hour-start'}`}
               aria-label={label} onFocus={() => setCursor({ day: dayIndex, row })} onKeyDown={(event) => move(event, dayIndex, row)} onClick={() => onSlot({ dayIndex, minutes, date })} />;
           })}
+          {date === today && nowRow >= 0 && nowRow <= rows && <span className="cal-now" style={{ '--at': nowRow }} aria-hidden="true" />}
           {occurrences.filter((item) => item.dayIndex === dayIndex).map(({ batch }) => {
             const start = Math.max(range.start, toMinutes(batch.start_time));
             const span = Math.max(1, (toMinutes(batch.end_time) - start) / SLOT_MINUTES);
             const paused = batch.status === 'paused';
-            return <button key={batch.id} type="button" className={`cal-block${paused ? ' is-paused' : ''}`} style={{ '--start': (start - range.start) / SLOT_MINUTES, '--span': span }}
-              onClick={() => onBatch(batch)} aria-label={`${b.edit}: ${batch.name}, ${batch.course_name}, ${b.dayLong[DAYS[dayIndex]]} ${timeRange(batch, locale)}${paused ? `, ${b.paused}` : ''}`}>
-              <strong>{batch.name}</strong><small>{timeRange(batch, locale)}</small><small>{paused ? b.paused : fill(b.studentCount, { count: batch.student_ids.length })}</small>
+            const label = blockLabel(batch, dayIndex);
+            return <button key={batch.id} type="button" className={`cal-block${paused ? ' is-paused' : ''}`} style={{ '--start': (start - range.start) / SLOT_MINUTES, '--span': span, '--block': colors.get(batch.course_id)?.color }}
+              onClick={() => onBatch(batch)} aria-label={label} title={label}>
+              <strong>{batch.name}</strong><small>{timeRange(batch, locale)}</small><small>{blockDetail(batch)}</small>
             </button>;
           })}
         </div>
       </div>)}
     </div>
+    <ol className="cal-agenda" aria-label={`${b.title}, ${weekLabel}`}>
+      {dates.map((date, dayIndex) => {
+        const items = occurrences.filter((item) => item.dayIndex === dayIndex).sort((x, y) => x.batch.start_time.localeCompare(y.batch.start_time));
+        return <li key={date} className={date === today ? 'is-today' : ''}>
+          <h3>{b.dayLong[DAYS[dayIndex]]} {formatDate(date, locale, { day: 'numeric', month: 'short' })}{date === today && <span className="status-badge success">{t.portal.teacher.today}</span>}</h3>
+          {items.length ? <ul>{items.map(({ batch }) => <li key={batch.id}><button type="button" className={`cal-agenda-item${batch.status === 'paused' ? ' is-paused' : ''}`} style={{ '--block': colors.get(batch.course_id)?.color }} onClick={() => onBatch(batch)} aria-label={blockLabel(batch, dayIndex)}>
+            <span className="cal-agenda-time">{timeRange(batch, locale)}</span><strong>{batch.name}</strong><small>{batch.course_name} · {blockDetail(batch)}</small>
+          </button></li>)}</ul> : <p className="calendar-note">{b.noClasses}</p>}
+        </li>;
+      })}
+    </ol>
+    {colors.size > 0 && <ul className="cal-legend" aria-label={b.legend}>{[...colors.values()].map((course) => <li key={course.name} style={{ '--block': course.color }}>{course.name}</li>)}</ul>}
   </section>;
 }
 

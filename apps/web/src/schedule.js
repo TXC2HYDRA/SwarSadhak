@@ -21,13 +21,31 @@ export function weekOccurrences(batches, monday) {
     .filter(({ batch, date }) => !batch.starts_on || date >= batch.starts_on);
 }
 
-// Default 6 AM-10 PM, widened to whole hours that fit every batch.
+// Whole hours around the batches with an hour of air either side, at least MIN_HOURS tall.
+// No batches: DEFAULT_RANGE. "Create batch" still accepts any time outside the visible hours.
+const MIN_HOURS = 8;
 export function visibleRange(batches, range = DEFAULT_RANGE) {
-  return batches.reduce((current, batch) => ({
-    start: Math.min(current.start, Math.floor(toMinutes(batch.start_time) / 60) * 60),
-    end: Math.max(current.end, Math.min(24 * 60, Math.ceil(toMinutes(batch.end_time) / 60) * 60)),
-  }), range);
+  if (!batches.length) return range;
+  let start = Math.max(0, Math.min(...batches.map((batch) => Math.floor(toMinutes(batch.start_time) / 60) * 60)) - 60);
+  let end = Math.min(24 * 60, Math.max(...batches.map((batch) => Math.ceil(toMinutes(batch.end_time) / 60) * 60)) + 60);
+  const missing = MIN_HOURS * 60 - (end - start);
+  if (missing > 0) { end = Math.min(24 * 60, end + Math.ceil(missing / 120) * 60); start = Math.max(0, end - MIN_HOURS * 60); }
+  return { start, end };
 }
+
+// Active classes on one date, earliest first.
+export const classesOn = (batches, date) => weekOccurrences(batches.filter((batch) => batch.status === 'active'), mondayOf(date))
+  .filter((item) => item.date === date).sort((a, b) => a.batch.start_time.localeCompare(b.batch.start_time));
+
+// The class running now or next: today's first class that has not ended, else the next day with a class (up to a week ahead).
+export function nextClass(batches, today, nowHHMM) {
+  const current = classesOn(batches, today).find(({ batch }) => batch.end_time > nowHHMM);
+  if (current) return current;
+  for (let day = 1; day <= 7; day += 1) { const [first] = classesOn(batches, addDays(today, day)); if (first) return first; }
+  return null;
+}
+
+export const nowIn = (timeZone, now = new Date()) => new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(now);
 
 export function formatTime(hhmm, locale = 'en') {
   const minutes = toMinutes(hhmm);
