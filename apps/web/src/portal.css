@@ -299,3 +299,8 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
   .table-toolbar > label { flex: 1 1 140px; }
   .table-toolbar select { width: 100%; min-width: 0; }
 }
+
+/* Drag to create: a snapped guide with the chosen time range. */
+.calendar-grid.is-dragging { cursor: ns-resize; user-select: none; }
+.cal-drag-guide { position: absolute; z-index: 2; top: calc(var(--start) * var(--slot-h) + 1px); right: 3px; left: 3px; height: calc(var(--span) * var(--slot-h) - 2px); padding: 2px 6px; overflow: hidden; color: var(--primary); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--primary) 14%, var(--surface-raised)); border: 2px dashed var(--primary); border-radius: var(--radius-xs); pointer-events: none; }
+@media (pointer: coarse) { .drag-hint { display: none; } }

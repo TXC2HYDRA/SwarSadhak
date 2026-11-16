@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { CalendarDays, ChevronLeft, ChevronRight, List, Pause, Play, Trash2 } from 'lucide-react';
-import { DAYS, SLOT_MINUTES, addDays, batchFormErrors, classesOn, formatDate, formatTime, mondayOf, nextClass, toMinutes, visibleRange, weekDates, weekOccurrences } from './schedule.js';
+import { DAYS, SLOT_MINUTES, addDays, batchFormErrors, classesOn, formatDate, formatTime, fromMinutes, mondayOf, nextClass, toMinutes, visibleRange, weekDates, weekOccurrences } from './schedule.js';
 
 // Each course gets a chart colour (with its name in the legend and on every block, so colour is never the only cue).
 export function courseColors(batches) {
@@ -22,6 +22,19 @@ export function BatchCalendar({ t, locale, batches, timezone, today, now, select
   const colors = courseColors(batches);
   const nowRow = now && (toMinutes(now) - visibleRange(batches).start) / SLOT_MINUTES;
   const gridRef = useRef(null);
+  // Drag down a day column to choose a time range; the guide snaps to 30-minute slots. Escape or a cancelled pointer drops it.
+  const [drag, setDrag] = useState(null);
+  useEffect(() => {
+    if (!drag) return undefined;
+    const finish = () => {
+      const top = Math.min(drag.from, drag.to); const count = Math.abs(drag.to - drag.from) + 1;
+      setDrag(null);
+      onSlot({ dayIndex: drag.dayIndex, date: drag.date, minutes: visibleRange(batches).start + top * SLOT_MINUTES, duration: count > 1 ? count * SLOT_MINUTES : undefined });
+    };
+    const cancel = (event) => { if (!event.key || event.key === 'Escape') setDrag(null); };
+    globalThis.addEventListener('pointerup', finish); globalThis.addEventListener('pointercancel', cancel); globalThis.addEventListener('keydown', cancel);
+    return () => { globalThis.removeEventListener('pointerup', finish); globalThis.removeEventListener('pointercancel', cancel); globalThis.removeEventListener('keydown', cancel); };
+  }, [drag]);
   const dates = weekDates(monday);
   const range = visibleRange(batches);
   const rows = (range.end - range.start) / SLOT_MINUTES;
@@ -39,7 +52,7 @@ export function BatchCalendar({ t, locale, batches, timezone, today, now, select
   const blockDetail = (batch) => (batch.status === 'paused' ? b.paused : fill(b.studentCount, { count: batch.student_ids.length }));
   return <section className={`panel calendar-panel view-${view}`} aria-labelledby="calendar-title">
     <div className="calendar-toolbar">
-      <div><h2 id="calendar-title">{b.title}</h2><p className="calendar-note">{fill(b.timezoneNote, { timezone })}</p></div>
+      <div><h2 id="calendar-title">{b.title}</h2><p className="calendar-note">{fill(b.timezoneNote, { timezone })} <span className="drag-hint">{b.dragHint}</span></p></div>
       <div className="calendar-nav">
         <button className="icon-button" onClick={() => setMonday(addDays(monday, -7))} aria-label={b.previousWeek}><ChevronLeft size={18} aria-hidden="true" /></button>
         <button className="button quiet" onClick={() => setMonday(mondayOf(today))}>{b.thisWeek}</button>
@@ -52,7 +65,7 @@ export function BatchCalendar({ t, locale, batches, timezone, today, now, select
       </div>
     </div>
     {!batches.length && <p className="calendar-note">{b.empty}</p>}
-    <div ref={gridRef} className="calendar-grid" role="group" aria-label={`${b.title}, ${weekLabel}`} style={{ '--rows': rows }}>
+    <div ref={gridRef} className={`calendar-grid${drag ? ' is-dragging' : ''}`} role="group" aria-label={`${b.title}, ${weekLabel}`} style={{ '--rows': rows }}>
       <div className="cal-times" aria-hidden="true"><div className="cal-day-head" />{Array.from({ length: rows / 2 }, (_, hour) => <span key={hour} style={{ '--start': hour * 2 }}>{formatTime(`${String(range.start / 60 + hour).padStart(2, '0')}:00`, locale)}</span>)}</div>
       {dates.map((date, dayIndex) => <div key={date} className={`cal-day${date === today ? ' is-today' : ''}`}>
         <div className="cal-day-head"><span>{b.dayShort[DAYS[dayIndex]]}</span><strong>{formatDate(date, locale, { day: 'numeric' })}</strong></div>
@@ -61,9 +74,16 @@ export function BatchCalendar({ t, locale, batches, timezone, today, now, select
             const minutes = range.start + row * SLOT_MINUTES;
             const label = `${b.dayLong[DAYS[dayIndex]]} ${formatDate(date, locale, { day: 'numeric', month: 'long' })}, ${formatTime(`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`, locale)}: ${b.slotAction}`;
             return <button key={row} type="button" data-cell={`${dayIndex}-${row}`} tabIndex={cursor.day === dayIndex && cursor.row === row ? 0 : -1}
-              className={`cal-slot${selected?.date === date && selected.minutes === minutes ? ' is-selected' : ''}${row % 2 ? '' : ' hour-start'}`}
-              aria-label={label} onFocus={() => setCursor({ day: dayIndex, row })} onKeyDown={(event) => move(event, dayIndex, row)} onClick={() => onSlot({ dayIndex, minutes, date })} />;
+              className={`cal-slot${selected?.date === date && minutes >= selected.minutes && minutes < selected.minutes + (selected.duration || SLOT_MINUTES) ? ' is-selected' : ''}${row % 2 ? '' : ' hour-start'}`}
+              aria-label={label} onFocus={() => setCursor({ day: dayIndex, row })} onKeyDown={(event) => move(event, dayIndex, row)}
+              onPointerDown={(event) => { if (event.button !== 0) return; if (event.currentTarget.hasPointerCapture?.(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); setDrag({ dayIndex, date, from: row, to: row }); }}
+              onPointerEnter={() => { if (drag?.dayIndex === dayIndex && drag.to !== row) setDrag({ ...drag, to: row }); }}
+              onClick={(event) => { if (event.detail === 0) onSlot({ dayIndex, minutes, date }); }} />;
           })}
+          {drag?.dayIndex === dayIndex && (() => {
+            const top = Math.min(drag.from, drag.to); const count = Math.abs(drag.to - drag.from) + 1; const start = range.start + top * SLOT_MINUTES;
+            return <span className="cal-drag-guide" style={{ '--start': top, '--span': count }} aria-hidden="true">{timeRange({ start_time: fromMinutes(start), end_time: fromMinutes(start + count * SLOT_MINUTES) }, locale)}</span>;
+          })()}
           {date === today && nowRow >= 0 && nowRow <= rows && <span className="cal-now" style={{ '--at': nowRow }} aria-hidden="true" />}
           {occurrences.filter((item) => item.dayIndex === dayIndex).map(({ batch }) => {
             const start = Math.max(range.start, toMinutes(batch.start_time));
