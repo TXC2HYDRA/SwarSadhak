@@ -1,5 +1,6 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -55,5 +56,13 @@ test('shell renders sidebar, skip link, account and a phone bottom nav of four p
     assert.equal((html.match(/aria-current="page"/g) || []).length, 2); // sidebar + bottom nav
     assert.match(html, /class="sidebar-account"><span>ACCOUNT<\/span>/);
     assert.ok(!html.slice(html.indexOf('class="bottom-nav"')).includes('Page e'), 'fifth page lives in More');
+  }
+});
+
+test('staff portals stay out of the main bundle (loaded on demand)', () => {
+  const source = readFileSync(new URL('../apps/web/src/AccountRoot.jsx', import.meta.url), 'utf8');
+  for (const name of ['OwnerPortal', 'TeacherPortal']) {
+    assert.match(source, new RegExp(`lazy\\(\\(\\) => import\\('\\./${name}\\.jsx'\\)`), name);
+    assert.doesNotMatch(source, new RegExp(`^import .*${name}`, 'm'), name);
   }
 });

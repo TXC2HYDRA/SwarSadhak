@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ClipboardList, LogIn, Music2 } from 'lucide-react';
 import { createApiClient } from '@swarsadhak/api-client';
 import { getTranslations } from '@swarsadhak/localization';
@@ -9,11 +9,13 @@ import { startOptionalSync } from './optionalSync.js';
 import { AccountMenu, LanguagePicker, PortalShell } from './PortalShell.jsx';
 import { ThemeToggle } from './theme.jsx';
 import { roleFromPath } from './router.js';
-import { OwnerPortal } from './OwnerPortal.jsx';
-import { TeacherPortal } from './TeacherPortal.jsx';
 import { StudentTimetable, StudentToday } from './StudentTimetable.jsx';
 import { StudentAssignments } from './Assignments.jsx';
 import './portal.css';
+
+// Staff portals load on demand: students and guests never download them.
+const OwnerPortal = lazy(() => import('./OwnerPortal.jsx').then((module) => ({ default: module.OwnerPortal })));
+const TeacherPortal = lazy(() => import('./TeacherPortal.jsx').then((module) => ({ default: module.TeacherPortal })));
 
 const readLocale = () => readPreference('swar-locale', 'en') || 'en';
 
@@ -66,8 +68,9 @@ export function AccountRoot({ apiUrl = import.meta.env.VITE_API_URL || '' }) {
     { key: 'timetable', Icon: CalendarDays, label: (appT) => appT.portal.student.nav, render: (appT, appLocale) => <StudentTimetable t={appT} locale={appLocale} client={client} /> },
     { key: 'assignments', Icon: ClipboardList, label: (appT) => appT.portal.assignments.nav, render: (appT, appLocale) => <StudentAssignments t={appT} locale={appLocale} client={client} user={session.user} /> },
   ]} />;
-  if (portal === 'owner') return <OwnerPortal shell={shell} client={client} user={session.user} />;
-  if (portal === 'teacher') return <TeacherPortal shell={shell} client={client} user={session.user} />;
+  const loading = <p className="page" role="status">{t.portal.users.loading}</p>;
+  if (portal === 'owner') return <Suspense fallback={loading}><OwnerPortal shell={shell} client={client} user={session.user} /></Suspense>;
+  if (portal === 'teacher') return <Suspense fallback={loading}><TeacherPortal shell={shell} client={client} user={session.user} /></Suspense>;
   return <PortalShell {...shell} nav={[]}><div className="page"><h1>{t.portal.account}</h1><p className="notice" role="status">{t.portal.noAccess}</p></div></PortalShell>;
 }
 
