@@ -7,6 +7,7 @@ import { readPreference, writePreference } from './navigation.js';
 import { GUEST_KEY, PORTAL_KEY, choosePortal, clearSession, loginErrorKey, readSession, writeSession } from './auth.js';
 import { startOptionalSync } from './optionalSync.js';
 import { AccountMenu, LanguagePicker, PortalShell } from './PortalShell.jsx';
+import { ThemeToggle } from './theme.jsx';
 import { OwnerPortal } from './OwnerPortal.jsx';
 import { TeacherPortal } from './TeacherPortal.jsx';
 import { StudentTimetable } from './StudentTimetable.jsx';
@@ -26,6 +27,8 @@ export function AccountRoot({ apiUrl = import.meta.env.VITE_API_URL || '' }) {
   const signOut = (message = '') => { clearSession(); setSession(null); setNotice(message); setLocale(readLocale()); };
   const client = useMemo(() => createApiClient({ baseUrl: apiUrl, token: session?.token, onUnauthorized: () => signOut(t.portal.errors.sessionExpired) }), [apiUrl, session?.token]);
 
+  // The studio shell sets this too; portals and sign-in need it so screen readers use the right language.
+  useEffect(() => { document.documentElement.lang = locale; }, [locale]);
   useEffect(() => startOptionalSync({ baseUrl: apiUrl, token: session?.token, account: session?.user }), [apiUrl, session]);
   useEffect(() => {
     // Roles can change on the server; refresh them (a 401 here signs out via onUnauthorized).
@@ -80,7 +83,7 @@ export function LoginPage({ t, locale, onLocale, notice, onSubmit, onGuest }) {
     if (key) setError(p.errors[key] || p.errors.generic);
   };
   return <div className="login-shell">
-    <div className="login-top"><div className="brand"><span className="brand-mark"><Music2 size={20} aria-hidden="true" /></span><Brand t={t} /></div><LanguagePicker t={t} locale={locale} onLocale={onLocale} /></div>
+    <div className="login-top"><div className="brand"><span className="brand-mark"><Music2 size={20} aria-hidden="true" /></span><Brand t={t} /></div><div className="login-tools"><LanguagePicker t={t} locale={locale} onLocale={onLocale} /><ThemeToggle t={t} /></div></div>
     <main className="login-card panel">
       <h1>{p.signInTitle}</h1>
       <p className="page-lede">{p.signInLede}</p>
