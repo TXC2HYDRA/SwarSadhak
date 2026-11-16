@@ -307,6 +307,24 @@ test('API client builds batch and academy requests', async () => {
   ]);
 });
 
+test('student home shows today and work still to hand in; Home renders the academy panel under the hero', () => {
+  const items = [{ id: 'a1', title: 'Yaman', submission: null }, { id: 'a2', title: 'Bhairav', submission: { status: 'draft' } }, { id: 'a3', title: 'Done', submission: { status: 'submitted' } }, { id: 'a4', title: 'Seen', submission: { status: 'reviewed' } }];
+  assert.deepEqual(web.openAssignments(items).map((item) => item.id), ['a1', 'a2']);
+  const t = getTranslations('en');
+  // Students get no member list, so the today panel shows course and teacher only.
+  const own = { id: 'b1', name: 'Evening', course_name: 'Vocal', teacher_name: 'Guru', start_time: '18:00', end_time: '19:00', days: ['wed'], status: 'active' };
+  const today = renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', batches: [own], today: '2026-11-18', clock: '09:00', onBatch() {} }));
+  assert.ok(today.includes('Vocal · Guru</small>'));
+  for (const locale of supportedLocales) {
+    const lt = getTranslations(locale);
+    assert.ok(lt.portal.student.openWork && lt.portal.student.noOpenWork && lt.portal.student.allWork, locale);
+    const html = renderToStaticMarkup(React.createElement(web.StudentToday, { t: lt, locale, client: { student: { batches: pending, assignments: { list: pending } }, academy: pending } }));
+    assert.ok(html.includes(lt.portal.student.openWork) && html.includes(lt.portal.teacher.classesToday), locale);
+  }
+  const home = renderToStaticMarkup(React.createElement(web.App, { account: { id: 'u1', roles: ['student'] }, home: () => React.createElement('p', null, 'ACADEMY-PANEL') }));
+  assert.ok(home.indexOf('ACADEMY-PANEL') > home.indexOf('dashboard-hero'));
+});
+
 test('the student timetable groups batches by weekday and the student app links to it', () => {
   const batches = [{ id: 'b1', days: ['thu', 'tue'] }, { id: 'b2', days: ['tue'] }];
   assert.deepEqual(web.timetableDays(batches).map(({ day, items }) => [day, items.map((item) => item.id)]), [['tue', ['b1', 'b2']], ['thu', ['b1']]]);

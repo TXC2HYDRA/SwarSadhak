@@ -209,5 +209,10 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
   .data-table .row-actions { display: flex; flex-wrap: wrap; padding-top: 10px; }
   .data-table .row-actions .button { flex: 1; }
 }
+/* Phase 5: student home (academy panel under the practice hero) and timetable. */
+.student-today { margin: 18px 0 0; }
+.attention-list.is-plain button { grid-template-columns: minmax(0, 1fr) auto; box-shadow: inset 3px 0 var(--primary); }
+.student-today .attention-list + .button { margin-top: 12px; }
+.student-list li.is-next { border-color: color-mix(in srgb, var(--primary) 40%, transparent); box-shadow: inset 3px 0 var(--primary); }
 /* Phones always get the agenda; it must come after the view rules above. */
 @media (max-width: 700px) { .calendar-panel .calendar-grid, .view-toggle { display: none; } .calendar-panel .cal-agenda { display: grid; } }

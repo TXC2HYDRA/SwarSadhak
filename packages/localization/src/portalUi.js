@@ -96,6 +96,7 @@ export const portalUi = {
     student: {
       nav: 'Timetable', title: 'My timetable', lede: 'Your weekly classes. Your teachers schedule them.', teacher: 'Teacher', today: 'Today',
       empty: 'You are not in a batch yet. Your teacher adds you to one.',
+      openWork: 'To hand in', noOpenWork: 'Nothing to hand in right now.', allWork: 'See all {count}',
     },
   },
   mr: {
@@ -188,6 +189,7 @@ export const portalUi = {
     student: {
       nav: 'वेळापत्रक', title: 'माझे वेळापत्रक', lede: 'तुमचे साप्ताहिक वर्ग. ते तुमचे शिक्षक ठरवतात.', teacher: 'शिक्षक', today: 'आज',
       empty: 'तुम्ही अद्याप कोणत्याही बॅचमध्ये नाही. तुमचे शिक्षक तुम्हाला बॅचमध्ये जोडतील.',
+      openWork: 'जमा करायचे', noOpenWork: 'सध्या जमा करण्यासारखे काही नाही.', allWork: 'सर्व {count} पाहा',
     },
   },
   hi: {
@@ -280,6 +282,7 @@ export const portalUi = {
     student: {
       nav: 'समय-सारिणी', title: 'मेरी समय-सारिणी', lede: 'आपकी साप्ताहिक कक्षाएँ। इन्हें आपके शिक्षक तय करते हैं।', teacher: 'शिक्षक', today: 'आज',
       empty: 'आप अभी किसी बैच में नहीं हैं। आपके शिक्षक आपको बैच में जोड़ेंगे।',
+      openWork: 'जमा करना है', noOpenWork: 'अभी जमा करने के लिए कुछ नहीं है।', allWork: 'सभी {count} देखें',
     },
   },
 };
