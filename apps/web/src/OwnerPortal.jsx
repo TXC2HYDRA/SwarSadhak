@@ -59,7 +59,7 @@ export function OverviewPage({ t, locale = 'en', client, now, onNavigate = () =>
       <TodayPanel t={t} locale={locale} batches={batches.data} today={todayIn(timezone, now)} clock={nowIn(timezone, now)} onBatch={() => onNavigate('batches')} />
       <section className="panel attention-panel" aria-labelledby="attention-title">
         <h2 id="attention-title">{o.attention}</h2>
-        {!loaded ? <p role="status">{t.portal.users.loading}</p> : !attention.length ? <p>{o.allClear}</p>
+        {!loaded ? <div className="skeleton" role="status"><span className="sr-only">{t.portal.users.loading}</span>{[0, 1].map((row) => <span key={row} className="skeleton-row" aria-hidden="true" />)}</div> : !attention.length ? <p>{o.allClear}</p>
           : <ul className="attention-list">{attention.map(({ key, page, names }) => <li key={key}><button type="button" onClick={() => onNavigate(page)}>
             <strong>{names.length}</strong><span><span className="attention-label">{o[key]}</span><small>{names.slice(0, 3).join(', ')}{names.length > 3 ? ` ${o.more.replace('{count}', names.length - 3)}` : ''}</small></span><ArrowRight size={16} aria-hidden="true" />
           </button></li>)}</ul>}

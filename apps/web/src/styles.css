@@ -389,8 +389,23 @@ select:disabled, input:disabled { opacity: .6; cursor: not-allowed; }
 @keyframes sheet-in { from { opacity: 0; transform: translateY(8px); } }
 @keyframes mark-in { from { transform: scaleY(.2); } }
 @keyframes mark-in-x { from { transform: scaleX(.2); } }
+/* View transitions: only main is captured, so the sidebar, top bar and bottom bar stay live while content crossfades. */
+:root { view-transition-name: none; }
+main { view-transition-name: page; }
+::view-transition-old(page) { animation: fade-out var(--motion-ui) var(--ease-exit) both; }
+::view-transition-new(page) { animation: page-in var(--motion-page) var(--ease-out) both; }
+@keyframes fade-out { to { opacity: 0; } }
+/* Skeleton rows: a slow opacity pulse, still under reduced motion. */
+.skeleton { display: grid; gap: 10px; margin: 8px 0; }
+.skeleton-row { display: block; height: 44px; background: var(--surface); border-radius: var(--radius-control); animation: pulse 1.4s var(--ease-standard) infinite alternate; }
+.skeleton-row:nth-child(3) { width: 86%; }
+.skeleton-row:nth-child(4) { width: 72%; }
+@keyframes pulse { to { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .skeleton-row { animation: none; } }
 /* backwards, not both: a held end transform would make .page the containing block for fixed elements (the toast). */
 main > .page { animation: page-in var(--motion-page) var(--ease-out) backwards; }
+/* With view transitions the new snapshot already enters; do not animate the page twice. */
+@supports (view-transition-name: none) { main > .page { animation: none; } }
 
 /* Student home: the next step first, then today's classes and work to hand in. No hero. */
 .home-head { margin-bottom: clamp(24px, 3vw, 36px); }

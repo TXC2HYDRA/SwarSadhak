@@ -25,6 +25,8 @@ before(async () => {
     ...(await server.ssrLoadModule('/src/Assignments.jsx')),
     App: (await server.ssrLoadModule('/src/main.jsx')).App,
     LandingPage: (await server.ssrLoadModule('/src/main.jsx')).LandingPage,
+    LoadState: (await server.ssrLoadModule('/src/PortalShell.jsx')).LoadState,
+    withTransition: (await server.ssrLoadModule('/src/router.js')).withTransition,
   };
 });
 after(async () => { await server?.close(); });
@@ -488,4 +490,14 @@ test('accounts filter by role and status and sort by any column', () => {
   assert.deepEqual(names({ role: 'student', status: 'active' }), ['Kabir']);
   assert.deepEqual(names({ sort: { key: 'status', dir: 1 } }), ['Kabir', 'Meera', 'aarav']);
   assert.deepEqual(names({ query: 'teach' }), ['Meera']);
+});
+
+test('loading shows placeholder rows with screen-reader text, and page changes apply without the transition API', () => {
+  const t = getTranslations('en');
+  const html = renderToStaticMarkup(React.createElement(web.LoadState, { t, state: { data: null } }));
+  assert.match(html, new RegExp(`^<div class="skeleton" role="status"><span class="sr-only">${t.portal.users.loading}</span>`));
+  assert.equal((html.match(/class="skeleton-row" aria-hidden="true"/g) || []).length, 3);
+  let changed = false;
+  web.withTransition(() => { changed = true; });
+  assert.ok(changed);
 });

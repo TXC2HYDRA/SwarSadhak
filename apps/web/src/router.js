@@ -1,4 +1,13 @@
 import { useEffect, useState } from 'react';
+import { flushSync } from 'react-dom';
+
+// Page changes crossfade the content area only (main carries the view-transition name; the shell stays live) where
+// the View Transitions API exists. Elsewhere, and under reduced motion, the change is instant.
+export function withTransition(update) {
+  const doc = globalThis.document;
+  if (!doc?.startViewTransition || globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { update(); return; }
+  doc.startViewTransition(() => flushSync(update));
+}
 
 // Pages live in the URL as /<base>/<key>; the base's home page is /<base>. History API only, no router dependency.
 export const ROLE_BASES = ['owner', 'teacher', 'student'];
@@ -32,6 +41,6 @@ export function useUrlPage(base, keys, home) {
     globalThis.addEventListener?.('popstate', onPop);
     return () => globalThis.removeEventListener?.('popstate', onPop);
   }, [base]);
-  const go = (next) => { showPath(pagePath(base, next, home)); setPage(next); };
+  const go = (next) => { showPath(pagePath(base, next, home)); withTransition(() => setPage(next)); };
   return [page, go];
 }

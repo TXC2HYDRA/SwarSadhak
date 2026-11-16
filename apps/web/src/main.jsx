@@ -11,7 +11,7 @@ import './styles.css';
 import { AlankarList } from './AlankarList.jsx';
 import { ThemeToggle } from './theme.jsx';
 import { AppShell, Brand, BrandMark } from './AppShell.jsx';
-import { pageFromPath, pagePath, showPath } from './router.js';
+import { pageFromPath, pagePath, showPath, withTransition } from './router.js';
 import { Practice, AlankarPractice } from './PracticeStudio.jsx';
 import { Results } from './Results.jsx';
 import { assessPracticeEvidence } from './practiceSession.js';
@@ -38,7 +38,7 @@ export function App({ account = null, accountBar = null, pages = [], home = null
     const linked = pageFromPath(globalThis.location?.pathname, base, urlKeys, 'home');
     return linked !== 'home' || account || readPreference('swar-visited-v1', 'false') === 'true' || store.get(KEYS.sessions, []).length > 0 ? linked : 'landing';
   });
-  const setRoute = (next) => { if (next !== 'landing') showPath(pagePath(base, PARENT[next] || next, 'home')); setRouteState(next); };
+  const setRoute = (next) => { if (next !== 'landing') showPath(pagePath(base, PARENT[next] || next, 'home')); withTransition(() => setRouteState(next)); };
   const [sessions, setSessions] = useState(() => store.get(KEYS.sessions, []));
   const [routines, setRoutines] = useState(() => store.get(KEYS.routines, STARTER_ROUTINES));
   const [rewards, setRewards] = useState(() => store.get(KEYS.rewards, []));
