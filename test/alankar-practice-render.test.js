@@ -108,3 +108,22 @@ test('Marathi display keeps swaras plain at octave boundaries', () => {
     assert.ok(!lastHtml.includes('swara-mark-'));
   }
 });
+
+test('the held-Sa trace draws only real readings and shows the beat ruler on the current beat', async () => {
+  const { PitchTrace } = await server.ssrLoadModule('/src/PracticeStudio.jsx');
+  const t = getTranslations('en');
+  const target = { swara: 'Sa', octave: 0 };
+  const reading = { timestamp: 1000, targetNote: 'Sa', octave: 0, frequencyHz: 262, centsError: 20, confidence: .9, voiced: true, clipped: false, valid: true };
+  const idle = renderToStaticMarkup(React.createElement(PitchTrace, { t, state: { phase: 'idle', elapsedMs: 0 }, target }));
+  assert.ok(!idle.includes('trace-line') && !idle.includes('trace-now') && idle.includes('class="pitch-trace"'));
+  const live = renderToStaticMarkup(React.createElement(PitchTrace, { t, state: { phase: 'running', startedAt: 1, elapsedMs: 1100, observation: reading }, target }));
+  assert.match(live, /class="pitch-trace is-live"/);
+  assert.match(live, /class="trace-now" style="top:41\.33/); // 20 cents sharp sits above the Sa line
+  const silent = renderToStaticMarkup(React.createElement(PitchTrace, { t, state: { phase: 'running', startedAt: 1, elapsedMs: 1100, observation: { ...reading, voiced: false } }, target }));
+  assert.ok(!silent.includes('trace-now') && !silent.includes('trace-line'));
+  const groups = [['Sa', 'Re', 'Ga']];
+  const timeline = createAlankarTimeline({ groups, bpm: 60, loops: 1 });
+  const beat = getAlankarBeatAt(timeline.countInBeats * timeline.beatDurationMs + timeline.beatDurationMs * 2, timeline);
+  const html = renderToStaticMarkup(React.createElement(AlankarPracticeDisplay, { beat, timeline, groups, progress: 50, phase: 'running', t, groupKey: 'g' }));
+  assert.match(html, /<ol class="beat-ruler" aria-hidden="true"><li>1<\/li><li>2<\/li><li class="is-on">3<\/li><li>4<\/li><\/ol>/);
+});

@@ -78,6 +78,39 @@ export function PitchReadout({ t, state, target, tonic }) {
   </section>;
 }
 
+// The held Sa: a steady reference line for the current target and the voice's measured deviation from it over the
+// last few seconds. Only real readings are drawn; silence and unreliable frames leave gaps, and nothing moves unless
+// the microphone is measuring.
+const TRACE_MS = 6000;
+const TRACE_CENTS = 100;
+export function PitchTrace({ t, state, target }) {
+  const samples = useRef([]);
+  const now = state.elapsedMs;
+  if (!state.startedAt || now < (samples.current.at(-1)?.at ?? 0)) samples.current = [];
+  const pitch = state.phase === 'running' ? livePitch(state.observation, target, now) : null;
+  // Off the scale (more than a semitone away) is shown as an edge marker, never as a line.
+  const offScale = pitch && Math.abs(pitch.cents) > TRACE_CENTS ? Math.sign(pitch.cents) : 0;
+  const cents = pitch && !offScale ? pitch.cents : null;
+  if (state.phase === 'running' && now > (samples.current.at(-1)?.at ?? -1)) samples.current = [...samples.current.filter((sample) => now - sample.at <= TRACE_MS), { at: now, cents }];
+  const y = (value) => 60 - (value / TRACE_CENTS) * 52;
+  let path = ''; let previous = null;
+  for (const sample of samples.current) {
+    // A gap, or a jump too big for a voice between two readings 40 ms apart, lifts the pen: only the drawing is shaped, not the data.
+    const pen = previous != null && sample.cents != null && Math.abs(sample.cents - previous) <= 35;
+    if (sample.cents != null) path += `${pen ? 'L' : 'M'}${(600 - ((now - sample.at) / TRACE_MS) * 600).toFixed(1)} ${y(sample.cents).toFixed(1)}`;
+    previous = sample.cents;
+  }
+  return <div className={`pitch-trace${state.phase === 'running' ? ' is-live' : ''}`} aria-hidden="true">
+    <svg viewBox="0 0 600 120" preserveAspectRatio="none">
+      <rect className="trace-band" x="0" y={y(50)} width="600" height={y(-50) - y(50)} />
+      <line className="trace-ref" x1="0" y1="60" x2="600" y2="60" vectorEffect="non-scaling-stroke" />
+      {path && <path className="trace-line" d={path} vectorEffect="non-scaling-stroke" />}
+    </svg>
+    <span className="trace-label">{target ? t.swaras[target.swara] || target.swara : t.swaras.Sa}</span>
+    {(cents != null || offScale !== 0) && <span className={`trace-now${offScale ? ' is-off' : ''}`} style={{ top: `${(y(cents ?? offScale * TRACE_CENTS) / 120) * 100}%` }} />}
+  </div>;
+}
+
 function TonicControl({ t, tonic, setTonic, locked }) {
   return <label className="field-label">{t.tonic}<select disabled={locked} value={tonic} onChange={(event) => setTonic(Number(event.target.value))}>
     {TONICS.map((item) => <option key={item.value} value={item.value}>{textAt(t, item.labelKey)} · {item.value} Hz</option>)}
@@ -92,24 +125,23 @@ export function Practice({ t, exercise, tonic, setTonic, onFinish, onBack, durat
   const { state } = session;
   const locked = isLocked(state.phase);
   return <div className="page practice-page">
-    <div className="practice-heading"><div><p className="eyebrow">{t.practice}</p><h1>{textAt(t, exercise.nameKey)}</h1><p className="page-lede">{textAt(t, exercise.descriptionKey)}</p></div></div>
-    <SessionStatus t={t} state={state} />
-    <div className="practice-grid">
-      <section className="panel practice-studio">
-        <div className="studio-header"><h2>{t.measurement}</h2><div className="elapsed"><span>{timeLabel(state.elapsedMs)} / {timeLabel(durationSeconds * 1000)}</span><small>{t.studioUi.activeTime}</small></div></div>
+    <header className="practice-heading"><div><h1>{textAt(t, exercise.nameKey)}</h1><p className="page-lede">{textAt(t, exercise.descriptionKey)}</p></div></header>
+    <div className="studio">
+      <section className="studio-controls" aria-label={t.studioUi.setup}>
+        <TonicControl t={t} tonic={tonic} setTonic={setTonic} locked={locked} />
+        {locked && <p className="evidence-note">{t.studioUi.settingsLocked}</p>}
+        {!['completed', 'error'].includes(state.phase) && <TanpuraPlayer key={session.attempt} t={t} tonic={tonic} setTonic={setTonic} settingsLocked={locked} compact />}
+        <div className="studio-instructions"><h3>{t.studioUi.instructions}</h3><p>{textAt(t, exercise.instructionKey)}</p><p>{t.studioUi.plannedTime}: {durationSeconds} {t.exerciseUi.seconds}</p></div>
+      </section>
+      <section className="studio-stage" aria-labelledby="stage-title">
+        <div className="stage-head"><h2 id="stage-title" className="sr-only">{t.measurement}</h2><SessionStatus t={t} state={state} /><div className="elapsed"><span>{timeLabel(state.elapsedMs)} / {timeLabel(durationSeconds * 1000)}</span><small>{t.studioUi.activeTime}</small></div></div>
+        <PitchTrace t={t} state={state} target={target} />
         <PitchReadout t={t} state={state} target={target} tonic={tonic} />
         <p className="evidence-note">{t.studioUi.evidencePolicy}</p>
         {exercise.limited && <p className="notice">{t.studioUi.limited}</p>}
       </section>
-      <section className="panel practice-controls"><h2>{t.studioUi.setup}</h2>
-        <h3>{t.studioUi.instructions}</h3><p>{textAt(t, exercise.instructionKey)}</p>
-        <p>{t.studioUi.plannedTime}: {durationSeconds} {t.exerciseUi.seconds}</p>
-        <TonicControl t={t} tonic={tonic} setTonic={setTonic} locked={locked} />
-        {locked && <p className="evidence-note">{t.studioUi.settingsLocked}</p>}
-        <SessionControls t={t} session={session} />
-      </section>
+      <div className="studio-transport"><SessionControls t={t} session={session} /></div>
     </div>
-    {!['completed', 'error'].includes(state.phase) && <TanpuraPlayer key={session.attempt} t={t} tonic={tonic} setTonic={setTonic} settingsLocked={locked} />}
     <p className="studio-privacy"><ShieldCheck size={17} aria-hidden="true" />{t.privacy}</p>
     <button className="button quiet" onClick={onBack}>{t.studioUi.return}</button>
   </div>;
@@ -141,26 +173,33 @@ export function AlankarPractice({ t, pattern, tonic, setTonic, onFinish, onBack,
   useEffect(() => () => beatPlayer.current?.stop(), []);
   const practiceMs = Math.max(0, state.elapsedMs - countInMs);
   const progress = Math.min(100, Math.floor(practiceMs / Math.max(1, durationMs - countInMs) * 100));
+  const liveTarget = state.startedAt ? targetAt(state.elapsedMs) : null;
   return <div className="page practice-page alankar-practice-page">
-    <p className="eyebrow">{t.alankar.name}</p><h1>{textAt(t, pattern.nameKey)}</h1><p className="page-lede">{t.alankar.instruction}</p>
-    <SessionStatus t={t} state={state} countIn={countIn} />
-    <section className="panel"><h2>{t.studioUi.setup}</h2><div className="control-grid">
-      <TonicControl t={t} tonic={tonic} setTonic={setTonic} locked={locked} />
-      <label>{t.bpm}<input disabled={locked} type="number" min="20" max="240" step="1" value={bpm} onChange={(event) => setBpm(event.target.value)} onBlur={() => setBpm(timeline.bpm)} /></label>
-      <label>{t.loops}<input disabled={locked} type="number" min="1" max="10" step="1" value={loops} onChange={(event) => setLoops(event.target.value)} onBlur={() => setLoops(timeline.loops)} /></label>
-      <label>{t.direction}<select disabled={locked} value={direction} onChange={(event) => setDirection(event.target.value)}><option value="full">{t.full}</option><option value="aaroha">{t.aaroha}</option><option value="avaroha">{t.avaroha}</option></select></label>
-    </div><p>{t.timeSignature}: {t.timeSignatureValue} · {timeline.bpm} {t.bpm} · {t.studioUi.plannedTime}: {timeLabel(durationMs - countInMs)}</p>
-      {locked && <p className="evidence-note">{t.studioUi.settingsLocked}</p>}
-      <label className="beat-toggle"><input type="checkbox" checked={clickEnabled} onChange={(event) => { setClickEnabled(event.target.checked); setClickError(false); }} />{t.studioUi.click}</label>
-      {clickError && <p role="status">{t.studioUi.clickUnavailable}</p>}
-    </section>
-    <AlankarPracticeDisplay beat={beat} timeline={timeline} groups={groups} octaveGroups={octaveGroups} progress={progress} phase={countIn ? 'count-in' : state.phase} t={t} groupKey={`${pattern.id}-${direction}`} />
-    <section className="panel"><h2>{t.measurement}</h2><p>{t.studioUi.activeTime}: {timeLabel(practiceMs)}</p>
-      <PitchReadout t={t} state={state} target={state.startedAt ? targetAt(state.elapsedMs) : null} tonic={tonic} />
-      <p>{t.studioUi.countInNote}</p><p className="evidence-note">{t.studioUi.evidencePolicy}</p><p className="notice">{t.studioUi.alankarScope}</p>
-      <SessionControls t={t} session={session} />
-    </section>
-    {!['completed', 'error'].includes(state.phase) && <TanpuraPlayer key={session.attempt} t={t} tonic={tonic} setTonic={setTonic} settingsLocked={locked} />}
+    <header className="practice-heading"><div><h1>{textAt(t, pattern.nameKey)}</h1><p className="page-lede">{t.alankar.instruction}</p></div></header>
+    <div className="studio">
+      <section className="studio-controls" aria-label={t.studioUi.setup}>
+        <div className="control-grid">
+          <TonicControl t={t} tonic={tonic} setTonic={setTonic} locked={locked} />
+          <label>{t.bpm}<input disabled={locked} type="number" min="20" max="240" step="1" value={bpm} onChange={(event) => setBpm(event.target.value)} onBlur={() => setBpm(timeline.bpm)} /></label>
+          <label>{t.loops}<input disabled={locked} type="number" min="1" max="10" step="1" value={loops} onChange={(event) => setLoops(event.target.value)} onBlur={() => setLoops(timeline.loops)} /></label>
+          <label>{t.direction}<select disabled={locked} value={direction} onChange={(event) => setDirection(event.target.value)}><option value="full">{t.full}</option><option value="aaroha">{t.aaroha}</option><option value="avaroha">{t.avaroha}</option></select></label>
+        </div>
+        <p className="studio-meta">{t.timeSignature}: {t.timeSignatureValue} · {timeline.bpm} {t.bpm} · {t.studioUi.plannedTime}: {timeLabel(durationMs - countInMs)}</p>
+        {locked && <p className="evidence-note">{t.studioUi.settingsLocked}</p>}
+        <label className="beat-toggle"><input type="checkbox" checked={clickEnabled} onChange={(event) => { setClickEnabled(event.target.checked); setClickError(false); }} />{t.studioUi.click}</label>
+        {clickError && <p role="status">{t.studioUi.clickUnavailable}</p>}
+        {!['completed', 'error'].includes(state.phase) && <TanpuraPlayer key={session.attempt} t={t} tonic={tonic} setTonic={setTonic} settingsLocked={locked} compact />}
+      </section>
+      <section className="studio-stage" aria-labelledby="stage-title">
+        <div className="stage-head"><h2 id="stage-title" className="sr-only">{t.measurement}</h2><SessionStatus t={t} state={state} countIn={countIn} /><div className="elapsed"><span>{timeLabel(practiceMs)}</span><small>{t.studioUi.activeTime}</small></div></div>
+        <AlankarPracticeDisplay beat={beat} timeline={timeline} groups={groups} octaveGroups={octaveGroups} progress={progress} phase={countIn ? 'count-in' : state.phase} t={t} groupKey={`${pattern.id}-${direction}`} />
+        <PitchTrace t={t} state={state} target={liveTarget} />
+        <PitchReadout t={t} state={state} target={liveTarget} tonic={tonic} />
+        <p className="evidence-note">{t.studioUi.countInNote} {t.studioUi.evidencePolicy}</p>
+        <p className="notice">{t.studioUi.alankarScope}</p>
+      </section>
+      <div className="studio-transport"><SessionControls t={t} session={session} /></div>
+    </div>
     <p className="studio-privacy"><ShieldCheck size={17} aria-hidden="true" />{t.privacy}</p>
     <button className="button quiet" onClick={onBack}>{t.backToAlankars}</button>
   </div>;

@@ -5,7 +5,8 @@ import { createTanpuraPlayer, tanpuraRecordingsFor } from './tanpura.js';
 
 const textAt = (t, key) => key.split('.').reduce((value, part) => value?.[part], t) || key;
 
-export function TanpuraPlayer({ t, tonic, setTonic, visible = true, settingsLocked = false }) {
+// compact: the practice studio's control column (the studio's own tonic select sets the scale there).
+export function TanpuraPlayer({ t, tonic, setTonic, visible = true, settingsLocked = false, compact = false }) {
   const player = useRef(null);
   const tonicOption = TONICS.find((item) => item.value === tonic) || TONICS[0];
   const recordings = tanpuraRecordingsFor(tonicOption.pitch);
@@ -73,6 +74,18 @@ export function TanpuraPlayer({ t, tonic, setTonic, visible = true, settingsLock
   };
 
   if (!visible && !playing) return null;
+  const toggle = !playing && !pending ? <button className={`button${compact ? '' : ' primary'}`} onClick={start}><Play size={17} aria-hidden="true" />{t.tanpuraStart}</button> : <button className="button tanpura-stop" onClick={stop}><Pause size={17} aria-hidden="true" />{t.tanpuraStop}</button>;
+  const profiles = recordings.length > 1 && <label>{t.tanpuraProfile}
+    <select disabled={pending} value={profile} onChange={changeProfile}>
+      {recordings.map((item) => <option key={item.id} value={item.id}>{textAt(t, item.labelKey)}</option>)}
+    </select>
+  </label>;
+  if (compact) return <section className="tanpura-compact" aria-labelledby="tanpura-title">
+    <div className="tanpura-row"><h3 id="tanpura-title"><Volume2 size={16} aria-hidden="true" />{t.tanpuraTitle}</h3><span className={`tanpura-status ${playing ? 'playing' : ''}`} role="status">{playing ? t.tanpuraPlaying : t.tanpuraStopped}</span></div>
+    {profiles}
+    {toggle}
+    {error && <p className="notice" role="alert">{t.tanpuraUnavailable}</p>}
+  </section>;
 
   return <section className={`tanpura-panel panel ${visible ? '' : 'tanpura-floating'}`} aria-labelledby="tanpura-title">
     <div className="tanpura-heading">
@@ -89,12 +102,8 @@ export function TanpuraPlayer({ t, tonic, setTonic, visible = true, settingsLock
           {TONICS.map((item) => <option key={item.value} value={item.value}>{textAt(t, item.labelKey)}</option>)}
         </select>
       </label>
-      {recordings.length > 1 && <label>{t.tanpuraProfile}
-        <select disabled={pending} value={profile} onChange={changeProfile}>
-          {recordings.map((item) => <option key={item.id} value={item.id}>{textAt(t, item.labelKey)}</option>)}
-        </select>
-      </label>}
-      {!playing && !pending ? <button className="button primary" onClick={start}><Play size={17} aria-hidden="true" />{t.tanpuraStart}</button> : <button className="button tanpura-stop" onClick={stop}><Pause size={17} aria-hidden="true" />{t.tanpuraStop}</button>}
+      {profiles}
+      {toggle}
     </div>
     <small className="tanpura-hint">{t.tanpuraHint}</small>
     <small className="tanpura-offline-note">{t.tanpuraOfflineNote}</small>
