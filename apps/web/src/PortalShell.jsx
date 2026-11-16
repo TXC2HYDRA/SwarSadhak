@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Languages, LogOut, Music2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Languages, LogOut } from 'lucide-react';
 import { localeNames, supportedLocales } from '@swarsadhak/localization';
-import { Brand } from './main.jsx';
+import { AppShell } from './AppShell.jsx';
 import { apiErrorKey } from './auth.js';
 import { ThemeToggle } from './theme.jsx';
 
@@ -37,15 +37,9 @@ export function AccountMenu({ t, user, portal, onPortal, onSignOut }) {
   </div>;
 }
 
-export function PortalShell({ t, locale, onLocale, accountBar, nav, page, onPage, children }) {
-  const mainRef = useRef(null);
-  useEffect(() => { const heading = mainRef.current?.querySelector('h1'); if (heading) { heading.tabIndex = -1; heading.focus(); } }, [page]);
-  return <div className="portal-shell">
-    <header className="portal-header">
-      <div className="brand"><span className="brand-mark"><Music2 size={20} aria-hidden="true" /></span><Brand t={t} /></div>
-      {nav.length > 0 && <nav className="portal-nav" aria-label={t.nav}>{nav.map(([key, label]) => <button key={key} className={`portal-tab ${page === key ? 'active' : ''}`} aria-current={page === key ? 'page' : undefined} onClick={() => onPage(key)}>{label}</button>)}</nav>}
-      <div className="portal-tools"><LanguagePicker t={t} locale={locale} onLocale={onLocale} /><ThemeToggle t={t} />{accountBar}</div>
-    </header>
-    <main ref={mainRef} className="portal-main">{children}</main>
-  </div>;
+// Owner and Teacher portals: nav is [[key, label, Icon]]; the shared AppShell gives them the same sidebar and bottom nav as the studio.
+export function PortalShell({ t, locale, onLocale, accountBar, kicker, nav, page, onPage, children }) {
+  const items = nav.map(([key, label, Icon]) => ({ key, label, Icon }));
+  return <AppShell t={t} kicker={kicker} items={items} active={page} onNavigate={onPage} title={items.find((item) => item.key === page)?.label || t.portal.account}
+    tools={<><LanguagePicker t={t} locale={locale} onLocale={onLocale} /><ThemeToggle t={t} /></>} account={accountBar}>{children}</AppShell>;
 }

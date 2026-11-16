@@ -95,10 +95,12 @@ function component(tree, name) {
   assert.ok(result, `Expected ${name}`);
   return result;
 }
+// The shared AppShell renders the nav from its items; drive it the way a click would.
 function navigate(tree, label) {
-  const button = elements(tree).find((node) => node.type === 'button' && node.props.className?.startsWith('nav-item') && elements(node.props.children).some((child) => child.type === 'span' && child.props.children === label));
-  assert.ok(button, `Expected navigation to ${label}`);
-  button.props.onClick();
+  const shell = component(tree, 'AppShell');
+  const item = shell.props.items.find((entry) => entry.label === label);
+  assert.ok(item, `Expected navigation to ${label}`);
+  shell.props.onNavigate(item.key);
 }
 const render = (Component, props) => renderToStaticMarkup(React.createElement(Component, props));
 const homeProps = (activeRoutine) => ({ t, sessions: [], routines: [STARTER_ROUTINES[0]], activeRoutine, rewards: [], achievements: [], level: { level: 1 }, recommendation: { reasonKey: 'recommendations.noReliableAudio' }, recommendedExercise: getExercise('sa-sustain') });
@@ -148,7 +150,7 @@ test('blocked visited writes never prevent landing, sidebar, or locale navigatio
   navigate(app(), t.settings);
   component(app(), 'SettingsPage').props.setLocale('hi');
   assert.equal(component(app(), 'SettingsPage').props.locale, 'hi');
-  const picker = elements(app()).find((node) => node.type === 'select' && node.props.value === 'hi');
+  const picker = elements(component(app(), 'AppShell').props.tools).find((node) => node.type === 'select' && node.props.value === 'hi');
   picker.props.onChange({ target: { value: 'en' } });
   assert.equal(component(app(), 'SettingsPage').props.locale, 'en');
 });

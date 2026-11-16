@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, AlertCircle, ArrowRight, BarChart3, BookOpen, CheckCircle2, ChevronRight, Clock3, Home, Languages, Library, LockKeyhole, Menu, Mic2, Music2, Pause, Play, Radio, Route, Search, Settings, ShieldCheck, Sparkles, Target, Trophy, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Activity, AlertCircle, ArrowRight, BarChart3, BookOpen, CheckCircle2, ChevronRight, Clock3, Home, Languages, Library, LockKeyhole, Mic2, Music2, Pause, Play, Radio, Route, Search, Settings, ShieldCheck, Sparkles, Target, Trophy } from 'lucide-react';
 import { getTranslations, localeNames, supportedLocales } from '@swarsadhak/localization';
 import { createSession } from '@swarsadhak/practice-domain';
 import { createStorage } from '@swarsadhak/persistence';
@@ -10,6 +10,8 @@ import { recommend } from '@swarsadhak/recommendations';
 import './styles.css';
 import { AlankarList } from './AlankarList.jsx';
 import { ThemeToggle } from './theme.jsx';
+import { AppShell, Brand } from './AppShell.jsx';
+import { pageFromPath, pagePath, showPath } from './router.js';
 import { Practice, AlankarPractice } from './PracticeStudio.jsx';
 import { Results } from './Results.jsx';
 import { assessPracticeEvidence } from './practiceSession.js';
@@ -19,14 +21,23 @@ const store = createStorage();
 const KEYS = { sessions: 'swar-practice-sessions-v1', routines: 'swar-routines-v1', rewards: 'swar-reward-events-v1', streak: 'swar-streak-preferences-v1' };
 const textAt = (t, key) => key.split('.').reduce((value, part) => value?.[part], t) || key;
 
-export const Brand = ({ t }) => <span>{t.brand.first}<span>{t.brand.second}</span></span>;
+export { Brand };
+// Sub-pages share their parent's URL and nav highlight; only parents can be opened from a link.
+const PARENT = { results: 'practice', alankars: 'library', 'alankar-practice': 'library', planner: 'routines', routine: 'routines' };
+const STUDIO_KEYS = ['home', 'practice', 'library', 'routines', 'progress', 'settings'];
 
 // account/accountBar/pages come from AccountRoot when signed in; without them this is the offline studio.
 // pages: [{ key, Icon, label(t), render(t, locale) }], rendered with this app's own language picker.
 export function App({ account = null, accountBar = null, pages = [] } = {}) {
   const [locale, setLocale] = useState(() => readPreference('swar-locale', 'en') || 'en');
   const t = getTranslations(locale);
-  const [route, setRoute] = useState(() => account || readPreference('swar-visited-v1', 'false') === 'true' || store.get(KEYS.sessions, []).length > 0 ? 'home' : 'landing');
+  const base = account ? 'student' : 'studio';
+  const urlKeys = [...STUDIO_KEYS, ...pages.map((page) => page.key)];
+  const [route, setRouteState] = useState(() => {
+    const linked = pageFromPath(globalThis.location?.pathname, base, urlKeys, 'home');
+    return linked !== 'home' || account || readPreference('swar-visited-v1', 'false') === 'true' || store.get(KEYS.sessions, []).length > 0 ? linked : 'landing';
+  });
+  const setRoute = (next) => { if (next !== 'landing') showPath(pagePath(base, PARENT[next] || next, 'home')); setRouteState(next); };
   const [sessions, setSessions] = useState(() => store.get(KEYS.sessions, []));
   const [routines, setRoutines] = useState(() => store.get(KEYS.routines, STARTER_ROUTINES));
   const [rewards, setRewards] = useState(() => store.get(KEYS.rewards, []));
@@ -35,30 +46,20 @@ export function App({ account = null, accountBar = null, pages = [] } = {}) {
   const [tonic, setTonic] = useState(261.63);
   const [activeRoutine, setActiveRoutine] = useState(null);
   const [notice, setNotice] = useState('');
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(() => globalThis.innerWidth <= 850);
   const [streakEnabled, setStreakEnabled] = useState(() => store.get(KEYS.streak, true));
   const [resultSaved, setResultSaved] = useState(null);
   const [retrySettings, setRetrySettings] = useState(null);
-  const mainRef = useRef(null);
   useEffect(() => {
     document.documentElement.lang = supportedLocales.includes(locale) ? locale : 'en';
   }, [locale]);
   useEffect(() => {
-    const heading = mainRef.current?.querySelector('h1');
-    if (heading) { heading.tabIndex = -1; heading.focus(); }
-  }, [route]);
-  useEffect(() => {
-    const handleResize = () => {
-      const nextIsMobile = globalThis.innerWidth <= 850;
-      setIsMobile(nextIsMobile);
-      if (nextIsMobile) setSidebarCollapsed(false);
-      else setMenuOpen(false);
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    // Canonical URL for the opening page; Back/Forward re-open parent pages.
+    // ponytail: Back skips the "leave this routine?" confirm; add a guard if people lose routine items that way.
+    if (route !== 'landing') showPath(pagePath(base, PARENT[route] || route, 'home'), { replace: true });
+    const onPop = () => setRouteState(pageFromPath(globalThis.location?.pathname, base, urlKeys, 'home'));
+    globalThis.addEventListener?.('popstate', onPop);
+    return () => globalThis.removeEventListener?.('popstate', onPop);
+  }, [base]);
   const derivedRewards = useMemo(() => deriveRewards(sessions, rewards), [sessions, rewards]);
   const achievements = useMemo(() => deriveAchievements(sessions, derivedRewards), [sessions, derivedRewards]);
   const recommendation = useMemo(() => recommend(sessions.at(-1) || {}), [sessions]);
@@ -85,11 +86,11 @@ export function App({ account = null, accountBar = null, pages = [] } = {}) {
   };
   const go = (nextRoute, { routineItem } = {}) => {
     if (nextRoute === 'practice' && !routineItem) nextRoute = exerciseRoute(selected);
-    if (nextRoute === route && !routineItem) { setMenuOpen(false); return true; }
+    if (nextRoute === route && !routineItem) return true;
     if (activeRoutine?.current && ['practice', 'alankar-practice'].includes(route) && nextRoute !== 'routine' && nextRoute !== 'results' && !confirm(t.exitConfirm)) return false;
     const saved = nextRoute === 'landing' || writePreference('swar-visited-v1', 'true');
     setActiveRoutine((routine) => routineItem ? { ...routine, current: routineItem } : clearRoutineCurrent(routine));
-    setRoute(nextRoute); setNotice(saved ? '' : t.persistenceWarning); setMenuOpen(false);
+    setRoute(nextRoute); setNotice(saved ? '' : t.persistenceWarning);
     return true;
   };
   const changeLocale = (value) => {
@@ -115,25 +116,15 @@ export function App({ account = null, accountBar = null, pages = [] } = {}) {
     setActiveRoutine(clearRoutineCurrent(routine));
     go('routine');
   };
-  const toggleNavigation = () => {
-    if (isMobile) setMenuOpen((open) => !open);
-    else setSidebarCollapsed((collapsed) => !collapsed);
-  };
   const clearHistory = () => { if (!confirm(t.clearConfirm)) return; setSessions([]); setRewards([]); persist(KEYS.sessions, []); persist(KEYS.rewards, []); };
 
-  const navItems = [['home', Home], ...pages.map((page) => [page.key, page.Icon]), ['practice', Activity], ['library', Library], ['routines', Trophy], ['progress', Trophy], ['settings', Settings]];
+  const navItems = [['home', Home], ...pages.map((page) => [page.key, page.Icon]), ['practice', Activity], ['library', Library], ['routines', Route], ['progress', BarChart3], ['settings', Settings]];
   const routeLabel = { home: t.home, practice: t.practice, results: t.results, library: t.library, alankars: t.alankarListTitle, 'alankar-practice': t.alankarPracticeTitle, routines: t.planner, planner: t.planner, routine: t.routineProgress, progress: t.progress, settings: t.settings }[route] || pages.find((page) => page.key === route)?.label(t) || t.home;
-  const isActive = (key) => route === key || (key === 'library' && ['alankars', 'alankar-practice'].includes(route)) || (key === 'routines' && ['planner', 'routine'].includes(route));
   if (route === 'landing') return <LandingPage t={t} locale={locale} onLocaleChange={changeLocale} onStart={() => go('home')} onExplore={() => go('library')} onNavigate={go} />;
-  return <div className="app-shell">
-    <aside id="primary-navigation" className={`sidebar ${menuOpen ? 'open' : ''} ${sidebarCollapsed ? 'collapsed' : ''}`} aria-label={t.nav} inert={(isMobile && !menuOpen) || sidebarCollapsed ? true : undefined} onKeyDown={(event) => { if (event.key === 'Escape') { setMenuOpen(false); mainRef.current?.querySelector('.menu-button')?.focus(); } }}>
-      <div className="sidebar-header"><div className="brand"><span className="brand-mark"><Music2 size={20} /></span><Brand t={t} /></div><button className="icon-button close-menu" aria-label={t.close} onClick={() => setMenuOpen(false)}><X size={20} /></button></div>
-      <div className="sidebar-intro"><span className="sidebar-kicker">{t.studio}</span><span className="sidebar-note">{t.ready}</span></div>
-      <nav aria-label={t.nav}>{navItems.map(([key, Icon]) => <button className={`nav-item ${isActive(key) ? 'active' : ''}`} key={key} onClick={() => go(key)}><Icon size={19} aria-hidden="true" /><span>{key === 'routines' ? t.planner : pages.find((page) => page.key === key)?.label(t) ?? t[key]}</span>{isActive(key) && <span className="nav-active-mark" aria-hidden="true" />}</button>)}</nav>
-      <div className="sidebar-footer"><div className="practice-tip"><Radio size={17} aria-hidden="true" /><strong>{t.tanpuraTitle}</strong><span>{t.tanpuraDescription}</span></div><small>{t.privacy}</small></div>
-    </aside>
-    {menuOpen && <button className="scrim" aria-label={t.close} onClick={() => setMenuOpen(false)} />}
-    <main ref={mainRef} className={`main-content ${sidebarCollapsed ? 'expanded' : ''}`}><header className="topbar"><button className="icon-button menu-button" aria-label={isMobile ? (menuOpen ? t.close : t.openMenu) : (sidebarCollapsed ? t.openMenu : t.close)} aria-controls="primary-navigation" aria-expanded={isMobile ? menuOpen : !sidebarCollapsed} onClick={toggleNavigation}><Menu size={22} aria-hidden="true" /></button><div className="breadcrumbs" aria-label={t.nav}><span className="breadcrumb-brand">{t.brand.name}</span><ChevronRight size={15} aria-hidden="true" /><strong>{routeLabel}</strong></div><div className="language-picker"><Languages size={16} aria-hidden="true" /><select value={locale} aria-label={t.language} onChange={(event) => changeLocale(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></div><ThemeToggle t={t} />{accountBar}</header>
+  const items = navItems.map(([key, Icon]) => ({ key, Icon, label: key === 'routines' ? t.planner : pages.find((page) => page.key === key)?.label(t) ?? t[key] }));
+  const tools = <><div className="language-picker"><Languages size={16} aria-hidden="true" /><select value={locale} aria-label={t.language} onChange={(event) => changeLocale(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></div><ThemeToggle t={t} /></>;
+  const footer = <><div className="practice-tip"><Radio size={17} aria-hidden="true" /><strong>{t.tanpuraTitle}</strong><span>{t.tanpuraDescription}</span></div><small>{t.privacy}</small></>;
+  return <AppShell t={t} kicker={t.studio} note={t.ready} items={items} active={PARENT[route] || route} focusKey={route} onNavigate={go} title={routeLabel} tools={tools} footer={footer} account={accountBar}>
         {notice && <div className="notice" role="status">{notice}</div>}
         {route === 'home' && <HomePage t={t} sessions={sessions} routines={routines} activeRoutine={activeRoutine} rewards={derivedRewards} achievements={achievements} level={level} recommendation={recommendation} recommendedExercise={recommendedExercise} onStart={() => go('practice')} onSelectExercise={chooseExercise} onAlankar={() => chooseExercise(getExercise('sa-re-ga'))} onRoutine={openRoutine} onProgress={() => go('progress')} />}
         {pages.map((page) => route === page.key && <React.Fragment key={page.key}>{page.render(t, locale)}</React.Fragment>)}
@@ -146,8 +137,7 @@ export function App({ account = null, accountBar = null, pages = [] } = {}) {
       {route === 'alankar-practice' && <AlankarPractice key={selectedAlankar.id} t={t} pattern={selectedAlankar} initialSettings={retrySettings} durationSeconds={activeRoutine?.current?.durationSeconds} tonic={tonic} setTonic={setTonic} onFinish={saveSession} onBack={() => go(activeRoutine?.current ? 'routine' : 'alankars')} />}
        {route === 'progress' && <Progress t={t} sessions={sessions} rewards={derivedRewards} achievements={achievements} onClear={clearHistory} streakEnabled={streakEnabled} setStreakEnabled={(value) => { setStreakEnabled(value); persist(KEYS.streak, value); }} />}
         {route === 'settings' && <SettingsPage t={t} locale={locale} setLocale={changeLocale} />}
-    </main>
-  </div>;
+  </AppShell>;
 }
 
 function Surface({ children, className = '', ...props }) { return <section className={`panel ${className}`.trim()} {...props}>{children}</section>; }

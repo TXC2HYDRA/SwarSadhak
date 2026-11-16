@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { CalendarPlus, Search } from 'lucide-react';
+import { CalendarPlus, ClipboardList, LayoutDashboard, Search } from 'lucide-react';
+import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
 import { BatchCalendar, BatchDialog, timeRange } from './BatchCalendar.jsx';
 import { TeacherAssignments } from './Assignments.jsx';
@@ -7,9 +8,9 @@ import { apiErrorKey } from './auth.js';
 import { slotForm, todayIn } from './schedule.js';
 
 export function TeacherPortal({ shell, client, user }) {
-  const [page, setPage] = useState('dashboard');
+  const [page, setPage] = useUrlPage('teacher', ['dashboard', 'assignments'], 'dashboard');
   const { t } = shell;
-  return <PortalShell {...shell} nav={[['dashboard', t.portal.nav.dashboard], ['assignments', t.portal.assignments.nav]]} page={page} onPage={setPage}>
+  return <PortalShell {...shell} kicker={t.portal.roles.teacher} nav={[['dashboard', t.portal.nav.dashboard, LayoutDashboard], ['assignments', t.portal.assignments.nav, ClipboardList]]} page={page} onPage={setPage}>
     {page === 'dashboard' && <TeacherDashboard t={t} locale={shell.locale} client={client} />}
     {page === 'assignments' && <TeacherAssignments t={t} locale={shell.locale} client={client} user={user} />}
   </PortalShell>;
