@@ -344,6 +344,7 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 ## 10. Progress log
 
+- **Counterpoint step 5:** QA (section 12). 150-shot matrix with no overflow, axe-core 4.10 with WCAG 2.2 AA rules on 38 page states with no violations, reduced motion verified, 200% zoom checked on 11 screens. Fixed: unlabelled routine picker, landing nav links wrapping at 1024–1280 px, three redundant page-title eyebrows. Checked: `npm test` 162/162, `npm run build` (main bundle 493.8 kB).
 - **Counterpoint step 4:** owner tables and drawer, sign-in, landing (section 12). Checked: `npm test` 162/162, `npm run build` (main bundle 494.0 kB), owner, sign-in and landing screenshots at 1440, 1280, 1024, 390 and Marathi 360 px, no overflow.
 - **Counterpoint step 3:** teacher dashboard and the answer history (section 12). Checked: `npm test` 161/161, `npm run build` (main bundle 496.9 kB), teacher screenshots at 1440, 1280, 768 and 390 px, Marathi at 390 px dark, no overflow.
 - **Counterpoint step 2:** practice studio (section 12): held-Sa trace, studio grid with a pinned transport on phones, beat ruler, tanpura in the control column. Checked: `npm test` 160/160, `npm run build` (main bundle 495.3 kB), studio screenshots with a synthetic voice fed into the real pitch pipeline.
@@ -441,7 +442,7 @@ Review of Darbar: "simple UI but rich UX", new palette, smoother, nothing that l
 | 2 | Practice studio: held Sa line, honest mic states, tala ruler | Done |
 | 3 | Teacher dashboard: calendar first, metric strip, assignment feedback loop | Done |
 | 4 | Owner tables and drawers, sign-in, landing | Done |
-| 5 | QA matrix, axe, reduced motion, 200% zoom | After review |
+| 5 | QA matrix, axe, reduced motion, 200% zoom | Done |
 
 **Palette** (all values and contrast matrices: spec section 2). Mineral `#F4F6F5` canvas, fog `#EDF1F0` surface, white raised surface, ink `#14282D` text, deep tide `#155D67` actions. Dark: night `#101C21`, `#F2F6F4` text, `#96DDE3` actions. Citron `#D8EE84` (`--live`, with `--on-live` text) is a fill used only for the rare live moment, today the "Next class" badge. Every text token is at least 4.5:1 on all three surfaces in both themes.
 
@@ -473,3 +474,11 @@ Review of Darbar: "simple UI but rich UX", new palette, smoother, nothing that l
 
 **Landing**: the decorative orbit, sound-wave bars, the fake practice preview, the empty progress bars, the icon-chip feature cards and every eyebrow are gone. What remains: the headline, one line, Start and Explore, the privacy line, then the held Sa reference line drawn once (static, `aria-hidden`, off under reduced motion). Features are a ruled three-column list; "How it works" is a five-beat time ruler with the first beat heavier (vertical on phones); privacy is a plain list. Phones hide the nav Start button (the hero has one) so the bar fits at 360 px.
 - Screenshots: `ui-redesign/counterpoint/owner-*.jpg`, `login-*.jpg`, `landing-*.jpg`.
+
+**QA** (spec section 10):
+- Matrix: 150 screenshots. The earlier seven screens (sign-in, student home, timetable, teacher dashboard, teacher assignments, owner overview, accounts) plus practice studio, student assignments, owner batches and the landing page, each at 360, 390, 768, 1024, 1280 and 1440 px in both themes, plus Marathi and Hindi at 390 px. The harness flags any visible element that ends past the right edge and is not inside a scroll container; the landing page is checked with its horizontal clip removed. No screen overflows. Contact sheets: `ui-redesign/counterpoint/matrix-*.jpg`.
+- Accessibility: axe-core 4.10 (run from a scratch folder, not a project dependency) with the WCAG 2.0 A/AA, 2.1 AA and 2.2 AA rules, at 1280 px in both themes, on 19 screens: landing, sign-in, home, practice, library, alankar practice, timetable, student assignments, routines, progress, settings, teacher dashboard, teacher assignments with answers open, owner overview, accounts, the account drawer, courses, enrollments and batches. No violations. Fixed on the way: the routine picker had no accessible name (now labelled by the page heading).
+- Reduced motion: with `prefers-reduced-motion: reduce` the held-Sa line's animation and the button transitions compute to 1e-06 s (the global rule in `styles.css`). Every screenshot is taken in reduced motion, so layouts never depend on an animation finishing.
+- 200% zoom: 1280 × 800 at 200% is a 640 × 400 CSS viewport. Sign-in, home, practice, timetable, student assignments, teacher dashboard, teacher assignments, owner overview, accounts, batches and landing were captured there: no overflow, nothing clipped (`matrix-zoom-200.jpg`).
+- Bundle: main chunk 493.8 kB (limit 500 kB); the Owner and Teacher portals stay lazy-loaded.
+- Avoid list (spec section 9): no ornament, gradients only as the hatch on paused batches, no pill buttons, no card per metric (metric strips on teacher and owner), no fake audio visuals (the trace draws only real readings; the landing page has none). Remaining eyebrows are contextual (the date on "Classes today", "Session completed" on results, the coach source), not a label above every title; three that repeated the page title were removed. Fixed: the landing nav's three section links wrapped onto two or three lines at 1024–1280 px; they now show only from 1360 px.
