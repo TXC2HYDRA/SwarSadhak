@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Languages, LogOut } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Languages, LogOut, Search } from 'lucide-react';
 import { localeNames, supportedLocales } from '@swarsadhak/localization';
 import { AppShell } from './AppShell.jsx';
 import { apiErrorKey } from './auth.js';
@@ -23,6 +23,24 @@ export function LoadState({ t, state, empty }) {
   if (Array.isArray(state.data) && state.data.length === 0 && empty) return <p>{empty}</p>;
   return null;
 }
+
+// Modal form sheet: centred dialog on desktop, full screen on phones (CSS). Children always render so forms keep their state.
+export function Sheet({ open, title, onClose, children }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (open && !dialog?.open) dialog?.showModal?.();
+    if (!open && dialog?.open) dialog.close();
+  }, [open]);
+  return <dialog ref={ref} className="sheet-dialog" aria-label={title} onClose={onClose}>{children}</dialog>;
+}
+
+export const matches = (query, ...values) => {
+  const needle = query.trim().toLocaleLowerCase();
+  return !needle || values.some((value) => String(value ?? '').toLocaleLowerCase().includes(needle));
+};
+
+export const TableSearch = ({ t, value, onChange }) => <div className="filter-controls table-search"><label className="search-field"><Search size={16} aria-hidden="true" /><input type="search" value={value} onChange={(event) => onChange(event.target.value)} placeholder={t.portal.search} aria-label={t.portal.search} /></label></div>;
 
 export function LanguagePicker({ t, locale, onLocale }) {
   return <label className="language-picker"><Languages size={16} aria-hidden="true" /><span className="sr-only">{t.language}</span><select value={locale} aria-label={t.language} onChange={(event) => onLocale(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></label>;

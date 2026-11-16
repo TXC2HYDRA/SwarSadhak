@@ -216,6 +216,25 @@ test('today and next class come from active batches in academy time', () => {
   assert.ok(!renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', batches: null, today: '2026-11-17', clock: '09:00', onBatch() {} })).includes(t.portal.teacher.todayEmpty)); // nothing claimed before data loads
 });
 
+test('owner attention lists only real exceptions, and owner tables search and open forms in sheets', () => {
+  const courses = [{ id: 'c1', name: 'Vocal', active: true, teachers: [{ id: 't1' }] }, { id: 'c2', name: 'Tabla', active: true, teachers: [] }, { id: 'c3', name: 'Old', active: false, teachers: [] }];
+  const students = [{ id: 's1', display_name: 'Asha', active: true }, { id: 's2', display_name: 'Ravi', active: true }, { id: 's3', display_name: 'Gone', active: false }];
+  const enrollments = [{ id: 'e1', student_id: 's1', course_id: 'c1', student_name: 'Asha', course_name: 'Vocal', status: 'active' }, { id: 'e2', student_id: 's2', course_id: 'c1', student_name: 'Ravi', course_name: 'Vocal', status: 'paused' }];
+  const batches = [{ id: 'b1', name: 'Evening', course_id: 'c1', status: 'active', student_ids: ['s2'] }];
+  const found = Object.fromEntries(web.ownerAttention({ courses, students, enrollments, batches }).map((item) => [item.key, item.names]));
+  assert.deepEqual(found, { noTeacher: ['Tabla'], notEnrolled: ['Ravi'], noBatch: ['Asha · Vocal'], pausedEnrollments: ['Ravi · Vocal'] });
+  assert.deepEqual(web.ownerAttention({ courses: courses.slice(0, 1), students: students.slice(0, 1), enrollments: enrollments.slice(0, 1), batches: [{ ...batches[0], student_ids: ['s1'] }] }), []);
+  for (const locale of supportedLocales) {
+    const t = getTranslations(locale); const p = t.portal;
+    assert.ok(['attention', 'allClear', 'noTeacher', 'notEnrolled', 'noBatch', 'pausedBatches', 'pausedEnrollments', 'more'].every((key) => p.overview[key]) && p.search && p.noMatches, locale);
+    const overview = renderToStaticMarkup(React.createElement(web.OverviewPage, { t, locale, client: stubClient }));
+    assert.ok(overview.includes(p.overview.attention) && overview.includes(p.teacher.classesToday), locale);
+    const users = renderToStaticMarkup(React.createElement(web.UsersPage, { t, client: stubClient, me: { id: 'u1' } }));
+    assert.match(users, /<dialog class="sheet-dialog"/);
+    assert.match(users, new RegExp(`aria-label="${p.search}"`));
+  }
+});
+
 test('the batch calendar renders blocks, today and accessible slots in every locale', () => {
   for (const locale of supportedLocales) {
     const t = getTranslations(locale); const b = t.portal.batches;

@@ -147,5 +147,8 @@ def all_batches():
     with connect() as c:
         rows = c.execute("""SELECT b.*, u.display_name AS teacher_name, co.name AS course_name, (SELECT COUNT(*) FROM batch_members m WHERE m.batch_id=b.id) AS student_count
             FROM batches b JOIN users u ON u.id=b.teacher_id JOIN courses co ON co.id=b.course_id ORDER BY u.display_name COLLATE NOCASE, b.start_time""").fetchall()
-        return [{"id": r["id"], "name": r["name"], "teacher_name": r["teacher_name"], "course_name": r["course_name"], "days": mask_days(r["days"]),
-                 "start_time": r["start_time"], "end_time": r["end_time"], "status": r["status"], "student_count": r["student_count"]} for r in rows]
+        members = {}
+        for m in c.execute("SELECT batch_id, student_id FROM batch_members"): members.setdefault(m["batch_id"], []).append(m["student_id"])
+        return [{"id": r["id"], "name": r["name"], "teacher_id": r["teacher_id"], "teacher_name": r["teacher_name"], "course_id": r["course_id"], "course_name": r["course_name"],
+                 "days": mask_days(r["days"]), "start_time": r["start_time"], "end_time": r["end_time"], "status": r["status"], "student_count": r["student_count"],
+                 "student_ids": members.get(r["id"], [])} for r in rows]
