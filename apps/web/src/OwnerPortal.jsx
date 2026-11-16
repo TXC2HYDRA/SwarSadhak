@@ -3,8 +3,7 @@ import { ArrowRight, BookOpen, CalendarRange, LayoutDashboard, Plus, UserCheck, 
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, Sheet, TableSearch, matches, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
-import { timeRange } from './BatchCalendar.jsx';
-import { TodayPanel } from './TeacherPortal.jsx';
+import { TodayPanel, timeRange } from './BatchCalendar.jsx';
 import { nowIn, todayIn } from './schedule.js';
 
 const ROLES = ['owner', 'teacher', 'student'];

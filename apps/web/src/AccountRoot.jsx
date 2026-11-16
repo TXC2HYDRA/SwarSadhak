@@ -11,7 +11,7 @@ import { ThemeToggle } from './theme.jsx';
 import { roleFromPath } from './router.js';
 import { OwnerPortal } from './OwnerPortal.jsx';
 import { TeacherPortal } from './TeacherPortal.jsx';
-import { StudentTimetable } from './StudentTimetable.jsx';
+import { StudentTimetable, StudentToday } from './StudentTimetable.jsx';
 import { StudentAssignments } from './Assignments.jsx';
 import './portal.css';
 
@@ -62,7 +62,7 @@ export function AccountRoot({ apiUrl = import.meta.env.VITE_API_URL || '' }) {
 
   const accountBar = <AccountMenu t={t} user={session.user} portal={portal} onPortal={switchPortal} onSignOut={() => signOut()} />;
   const shell = { t, locale, onLocale: changeLocale, accountBar };
-  if (portal === 'student') return <App account={session.user} accountBar={accountBar} pages={[
+  if (portal === 'student') return <App account={session.user} accountBar={accountBar} home={(appT, appLocale, go) => <StudentToday t={appT} locale={appLocale} client={client} onTimetable={() => go('timetable')} onAssignments={() => go('assignments')} />} pages={[
     { key: 'timetable', Icon: CalendarDays, label: (appT) => appT.portal.student.nav, render: (appT, appLocale) => <StudentTimetable t={appT} locale={appLocale} client={client} /> },
     { key: 'assignments', Icon: ClipboardList, label: (appT) => appT.portal.assignments.nav, render: (appT, appLocale) => <StudentAssignments t={appT} locale={appLocale} client={client} user={session.user} /> },
   ]} />;

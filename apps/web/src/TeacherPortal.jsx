@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { ArrowRight, CalendarPlus, ClipboardList, LayoutDashboard, Search } from 'lucide-react';
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
-import { BatchCalendar, BatchDialog, timeRange } from './BatchCalendar.jsx';
+import { BatchCalendar, BatchDialog, TodayPanel, timeRange } from './BatchCalendar.jsx';
 import { TeacherAssignments } from './Assignments.jsx';
 import { apiErrorKey } from './auth.js';
-import { DAYS, classesOn, formatDate, nextClass, nowIn, slotForm, todayIn } from './schedule.js';
+import { nowIn, slotForm, todayIn } from './schedule.js';
 
 export function TeacherPortal({ shell, client, user }) {
   const [page, setPage] = useUrlPage('teacher', ['dashboard', 'assignments'], 'dashboard');
@@ -110,25 +110,3 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
 }
 
 // Today's classes in order, marking the one running now or next. Only real batches; nothing is shown before they load.
-export function TodayPanel({ t, locale, batches, today, clock, onBatch }) {
-  const p = t.portal.teacher; const b = t.portal.batches;
-  const todays = batches ? classesOn(batches, today) : [];
-  const upNext = todays.find(({ batch }) => batch.start_time > clock);
-  const upcoming = batches ? nextClass(batches, today, clock) : null;
-  const later = upcoming && upcoming.date !== today ? upcoming : null;
-  const state = (item) => (item.batch.end_time <= clock ? 'finished' : item.batch.start_time <= clock ? 'live' : item === upNext ? 'upNext' : '');
-  return <section className="panel today-panel" aria-labelledby="today-title">
-    <p className="eyebrow">{p.today} · {formatDate(today, locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-    <h2 id="today-title">{p.classesToday}</h2>
-    {batches && !todays.length && <p>{p.todayEmpty}</p>}
-    {todays.length > 0 && <ol className="today-list">{todays.map((item) => {
-      const status = state(item);
-      return <li key={item.batch.id} className={status ? `is-${status}` : undefined}><button type="button" onClick={() => onBatch(item.batch)}>
-        <span className="today-time">{timeRange(item.batch, locale)}</span>
-        <span className="today-name"><strong>{item.batch.name}</strong><small>{item.batch.course_name}{item.batch.teacher_name ? ` · ${item.batch.teacher_name}` : ''} · {b.studentCount.replace('{count}', item.batch.student_ids.length)}</small></span>
-        {status && <span className={`status-badge ${status === 'live' ? 'success' : status === 'upNext' ? 'warning' : ''}`}>{p[status]}</span>}
-      </button></li>;
-    })}</ol>}
-    {later && <p className="today-next"><span>{p.nextClass}:</span> <strong>{b.dayLong[DAYS[later.dayIndex]]} {formatDate(later.date, locale, { day: 'numeric', month: 'short' })}, {timeRange(later.batch, locale)}</strong> · {later.batch.name}</p>}
-  </section>;
-}

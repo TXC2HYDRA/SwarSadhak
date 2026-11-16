@@ -11,8 +11,8 @@ It holds the Phase 0 audit, the design system (tokens, type, components), the pl
 | 2 | Shared shell and navigation (sidebar, bottom nav, URL routes) | Done |
 | 3 | Teacher workspace and batch calendar (flagship) | Done |
 | 4 | Owner command center | Done |
-| 5 | Student Riyaz studio | Next |
-| 6 | Polish, accessibility, performance, QA | Planned |
+| 5 | Student Riyaz studio | Done |
+| 6 | Polish, accessibility, performance, QA | Next |
 
 ---
 
@@ -277,7 +277,7 @@ Components stay in plain JSX + CSS classes. Primitives are built once and reused
 | Owner tables | Form sheet + full-width table with search | Same | Card list per row, actions as full-width buttons |
 | Teacher workspace | Today panel + stat tiles, calendar, roster | Week grid from 700 px | Agenda list by day; full-screen batch sheet |
 | Teacher assignments | List + detail | Same, stacked | Stacked cards; answers collapsible |
-| Student home | Bento: next class, open assignments, practice CTA, recent practice | Two columns | Single column, practice CTA first |
+| Student home | Practice hero, then classes today + work to hand in, then practice cards | Two columns | Single column, practice CTA first |
 | Student timetable | Week agenda | Same | Agenda (already) |
 | Student assignments | Cards with answer area | Same | Same; upload button full width |
 | Studio pages | Keep layouts, restyle with tokens | — | — |
@@ -315,6 +315,8 @@ Before the redesign (dark theme only), captured with headless Chrome against a s
 | Student timetable, 390 px | `ui-redesign/before/12-student-timetable-390.jpg` |
 | Student assignments, 1280 px | `ui-redesign/before/13-student-assignments-1280.jpg` |
 
+After Phase 5 (student studio): `ui-redesign/phase5/`. These cover the signed-in home at 1440 px light, 1280 px dark, 390 px light and in Marathi at 768 px; the timetable at 390 px dark and 1024 px light; and assignments at 390 px.
+
 After Phase 4 (owner command center): `ui-redesign/phase4/`. These cover the overview at 1440 px light, 1280 px dark and 390 px light; accounts at 1280 px light, at 1280 px dark with a search, at 390 px dark (card rows) and with the create sheet at 1280 px; the course sheet at 390 px; enrollments at 768 px dark; and batches in Marathi at 1024 px.
 
 After Phase 3 (teacher workspace): `ui-redesign/phase3/`. These cover the dashboard at 1440 px light (full page), 1280 px dark, the list view at 1280 px, the batch dialog at 1280 px, 768 px dark, Marathi at 1024 px, 390 px light (full page, agenda) and the full-screen batch sheet at 390 px dark.
@@ -338,6 +340,12 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 ## 10. Progress log
 
+- **Phase 5:** student studio.
+  - Signed-in home: under the practice hero (still the first thing, with "Start practice"), a two-panel strip shows "Classes today" (the shared `TodayPanel`, with each teacher's name and the next class on a later day) and "To hand in": up to three assignments with no answer or only a draft, with course, due date and status, linking to Assignments. The local-first practice cards follow unchanged. The offline studio has no strip.
+  - Timetable: the next class is marked "Next" with a burgundy edge.
+  - `TodayPanel` moved to `BatchCalendar.jsx` so Owner, Teacher and Student share it. It shows the member count only when the batch carries member ids (students never get other members).
+  - Bottom navigation labels wrap to two lines instead of being cut ("Practice studio").
+  - Checked: `npm test` 157/157 (new test for open assignments, the student today panel and Home placement), `npm run build`. Screenshots in `ui-redesign/phase5/`.
 - **Phase 4:** owner command center.
   - Overview bento: the five totals are links to their pages. "Classes today" across all teachers (with each teacher's name) sits next to "Needs attention". That panel lists only exceptions found in academy records: active courses without a teacher, active students with no active enrollment, active enrollments not placed in any active batch of that course, paused batches and paused enrollments. Each item shows its count and first names and opens the page where it is fixed. With nothing to fix it says so.
   - Accounts, Courses and Enrollments: the create/edit form moved from a side column into a sheet (`Sheet` in `PortalShell.jsx`, native `<dialog>`, full screen on phones), opened from a button next to the page title. Tables get the full width, so the row actions no longer stack at 1280 px. Every owner table has a search box. Under 600 px each row becomes a card with labelled fields and full-width actions.
