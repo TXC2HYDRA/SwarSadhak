@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { BookOpen, CalendarRange, LayoutDashboard, UserCheck, Users } from 'lucide-react';
+import { ArrowRight, BookOpen, CalendarRange, LayoutDashboard, Plus, UserCheck, Users } from 'lucide-react';
 import { useUrlPage } from './router.js';
-import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
+import { LoadState, PortalShell, Sheet, TableSearch, matches, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
 import { timeRange } from './BatchCalendar.jsx';
+import { TodayPanel } from './TeacherPortal.jsx';
+import { nowIn, todayIn } from './schedule.js';
 
 const ROLES = ['owner', 'teacher', 'student'];
 const emptyForm = { id: null, username: '', display_name: '', password: '', roles: [] };
@@ -15,7 +17,7 @@ export function OwnerPortal({ shell, client, user }) {
   const nav = [['overview', p.nav.overview, LayoutDashboard], ['users', p.nav.users, Users], ['courses', p.nav.courses, BookOpen], ['enrollments', p.nav.enrollments, UserCheck], ['batches', p.nav.batches, CalendarRange]];
   const [page, setPage] = useUrlPage('owner', nav.map(([key]) => key), 'overview');
   return <PortalShell {...shell} kicker={p.roles.owner} nav={nav} page={page} onPage={setPage}>
-    {page === 'overview' && <OverviewPage t={t} client={client} />}
+    {page === 'overview' && <OverviewPage t={t} locale={shell.locale} client={client} onNavigate={setPage} />}
     {page === 'users' && <UsersPage t={t} client={client} me={user} />}
     {page === 'courses' && <CoursesPage t={t} client={client} />}
     {page === 'enrollments' && <EnrollmentsPage t={t} client={client} />}
@@ -23,16 +25,54 @@ export function OwnerPortal({ shell, client, user }) {
   </PortalShell>;
 }
 
-export function OverviewPage({ t, client }) {
+// Exceptions the Owner can act on, derived only from academy records.
+export function ownerAttention({ courses = [], students = [], enrollments = [], batches = [] }) {
+  const active = enrollments.filter((item) => item.status === 'active');
+  const enrolled = new Set(active.map((item) => item.student_id));
+  const seated = new Set(batches.filter((batch) => batch.status === 'active').flatMap((batch) => batch.student_ids.map((id) => `${id}:${batch.course_id}`)));
+  const pair = (item) => `${item.student_name} · ${item.course_name}`;
+  return [
+    ['noTeacher', 'courses', courses.filter((course) => course.active && !course.teachers.length).map((course) => course.name)],
+    ['notEnrolled', 'enrollments', students.filter((student) => student.active && !enrolled.has(student.id)).map((student) => student.display_name)],
+    ['noBatch', 'batches', active.filter((item) => !seated.has(`${item.student_id}:${item.course_id}`)).map(pair)],
+    ['pausedBatches', 'batches', batches.filter((batch) => batch.status === 'paused').map((batch) => batch.name)],
+    ['pausedEnrollments', 'enrollments', enrollments.filter((item) => item.status === 'paused').map(pair)],
+  ].filter(([, , names]) => names.length).map(([key, page, names]) => ({ key, page, names }));
+}
+
+export function OverviewPage({ t, locale = 'en', client, now, onNavigate = () => {} }) {
   const o = t.portal.overview;
   const summary = useApi(t, () => client.owner.summary());
-  const stats = [['teachers', o.teachers], ['students', o.students], ['courses', o.courses], ['active_enrollments', o.enrollments], ['active_batches', o.batches]];
+  const batches = useApi(t, () => client.owner.batches());
+  const courses = useApi(t, () => client.owner.courses.list());
+  const students = useApi(t, () => client.owner.users.list('student'));
+  const enrollments = useApi(t, () => client.owner.enrollments.list());
+  const academy = useApi(t, () => client.academy());
+  const timezone = academy.data?.timezone || 'Asia/Kolkata';
+  const stats = [['teachers', o.teachers, 'users'], ['students', o.students, 'users'], ['courses', o.courses, 'courses'], ['active_enrollments', o.enrollments, 'enrollments'], ['active_batches', o.batches, 'batches']];
+  const loaded = [batches, courses, students, enrollments].every((state) => state.data);
+  const attention = loaded ? ownerAttention({ courses: courses.data, students: students.data, enrollments: enrollments.data, batches: batches.data }) : [];
   return <div className="page portal-page">
     <h1>{o.title}</h1><p className="page-lede">{o.lede}</p>
     <LoadState t={t} state={summary} />
-    {summary.data && <section className="stats-grid portal-stats">{stats.map(([key, label]) => <div className="stat-card" key={key}><strong>{summary.data[key]}</strong><small>{label}</small></div>)}</section>}
+    {summary.data && <section className="stats-grid portal-stats" aria-label={o.title}>{stats.map(([key, label, page]) => <button type="button" className="stat-card stat-link" key={key} onClick={() => onNavigate(page)}><strong>{summary.data[key]}</strong><small>{label}<ArrowRight size={14} aria-hidden="true" /></small></button>)}</section>}
+    <div className="workspace-grid owner-grid">
+      <TodayPanel t={t} locale={locale} batches={batches.data} today={todayIn(timezone, now)} clock={nowIn(timezone, now)} onBatch={() => onNavigate('batches')} />
+      <section className="panel attention-panel" aria-labelledby="attention-title">
+        <h2 id="attention-title">{o.attention}</h2>
+        {!loaded ? <p role="status">{t.portal.users.loading}</p> : !attention.length ? <p>{o.allClear}</p>
+          : <ul className="attention-list">{attention.map(({ key, page, names }) => <li key={key}><button type="button" onClick={() => onNavigate(page)}>
+            <strong>{names.length}</strong><span><span className="attention-label">{o[key]}</span><small>{names.slice(0, 3).join(', ')}{names.length > 3 ? ` ${o.more.replace('{count}', names.length - 3)}` : ''}</small></span><ArrowRight size={16} aria-hidden="true" />
+          </button></li>)}</ul>}
+      </section>
+    </div>
   </div>;
 }
+
+const Notice = ({ message }) => (message.text ? <p className={`notice ${message.error ? 'error' : 'success'}`} role={message.error ? 'alert' : 'status'}>{message.text}</p> : null);
+
+const Heading = ({ title, lede, action, onAction }) => <div className="page-heading-row"><div><h1>{title}</h1><p className="page-lede">{lede}</p></div>
+  {action && <button className="button primary" type="button" onClick={onAction}><Plus size={18} aria-hidden="true" />{action}</button>}</div>;
 
 export function CoursesPage({ t, client }) {
   const p = t.portal; const c = p.courses; const u = p.users;
@@ -40,10 +80,13 @@ export function CoursesPage({ t, client }) {
   const teachers = useApi(t, () => client.owner.users.list('teacher'));
   const empty = { id: null, name: '', description: '', teacherIds: [] };
   const [form, setForm] = useState(empty);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const [message, setMessage] = useState(noMessage);
   const [busy, setBusy] = useState(false);
   const fail = (result, conflictText) => { const key = apiErrorKey(result); setMessage({ text: key === 'conflict' ? conflictText : p.errors[key], error: true }); };
   const toggleTeacher = (id) => setForm({ ...form, teacherIds: form.teacherIds.includes(id) ? form.teacherIds.filter((item) => item !== id) : [...form.teacherIds, id] });
+  const show = (next) => { setForm(next); setMessage(noMessage); setOpen(true); };
   const submit = async (event) => {
     event.preventDefault();
     setBusy(true);
@@ -53,43 +96,43 @@ export function CoursesPage({ t, client }) {
     setBusy(false);
     if (!saved.ok) fail(saved, c.nameTaken);
     else if (!assigned.ok) { fail(assigned, c.teacherInUse); setForm({ ...form, id: saved.data.id }); } // retry updates instead of re-creating
-    else { setMessage({ text: form.id ? c.saved : c.created, error: false }); setForm(empty); }
+    else { setMessage({ text: form.id ? c.saved : c.created, error: false }); setOpen(false); }
     courses.reload();
   };
   const setActive = async (course, active) => { const result = await client.owner.courses.update(course.id, { active }); if (result.ok) { setMessage({ text: c.saved, error: false }); courses.reload(); } else fail(result, c.nameTaken); };
-  const edit = (course) => { setForm({ id: course.id, name: course.name, description: course.description, teacherIds: course.teachers.map((item) => item.id) }); setMessage(noMessage); };
   const teacherOptions = (teachers.data || []).filter((item) => item.active || form.teacherIds.includes(item.id));
+  const rows = (courses.data || []).filter((course) => matches(query, course.name, course.description, ...course.teachers.map((item) => item.display_name)));
 
   return <div className="page portal-page">
-    <h1>{c.title}</h1><p className="page-lede">{c.lede}</p>
-    <div className="portal-columns">
-      <section className="panel" aria-labelledby="course-form-title">
-        <h2 id="course-form-title">{form.id ? c.edit : c.create}</h2>
-        <form className="portal-form" onSubmit={submit}>
-          <label className="field-label">{c.name}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required maxLength={120} /></label>
-          <label className="field-label">{c.description}<textarea className="portal-input" rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} maxLength={1000} /></label>
-          <fieldset className="role-options"><legend>{c.teachers}</legend>
-            {teacherOptions.length ? teacherOptions.map((teacher) => <label key={teacher.id}><input type="checkbox" checked={form.teacherIds.includes(teacher.id)} onChange={() => toggleTeacher(teacher.id)} />{teacher.display_name}</label>) : <small>{teachers.data ? c.noTeachers : u.loading}</small>}
-          </fieldset>
-          {message.text && <p className={`notice ${message.error ? 'error' : 'success'}`} role={message.error ? 'alert' : 'status'}>{message.text}</p>}
-          <div className="form-actions"><button className="button primary" type="submit" disabled={busy}>{form.id ? u.save : c.create}</button>{form.id && <button className="button quiet" type="button" onClick={() => { setForm(empty); setMessage(noMessage); }}>{u.cancel}</button>}</div>
-        </form>
-      </section>
-      <section className="panel" aria-labelledby="course-list-title">
-        <h2 id="course-list-title">{c.title}</h2>
-        <LoadState t={t} state={courses} empty={c.empty} />
-        {courses.data?.length > 0 && <div className="table-wrap"><table className="data-table">
-          <thead><tr><th scope="col">{c.name}</th><th scope="col">{c.teachers}</th><th scope="col">{c.enrolled}</th><th scope="col">{u.status}</th><th scope="col">{u.actions}</th></tr></thead>
-          <tbody>{courses.data.map((course) => <tr key={course.id}>
-            <td><strong>{course.name}</strong>{course.description && <small>{course.description}</small>}</td>
-            <td>{course.teachers.length ? course.teachers.map((item) => item.display_name).join(', ') : <small>{c.unassigned}</small>}</td>
-            <td>{course.active_enrollments}</td>
-            <td><span className={`status-badge ${course.active ? 'success' : 'neutral'}`}>{course.active ? u.active : u.inactive}</span></td>
-            <td className="row-actions"><button className="button quiet" onClick={() => edit(course)} aria-label={`${u.editAction}: ${course.name}`}>{u.editAction}</button><button className="button quiet" onClick={() => setActive(course, !course.active)} aria-label={`${course.active ? u.deactivate : u.reactivate}: ${course.name}`}>{course.active ? u.deactivate : u.reactivate}</button></td>
-          </tr>)}</tbody>
-        </table></div>}
-      </section>
-    </div>
+    <Heading title={c.title} lede={c.lede} action={c.create} onAction={() => show(empty)} />
+    {!open && <Notice message={message} />}
+    <section className="panel" aria-label={c.title}>
+      <TableSearch t={t} value={query} onChange={setQuery} />
+      <LoadState t={t} state={courses} empty={c.empty} />
+      {courses.data?.length > 0 && !rows.length && <p>{p.noMatches}</p>}
+      {rows.length > 0 && <div className="table-wrap"><table className="data-table">
+        <thead><tr><th scope="col">{c.name}</th><th scope="col">{c.teachers}</th><th scope="col">{c.enrolled}</th><th scope="col">{u.status}</th><th scope="col">{u.actions}</th></tr></thead>
+        <tbody>{rows.map((course) => <tr key={course.id}>
+          <td><strong>{course.name}</strong>{course.description && <small>{course.description}</small>}</td>
+          <td data-label={c.teachers}>{course.teachers.length ? course.teachers.map((item) => item.display_name).join(', ') : <small>{c.unassigned}</small>}</td>
+          <td data-label={c.enrolled}>{course.active_enrollments}</td>
+          <td data-label={u.status}><span className={`status-badge ${course.active ? 'success' : 'neutral'}`}>{course.active ? u.active : u.inactive}</span></td>
+          <td className="row-actions"><button className="button quiet" onClick={() => show({ id: course.id, name: course.name, description: course.description, teacherIds: course.teachers.map((item) => item.id) })} aria-label={`${u.editAction}: ${course.name}`}>{u.editAction}</button><button className="button quiet" onClick={() => setActive(course, !course.active)} aria-label={`${course.active ? u.deactivate : u.reactivate}: ${course.name}`}>{course.active ? u.deactivate : u.reactivate}</button></td>
+        </tr>)}</tbody>
+      </table></div>}
+    </section>
+    <Sheet open={open} title={form.id ? c.edit : c.create} onClose={() => setOpen(false)}>
+      <form className="portal-form" onSubmit={submit}>
+        <h2>{form.id ? c.edit : c.create}</h2>
+        <label className="field-label">{c.name}<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required maxLength={120} /></label>
+        <label className="field-label">{c.description}<textarea className="portal-input" rows={3} value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} maxLength={1000} /></label>
+        <fieldset className="role-options"><legend>{c.teachers}</legend>
+          {teacherOptions.length ? teacherOptions.map((teacher) => <label key={teacher.id}><input type="checkbox" checked={form.teacherIds.includes(teacher.id)} onChange={() => toggleTeacher(teacher.id)} />{teacher.display_name}</label>) : <small>{teachers.data ? c.noTeachers : u.loading}</small>}
+        </fieldset>
+        {open && <Notice message={message} />}
+        <div className="form-actions"><button className="button primary" type="submit" disabled={busy}>{form.id ? u.save : c.create}</button><button className="button quiet" type="button" onClick={() => setOpen(false)}>{u.cancel}</button></div>
+      </form>
+    </Sheet>
   </div>;
 }
 
@@ -100,6 +143,8 @@ export function EnrollmentsPage({ t, client }) {
   const courses = useApi(t, () => client.owner.courses.list());
   const empty = { student_id: '', course_id: '', teacher_id: '' };
   const [form, setForm] = useState(empty);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
   const [message, setMessage] = useState(noMessage);
   const [busy, setBusy] = useState(false);
   const course = courses.data?.find((item) => item.id === form.course_id);
@@ -118,41 +163,42 @@ export function EnrollmentsPage({ t, client }) {
     setBusy(true);
     const ok = report(await client.owner.enrollments.create(form), e.created, e.duplicate);
     setBusy(false);
-    if (ok) setForm(empty);
+    if (ok) setOpen(false);
   };
   const remove = async (enrollment) => {
     if (!globalThis.confirm?.(e.confirmRemove)) return;
     report(await client.owner.enrollments.remove(enrollment.id), e.removed);
   };
   const select = (label, value, onChange, options) => <label className="field-label">{label}<select required value={value} onChange={(event) => onChange(event.target.value)}><option value="">{e.choose}</option>{options.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>;
+  const rows = (enrollments.data || []).filter((item) => matches(query, item.student_name, item.course_name, item.teacher_name, e.statuses[item.status]));
 
   return <div className="page portal-page">
-    <h1>{e.title}</h1><p className="page-lede">{e.lede}</p>
-    <div className="portal-columns">
-      <section className="panel" aria-labelledby="enroll-form-title">
-        <h2 id="enroll-form-title">{e.create}</h2>
-        <form className="portal-form" onSubmit={submit}>
-          {select(e.student, form.student_id, (value) => setForm({ ...form, student_id: value }), (students.data || []).filter((item) => item.active).map((item) => [item.id, `${item.display_name} (${item.username})`]))}
-          {select(e.course, form.course_id, chooseCourse, (courses.data || []).filter((item) => item.active).map((item) => [item.id, item.name]))}
-          {course && !course.teachers.length && <p className="notice" role="status">{e.needTeacher}</p>}
-          {select(e.teacher, form.teacher_id, (value) => setForm({ ...form, teacher_id: value }), (course?.teachers || []).map((item) => [item.id, item.display_name]))}
-          {message.text && <p className={`notice ${message.error ? 'error' : 'success'}`} role={message.error ? 'alert' : 'status'}>{message.text}</p>}
-          <div className="form-actions"><button className="button primary" type="submit" disabled={busy}>{e.create}</button></div>
-        </form>
-      </section>
-      <section className="panel" aria-labelledby="enroll-list-title">
-        <h2 id="enroll-list-title">{e.title}</h2>
-        <LoadState t={t} state={enrollments} empty={e.empty} />
-        {enrollments.data?.length > 0 && <div className="table-wrap"><table className="data-table">
-          <thead><tr><th scope="col">{e.student}</th><th scope="col">{e.course}</th><th scope="col">{e.teacher}</th><th scope="col">{e.status}</th><th scope="col">{u.actions}</th></tr></thead>
-          <tbody>{enrollments.data.map((item) => <tr key={item.id}>
-            <td><strong>{item.student_name}</strong></td><td>{item.course_name}</td><td>{item.teacher_name}</td>
-            <td><select aria-label={`${e.status}: ${item.student_name}, ${item.course_name}`} value={item.status} onChange={async (event) => report(await client.owner.enrollments.update(item.id, { status: event.target.value }), e.saved)}>{['active', 'paused', 'ended'].map((status) => <option key={status} value={status}>{e.statuses[status]}</option>)}</select></td>
-            <td className="row-actions"><button className="button quiet" onClick={() => remove(item)} aria-label={`${e.remove}: ${item.student_name}, ${item.course_name}`}>{e.remove}</button></td>
-          </tr>)}</tbody>
-        </table></div>}
-      </section>
-    </div>
+    <Heading title={e.title} lede={e.lede} action={e.create} onAction={() => { setForm(empty); setMessage(noMessage); setOpen(true); }} />
+    {!open && <Notice message={message} />}
+    <section className="panel" aria-label={e.title}>
+      <TableSearch t={t} value={query} onChange={setQuery} />
+      <LoadState t={t} state={enrollments} empty={e.empty} />
+      {enrollments.data?.length > 0 && !rows.length && <p>{p.noMatches}</p>}
+      {rows.length > 0 && <div className="table-wrap"><table className="data-table">
+        <thead><tr><th scope="col">{e.student}</th><th scope="col">{e.course}</th><th scope="col">{e.teacher}</th><th scope="col">{e.status}</th><th scope="col">{u.actions}</th></tr></thead>
+        <tbody>{rows.map((item) => <tr key={item.id}>
+          <td><strong>{item.student_name}</strong></td><td data-label={e.course}>{item.course_name}</td><td data-label={e.teacher}>{item.teacher_name}</td>
+          <td data-label={e.status}><select aria-label={`${e.status}: ${item.student_name}, ${item.course_name}`} value={item.status} onChange={async (event) => report(await client.owner.enrollments.update(item.id, { status: event.target.value }), e.saved)}>{['active', 'paused', 'ended'].map((status) => <option key={status} value={status}>{e.statuses[status]}</option>)}</select></td>
+          <td className="row-actions"><button className="button quiet" onClick={() => remove(item)} aria-label={`${e.remove}: ${item.student_name}, ${item.course_name}`}>{e.remove}</button></td>
+        </tr>)}</tbody>
+      </table></div>}
+    </section>
+    <Sheet open={open} title={e.create} onClose={() => setOpen(false)}>
+      <form className="portal-form" onSubmit={submit}>
+        <h2>{e.create}</h2>
+        {select(e.student, form.student_id, (value) => setForm({ ...form, student_id: value }), (students.data || []).filter((item) => item.active).map((item) => [item.id, `${item.display_name} (${item.username})`]))}
+        {select(e.course, form.course_id, chooseCourse, (courses.data || []).filter((item) => item.active).map((item) => [item.id, item.name]))}
+        {course && !course.teachers.length && <p className="notice" role="status">{e.needTeacher}</p>}
+        {select(e.teacher, form.teacher_id, (value) => setForm({ ...form, teacher_id: value }), (course?.teachers || []).map((item) => [item.id, item.display_name]))}
+        {open && <Notice message={message} />}
+        <div className="form-actions"><button className="button primary" type="submit" disabled={busy}>{e.create}</button><button className="button quiet" type="button" onClick={() => setOpen(false)}>{u.cancel}</button></div>
+      </form>
+    </Sheet>
   </div>;
 }
 
@@ -160,10 +206,13 @@ export function UsersPage({ t, client, me }) {
   const p = t.portal; const u = p.users;
   const users = useApi(t, () => client.owner.users.list());
   const [form, setForm] = useState(emptyForm);
-  const [message, setMessage] = useState({ text: '', error: false });
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [message, setMessage] = useState(noMessage);
   const [busy, setBusy] = useState(false);
   const field = (name) => ({ value: form[name], onChange: (event) => setForm({ ...form, [name]: event.target.value }) });
   const toggleRole = (role) => setForm({ ...form, roles: form.roles.includes(role) ? form.roles.filter((item) => item !== role) : [...form.roles, role] });
+  const show = (next) => { setForm(next); setMessage(noMessage); setOpen(true); };
   const report = (result, success) => {
     const key = apiErrorKey(result);
     setMessage(result.ok ? { text: success, error: false } : { text: key === 'conflict' ? u.usernameTaken : p.errors[key], error: true });
@@ -177,57 +226,60 @@ export function UsersPage({ t, client, me }) {
       ? await client.owner.users.update(form.id, { display_name: form.display_name.trim(), roles: form.roles, ...(form.password ? { password: form.password } : {}) })
       : await client.owner.users.create({ username: form.username.trim(), display_name: form.display_name.trim(), password: form.password, roles: form.roles });
     setBusy(false);
-    if (report(result, form.id ? u.saved : u.created)) { setForm(emptyForm); users.reload(); }
+    if (report(result, form.id ? u.saved : u.created)) { setOpen(false); users.reload(); }
   };
   const setActive = async (account, active) => { if (report(await client.owner.users.update(account.id, { active }), u.saved)) users.reload(); };
-  const edit = (account) => { setForm({ id: account.id, username: account.username, display_name: account.display_name, password: '', roles: account.roles }); setMessage({ text: '', error: false }); };
+  const rows = (users.data || []).filter((account) => matches(query, account.display_name, account.username, ...account.roles.map((role) => p.roles[role])));
 
   return <div className="page portal-page">
-    <h1>{u.title}</h1>
-    <p className="page-lede">{u.lede}</p>
-    <div className="portal-columns">
-      <section className="panel" aria-labelledby="account-form-title">
-        <h2 id="account-form-title">{form.id ? u.edit : u.create}</h2>
-        <form className="portal-form" onSubmit={submit}>
-          <label className="field-label">{p.username}<input {...field('username')} required disabled={Boolean(form.id)} minLength={2} maxLength={80} pattern="[A-Za-z0-9._\-]+" aria-describedby="username-help" autoComplete="off" /><small id="username-help">{u.usernameHelp}</small></label>
-          <label className="field-label">{u.displayName}<input {...field('display_name')} required maxLength={120} autoComplete="off" /></label>
-          <label className="field-label">{form.id ? u.newPassword : u.initialPassword}<input {...field('password')} type="password" required={!form.id} minLength={8} maxLength={200} aria-describedby="password-help" autoComplete="new-password" /><small id="password-help">{u.passwordHelp}</small></label>
-          <fieldset className="role-options"><legend>{u.roles}</legend>{ROLES.map((role) => <label key={role}><input type="checkbox" checked={form.roles.includes(role)} onChange={() => toggleRole(role)} />{p.roles[role]}</label>)}</fieldset>
-          {message.text && <p className={`notice ${message.error ? 'error' : 'success'}`} role={message.error ? 'alert' : 'status'}>{message.text}</p>}
-          <div className="form-actions"><button className="button primary" type="submit" disabled={busy}>{form.id ? u.save : u.create}</button>{form.id && <button className="button quiet" type="button" onClick={() => { setForm(emptyForm); setMessage({ text: '', error: false }); }}>{u.cancel}</button>}</div>
-        </form>
-      </section>
-      <section className="panel" aria-labelledby="account-list-title">
-        <h2 id="account-list-title">{u.title}</h2>
-        <LoadState t={t} state={users} empty={u.empty} />
-        {users.data?.length > 0 && <div className="table-wrap"><table className="data-table">
-          <thead><tr><th scope="col">{u.displayName}</th><th scope="col">{u.roles}</th><th scope="col">{u.status}</th><th scope="col">{u.actions}</th></tr></thead>
-          <tbody>{users.data.map((account) => <tr key={account.id}>
-            <td><strong>{account.display_name}</strong><small>{account.username}{account.id === me.id ? ` · ${u.you}` : ''}</small></td>
-            <td>{account.roles.map((role) => p.roles[role]).join(', ')}</td>
-            <td><span className={`status-badge ${account.active ? 'success' : 'neutral'}`}>{account.active ? u.active : u.inactive}</span></td>
-            <td className="row-actions"><button className="button quiet" onClick={() => edit(account)} aria-label={`${u.editAction}: ${account.display_name}`}>{u.editAction}</button>{account.id !== me.id && <button className="button quiet" onClick={() => setActive(account, !account.active)} aria-label={`${account.active ? u.deactivate : u.reactivate}: ${account.display_name}`}>{account.active ? u.deactivate : u.reactivate}</button>}</td>
-          </tr>)}</tbody>
-        </table></div>}
-      </section>
-    </div>
+    <Heading title={u.title} lede={u.lede} action={u.create} onAction={() => show(emptyForm)} />
+    {!open && <Notice message={message} />}
+    <section className="panel" aria-label={u.title}>
+      <TableSearch t={t} value={query} onChange={setQuery} />
+      <LoadState t={t} state={users} empty={u.empty} />
+      {users.data?.length > 0 && !rows.length && <p>{p.noMatches}</p>}
+      {rows.length > 0 && <div className="table-wrap"><table className="data-table">
+        <thead><tr><th scope="col">{u.displayName}</th><th scope="col">{u.roles}</th><th scope="col">{u.status}</th><th scope="col">{u.actions}</th></tr></thead>
+        <tbody>{rows.map((account) => <tr key={account.id}>
+          <td><strong>{account.display_name}</strong><small>{account.username}{account.id === me.id ? ` · ${u.you}` : ''}</small></td>
+          <td data-label={u.roles}>{account.roles.map((role) => p.roles[role]).join(', ')}</td>
+          <td data-label={u.status}><span className={`status-badge ${account.active ? 'success' : 'neutral'}`}>{account.active ? u.active : u.inactive}</span></td>
+          <td className="row-actions"><button className="button quiet" onClick={() => show({ id: account.id, username: account.username, display_name: account.display_name, password: '', roles: account.roles })} aria-label={`${u.editAction}: ${account.display_name}`}>{u.editAction}</button>{account.id !== me.id && <button className="button quiet" onClick={() => setActive(account, !account.active)} aria-label={`${account.active ? u.deactivate : u.reactivate}: ${account.display_name}`}>{account.active ? u.deactivate : u.reactivate}</button>}</td>
+        </tr>)}</tbody>
+      </table></div>}
+    </section>
+    <Sheet open={open} title={form.id ? u.edit : u.create} onClose={() => setOpen(false)}>
+      <form className="portal-form" onSubmit={submit}>
+        <h2>{form.id ? u.edit : u.create}</h2>
+        <label className="field-label">{p.username}<input {...field('username')} required disabled={Boolean(form.id)} minLength={2} maxLength={80} pattern="[A-Za-z0-9._\-]+" aria-describedby="username-help" autoComplete="off" /><small id="username-help">{u.usernameHelp}</small></label>
+        <label className="field-label">{u.displayName}<input {...field('display_name')} required maxLength={120} autoComplete="off" /></label>
+        <label className="field-label">{form.id ? u.newPassword : u.initialPassword}<input {...field('password')} type="password" required={!form.id} minLength={8} maxLength={200} aria-describedby="password-help" autoComplete="new-password" /><small id="password-help">{u.passwordHelp}</small></label>
+        <fieldset className="role-options"><legend>{u.roles}</legend>{ROLES.map((role) => <label key={role}><input type="checkbox" checked={form.roles.includes(role)} onChange={() => toggleRole(role)} />{p.roles[role]}</label>)}</fieldset>
+        {open && <Notice message={message} />}
+        <div className="form-actions"><button className="button primary" type="submit" disabled={busy}>{form.id ? u.save : u.create}</button><button className="button quiet" type="button" onClick={() => setOpen(false)}>{u.cancel}</button></div>
+      </form>
+    </Sheet>
   </div>;
 }
 
 export function BatchesPage({ t, locale = 'en', client }) {
   const b = t.portal.batches;
   const batches = useApi(t, () => client.owner.batches());
+  const [query, setQuery] = useState('');
+  const rows = (batches.data || []).filter((batch) => matches(query, batch.name, batch.teacher_name, batch.course_name));
   return <div className="page portal-page">
     <h1>{b.ownerTitle}</h1><p className="page-lede">{b.ownerLede}</p>
-    <section className="panel">
+    <section className="panel" aria-label={b.ownerTitle}>
+      <TableSearch t={t} value={query} onChange={setQuery} />
       <LoadState t={t} state={batches} empty={b.empty} />
-      {batches.data?.length > 0 && <div className="table-wrap"><table className="data-table">
+      {batches.data?.length > 0 && !rows.length && <p>{t.portal.noMatches}</p>}
+      {rows.length > 0 && <div className="table-wrap"><table className="data-table">
         <thead><tr><th scope="col">{b.name}</th><th scope="col">{b.teacher}</th><th scope="col">{b.course}</th><th scope="col">{b.schedule}</th><th scope="col">{b.students}</th><th scope="col">{b.status}</th></tr></thead>
-        <tbody>{batches.data.map((batch) => <tr key={batch.id}>
-          <td><strong>{batch.name}</strong></td><td>{batch.teacher_name}</td><td>{batch.course_name}</td>
-          <td>{batch.days.map((day) => b.dayShort[day]).join(', ')}<small>{timeRange(batch, locale)}</small></td>
-          <td>{batch.student_count}</td>
-          <td><span className={`status-badge ${batch.status === 'active' ? 'success' : 'neutral'}`}>{batch.status === 'active' ? b.active : b.paused}</span></td>
+        <tbody>{rows.map((batch) => <tr key={batch.id}>
+          <td><strong>{batch.name}</strong></td><td data-label={b.teacher}>{batch.teacher_name}</td><td data-label={b.course}>{batch.course_name}</td>
+          <td data-label={b.schedule}><span>{batch.days.map((day) => b.dayShort[day]).join(', ')}<small>{timeRange(batch, locale)}</small></span></td>
+          <td data-label={b.students}>{batch.student_count}</td>
+          <td data-label={b.status}><span className={`status-badge ${batch.status === 'active' ? 'success' : 'neutral'}`}>{batch.status === 'active' ? b.active : b.paused}</span></td>
         </tr>)}</tbody>
       </table></div>}
     </section>

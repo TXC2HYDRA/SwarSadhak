@@ -125,7 +125,7 @@ export function TodayPanel({ t, locale, batches, today, clock, onBatch }) {
       const status = state(item);
       return <li key={item.batch.id} className={status ? `is-${status}` : undefined}><button type="button" onClick={() => onBatch(item.batch)}>
         <span className="today-time">{timeRange(item.batch, locale)}</span>
-        <span className="today-name"><strong>{item.batch.name}</strong><small>{item.batch.course_name} · {b.studentCount.replace('{count}', item.batch.student_ids.length)}</small></span>
+        <span className="today-name"><strong>{item.batch.name}</strong><small>{item.batch.course_name}{item.batch.teacher_name ? ` · ${item.batch.teacher_name}` : ''} · {b.studentCount.replace('{count}', item.batch.student_ids.length)}</small></span>
         {status && <span className={`status-badge ${status === 'live' ? 'success' : status === 'upNext' ? 'warning' : ''}`}>{p[status]}</span>}
       </button></li>;
     })}</ol>}

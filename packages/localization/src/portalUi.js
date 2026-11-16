@@ -14,6 +14,7 @@ export const portalUi = {
     signOut: 'Sign out', switchPortal: 'Choose portal', account: 'Account',
     noAccess: 'This account has no role yet. Contact your academy.',
     roles: { owner: 'Owner', teacher: 'Teacher', student: 'Student' },
+    search: 'Search', noMatches: 'Nothing matches your search.',
     nav: { users: 'Accounts', dashboard: 'Dashboard', overview: 'Overview', courses: 'Courses', enrollments: 'Enrollments', batches: 'Batches' },
     errors: {
       invalidCredentials: 'Username or password is incorrect.', tooManyAttempts: 'Too many failed attempts. Wait 15 minutes and try again.',
@@ -32,7 +33,7 @@ export const portalUi = {
       active: 'Active', inactive: 'Deactivated', status: 'Status', actions: 'Actions',
       loading: 'Loading…', empty: 'No accounts yet.', created: 'Account created.', saved: 'Changes saved.', retry: 'Try again', you: 'You',
     },
-    overview: { title: 'Academy overview', lede: 'Active people, courses and enrollments at a glance.', teachers: 'Teachers', students: 'Students', courses: 'Active courses', enrollments: 'Active enrollments', batches: 'Active batches' },
+    overview: { title: 'Academy overview', lede: 'Active people, courses and enrollments at a glance.', teachers: 'Teachers', students: 'Students', courses: 'Active courses', enrollments: 'Active enrollments', batches: 'Active batches', attention: 'Needs attention', allClear: 'Nothing needs attention right now.', noTeacher: 'Courses without a teacher', notEnrolled: 'Students not enrolled in a course', noBatch: 'Enrollments without a batch', pausedBatches: 'Paused batches', pausedEnrollments: 'Paused enrollments', more: '+{count} more' },
     courses: {
       title: 'Courses', lede: 'Only the Owner manages the course catalog. Assign the teachers who teach each course.',
       create: 'Create course', edit: 'Edit course', name: 'Course name', description: 'Description', teachers: 'Teachers',
@@ -105,6 +106,7 @@ export const portalUi = {
     signOut: 'साइन आउट', switchPortal: 'पोर्टल निवडा', account: 'खाते',
     noAccess: 'या खात्याला अद्याप कोणतीही भूमिका दिलेली नाही. तुमच्या अकॅडमीशी संपर्क साधा.',
     roles: { owner: 'मालक', teacher: 'शिक्षक', student: 'विद्यार्थी' },
+    search: 'शोधा', noMatches: 'शोधाशी जुळणारे काही नाही.',
     nav: { users: 'खाती', dashboard: 'डॅशबोर्ड', overview: 'आढावा', courses: 'अभ्यासक्रम', enrollments: 'प्रवेश', batches: 'बॅच' },
     errors: {
       invalidCredentials: 'वापरकर्तानाव किंवा पासवर्ड चुकीचा आहे.', tooManyAttempts: 'खूप अयशस्वी प्रयत्न झाले. १५ मिनिटांनी पुन्हा प्रयत्न करा.',
@@ -123,7 +125,7 @@ export const portalUi = {
       active: 'सक्रिय', inactive: 'निष्क्रिय', status: 'स्थिती', actions: 'कृती',
       loading: 'लोड होत आहे…', empty: 'अद्याप कोणतीही खाती नाहीत.', created: 'खाते तयार झाले.', saved: 'बदल जतन झाले.', retry: 'पुन्हा प्रयत्न करा', you: 'तुम्ही',
     },
-    overview: { title: 'अकॅडमी आढावा', lede: 'सक्रिय व्यक्ती, अभ्यासक्रम आणि प्रवेश एका नजरेत.', teachers: 'शिक्षक', students: 'विद्यार्थी', courses: 'सक्रिय अभ्यासक्रम', enrollments: 'सक्रिय प्रवेश', batches: 'सक्रिय बॅच' },
+    overview: { title: 'अकॅडमी आढावा', lede: 'सक्रिय व्यक्ती, अभ्यासक्रम आणि प्रवेश एका नजरेत.', teachers: 'शिक्षक', students: 'विद्यार्थी', courses: 'सक्रिय अभ्यासक्रम', enrollments: 'सक्रिय प्रवेश', batches: 'सक्रिय बॅच', attention: 'लक्ष देण्यासारखे', allClear: 'सध्या लक्ष देण्यासारखे काही नाही.', noTeacher: 'शिक्षक नसलेले अभ्यासक्रम', notEnrolled: 'कोणत्याही अभ्यासक्रमात प्रवेश नसलेले विद्यार्थी', noBatch: 'बॅच नसलेले प्रवेश', pausedBatches: 'थांबवलेल्या बॅच', pausedEnrollments: 'थांबवलेले प्रवेश', more: 'आणखी +{count}' },
     courses: {
       title: 'अभ्यासक्रम', lede: 'अभ्यासक्रमांची यादी फक्त मालक व्यवस्थापित करतात. प्रत्येक अभ्यासक्रम शिकवणारे शिक्षक नेमा.',
       create: 'अभ्यासक्रम तयार करा', edit: 'अभ्यासक्रम संपादित करा', name: 'अभ्यासक्रमाचे नाव', description: 'वर्णन', teachers: 'शिक्षक',
@@ -196,6 +198,7 @@ export const portalUi = {
     signOut: 'साइन आउट', switchPortal: 'पोर्टल चुनें', account: 'खाता',
     noAccess: 'इस खाते को अभी कोई भूमिका नहीं दी गई है। अपनी अकादमी से संपर्क करें।',
     roles: { owner: 'मालिक', teacher: 'शिक्षक', student: 'विद्यार्थी' },
+    search: 'खोजें', noMatches: 'खोज से कुछ मेल नहीं खाता।',
     nav: { users: 'खाते', dashboard: 'डैशबोर्ड', overview: 'सारांश', courses: 'पाठ्यक्रम', enrollments: 'नामांकन', batches: 'बैच' },
     errors: {
       invalidCredentials: 'उपयोगकर्ता नाम या पासवर्ड गलत है।', tooManyAttempts: 'बहुत अधिक असफल प्रयास हुए। 15 मिनट बाद फिर प्रयास करें।',
@@ -214,7 +217,7 @@ export const portalUi = {
       active: 'सक्रिय', inactive: 'निष्क्रिय', status: 'स्थिति', actions: 'कार्य',
       loading: 'लोड हो रहा है…', empty: 'अभी कोई खाता नहीं है।', created: 'खाता बन गया।', saved: 'बदलाव सहेजे गए।', retry: 'फिर प्रयास करें', you: 'आप',
     },
-    overview: { title: 'अकादमी सारांश', lede: 'सक्रिय लोग, पाठ्यक्रम और नामांकन एक नज़र में।', teachers: 'शिक्षक', students: 'विद्यार्थी', courses: 'सक्रिय पाठ्यक्रम', enrollments: 'सक्रिय नामांकन', batches: 'सक्रिय बैच' },
+    overview: { title: 'अकादमी सारांश', lede: 'सक्रिय लोग, पाठ्यक्रम और नामांकन एक नज़र में।', teachers: 'शिक्षक', students: 'विद्यार्थी', courses: 'सक्रिय पाठ्यक्रम', enrollments: 'सक्रिय नामांकन', batches: 'सक्रिय बैच', attention: 'ध्यान देने योग्य', allClear: 'अभी ध्यान देने योग्य कुछ नहीं है।', noTeacher: 'बिना शिक्षक वाले पाठ्यक्रम', notEnrolled: 'किसी पाठ्यक्रम में नामांकित नहीं विद्यार्थी', noBatch: 'बिना बैच वाले नामांकन', pausedBatches: 'रोके गए बैच', pausedEnrollments: 'रोके गए नामांकन', more: '+{count} और' },
     courses: {
       title: 'पाठ्यक्रम', lede: 'पाठ्यक्रम सूची केवल मालिक प्रबंधित करते हैं। हर पाठ्यक्रम पढ़ाने वाले शिक्षक नियुक्त करें।',
       create: 'पाठ्यक्रम बनाएँ', edit: 'पाठ्यक्रम संपादित करें', name: 'पाठ्यक्रम का नाम', description: 'विवरण', teachers: 'शिक्षक',

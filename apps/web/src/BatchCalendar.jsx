@@ -107,7 +107,7 @@ export function BatchDialog({ t, locale, state, courses, students, onClose, onSa
     if (state && !dialog.open) dialog.showModal?.();
     if (!state && dialog.open) dialog.close();
   }, [state]);
-  if (!form) return <dialog ref={ref} className="batch-dialog" />;
+  if (!form) return <dialog ref={ref} className="sheet-dialog" />;
   const courseStudents = students.filter((student) => student.courses.some((course) => course.id === form.course_id));
   const needle = query.trim().toLocaleLowerCase();
   const shown = courseStudents.filter((student) => !needle || student.display_name.toLocaleLowerCase().includes(needle) || student.username.toLocaleLowerCase().includes(needle));
@@ -128,7 +128,7 @@ export function BatchDialog({ t, locale, state, courses, students, onClose, onSa
     if (problem) setServerError(problem);
   };
   const editing = Boolean(state.batch);
-  return <dialog ref={ref} className="batch-dialog" aria-labelledby="batch-dialog-title" onClose={onClose}>
+  return <dialog ref={ref} className="sheet-dialog" aria-labelledby="batch-dialog-title" onClose={onClose}>
     <form className="portal-form" onSubmit={submit} noValidate>
       <h2 id="batch-dialog-title">{editing ? b.edit : b.create}</h2>
       <label className="field-label">{b.name}<input value={form.name} onChange={(event) => set({ name: event.target.value })} maxLength={120} aria-invalid={errors.includes('name')} autoFocus /></label>

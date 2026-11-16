@@ -99,6 +99,7 @@ def test_owner_sees_all_batches_read_only(client, academy, setup):
     batch = setup["create"]().json()
     listed = {b["id"]: b for b in client.get("/api/owner/batches", headers=academy.headers).json()}
     assert listed[batch["id"]]["teacher_name"] == setup["teacher"]["display_name"] and listed[batch["id"]]["student_count"] == 1
+    assert listed[batch["id"]]["student_ids"] == [setup["asha"]["id"]] and listed[batch["id"]]["course_id"] == batch["course_id"]
     assert client.post("/api/teacher/batches", json={}, headers=academy.headers).status_code == 403
 
 
