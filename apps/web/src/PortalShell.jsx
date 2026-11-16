@@ -19,7 +19,8 @@ export function useApi(t, load, deps = []) {
 export function LoadState({ t, state, empty }) {
   const u = t.portal.users;
   if (state.error) return <div className="notice error" role="alert">{state.error} <button className="button quiet" onClick={state.reload}>{u.retry}</button></div>;
-  if (!state.data) return <p role="status">{u.loading}</p>;
+  // Placeholder rows in the shape of the list that is coming, instead of a spinner; the text is for screen readers.
+  if (!state.data) return <div className="skeleton" role="status"><span className="sr-only">{u.loading}</span>{[0, 1, 2].map((row) => <span key={row} className="skeleton-row" aria-hidden="true" />)}</div>;
   if (Array.isArray(state.data) && state.data.length === 0 && empty) return <p>{empty}</p>;
   return null;
 }
