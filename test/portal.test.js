@@ -8,7 +8,7 @@ import { createApiClient, toApiSession } from '@swarsadhak/api-client';
 import { getTranslations, supportedLocales } from '@swarsadhak/localization';
 import { apiErrorKey, choosePortal, clearSession, loginErrorKey, readSession, writeSession } from '../apps/web/src/auth.js';
 import { ACCEPT, checkFile, fileErrorKey, fileType, formatSize, uploadFile } from '../apps/web/src/files.js';
-import { addDays, batchFormErrors, formatTime, mondayOf, slotForm, todayIn, visibleRange, weekDates, weekOccurrences } from '../apps/web/src/schedule.js';
+import { addDays, batchFormErrors, classesOn, formatTime, mondayOf, nextClass, nowIn, slotForm, todayIn, visibleRange, weekDates, weekOccurrences } from '../apps/web/src/schedule.js';
 
 const memoryStorage = () => { const values = new Map(); return { getItem: (k) => values.get(k) ?? null, setItem: (k, v) => values.set(k, String(v)), removeItem: (k) => values.delete(k) }; };
 
@@ -174,12 +174,14 @@ test('week dates are computed in UTC so month, year and DST changes never shift 
   assert.equal(todayIn('America/New_York', lateEvening), '2026-11-15');
 });
 
-test('batch occurrences start on the batch start date and the visible range widens to fit', () => {
+test('batch occurrences start on the batch start date and the visible range fits the batches', () => {
   const batch = { id: 'b1', days: ['mon', 'wed'], starts_on: '2026-11-18', start_time: '05:30', end_time: '23:15' };
   assert.deepEqual(weekOccurrences([batch], '2026-11-16').map((item) => [item.dayIndex, item.date]), [[2, '2026-11-18']]);
   assert.deepEqual(weekOccurrences([batch], '2026-11-23').map((item) => item.date), ['2026-11-23', '2026-11-25']);
   assert.deepEqual(visibleRange([]), { start: 360, end: 1320 });
-  assert.deepEqual(visibleRange([batch]), { start: 300, end: 1440 });
+  assert.deepEqual(visibleRange([batch]), { start: 240, end: 1440 }); // an hour of air, clamped to midnight
+  assert.deepEqual(visibleRange([{ ...batch, start_time: '18:00', end_time: '19:00' }]), { start: 900, end: 1380 }); // at least 8 hours
+  assert.deepEqual(visibleRange([{ ...batch, start_time: '07:00', end_time: '08:00' }, { ...batch, start_time: '18:00', end_time: '19:00' }]), { start: 360, end: 1200 });
 });
 
 test('slot defaults and batch form validation', () => {
@@ -193,13 +195,40 @@ test('slot defaults and batch form validation', () => {
 
 const sampleBatch = { id: 'b1', name: 'Evening Riyaz', course_id: 'c1', course_name: 'Vocal', start_time: '18:00', end_time: '19:00', days: ['mon', 'wed'], starts_on: '2026-11-01', status: 'active', student_ids: ['s1'] };
 
+test('today and next class come from active batches in academy time', () => {
+  const evening = { ...sampleBatch, id: 'eve', days: ['mon', 'wed'] };
+  const morning = { ...sampleBatch, id: 'mor', start_time: '07:00', end_time: '08:00', days: ['wed'] };
+  const paused = { ...sampleBatch, id: 'off', days: ['wed'], start_time: '12:00', end_time: '13:00', status: 'paused' };
+  const all = [evening, paused, morning];
+  assert.deepEqual(classesOn(all, '2026-11-18').map((item) => item.batch.id), ['mor', 'eve']); // sorted, paused left out
+  assert.equal(nextClass(all, '2026-11-18', '07:30').batch.id, 'mor'); // running now
+  assert.equal(nextClass(all, '2026-11-18', '08:00').batch.id, 'eve');
+  assert.deepEqual([nextClass(all, '2026-11-18', '19:00').date, nextClass(all, '2026-11-18', '19:00').batch.id], ['2026-11-23', 'eve']); // next Monday
+  assert.equal(nextClass([paused], '2026-11-18', '00:00'), null);
+  assert.equal(nowIn('Asia/Kolkata', new Date('2026-11-18T12:45:00Z')), '18:15');
+  const t = getTranslations('en');
+  const html = renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', batches: all, today: '2026-11-18', clock: '07:30', onBatch() {} }));
+  assert.match(html, /class="is-live"/);
+  assert.match(html, /class="is-upNext"/);
+  assert.ok(html.includes(t.portal.teacher.live) && html.includes(t.portal.teacher.upNext));
+  const empty = renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', batches: [evening], today: '2026-11-17', clock: '09:00', onBatch() {} }));
+  assert.ok(empty.includes(t.portal.teacher.todayEmpty) && empty.includes(`${t.portal.teacher.nextClass}:`));
+  assert.ok(!renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', batches: null, today: '2026-11-17', clock: '09:00', onBatch() {} })).includes(t.portal.teacher.todayEmpty)); // nothing claimed before data loads
+});
+
 test('the batch calendar renders blocks, today and accessible slots in every locale', () => {
   for (const locale of supportedLocales) {
     const t = getTranslations(locale); const b = t.portal.batches;
     const render = (batches) => renderToStaticMarkup(React.createElement(web.BatchCalendar, { t, locale, batches, timezone: 'Asia/Kolkata', today: '2026-11-18', selected: null, onSlot() {}, onBatch() {} }));
     const html = render([sampleBatch, { ...sampleBatch, id: 'b2', name: 'Morning', start_time: '07:00', end_time: '07:30', days: ['fri'], status: 'paused' }]);
     assert.equal(html.match(/class="cal-block/g).length, 3);
-    assert.equal(html.match(/is-paused/g).length, 1);
+    assert.equal(html.match(/class="cal-block is-paused/g).length, 1);
+    assert.equal(html.match(/class="cal-agenda-item/g).length, 3); // list view / phone agenda has the same classes
+    assert.equal(html.match(/class="cal-agenda-item is-paused/g).length, 1);
+    assert.equal(html.match(new RegExp(`<p class="calendar-note">${b.noClasses}</p>`, 'g')).length, 4); // tue, thu, sat, sun
+    assert.match(html, new RegExp(`class="cal-legend" aria-label="${b.legend}"`));
+    assert.ok(!html.includes('cal-now'));
+    assert.equal(renderToStaticMarkup(React.createElement(web.BatchCalendar, { t, locale, batches: [sampleBatch], timezone: 'Asia/Kolkata', today: '2026-11-18', now: '18:30', selected: null, onSlot() {}, onBatch() {} })).match(/class="cal-now"/g).length, 1);
     assert.equal(html.match(/class="cal-day[^"]*is-today/g).length, 1);
     assert.equal(html.match(/tabindex="0"/g).length, 1);
     assert.match(html, /Evening Riyaz/);

@@ -62,13 +62,14 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 
 /* Phase 3: weekly batch calendar (days across, times down) and the batch dialog. */
 .page-heading-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.page-heading-row .page-lede { margin-bottom: 0; }
 .create-batch { min-height: 48px; padding-inline: 20px; font-weight: 650; }
 .calendar-panel { margin: 20px 0; }
 .calendar-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .calendar-note { margin: 4px 0 0; color: var(--text-subtle); font-size: 13px; }
 .calendar-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .calendar-nav strong { margin-left: 6px; font-size: 14px; }
-.calendar-grid { --slot-h: 26px; display: grid; grid-template-columns: 72px repeat(7, minmax(0, 1fr)); overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+.calendar-grid { --slot-h: 24px; display: grid; grid-template-columns: 72px repeat(7, minmax(0, 1fr)); overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
 .cal-day-head { display: grid; place-items: center; height: 52px; color: var(--text-muted); font-size: 12px; border-bottom: 1px solid var(--border); }
 .cal-day-head strong { color: var(--text); font-size: 18px; }
 .cal-day.is-today .cal-day-head strong { display: grid; place-items: center; width: 30px; height: 30px; color: var(--on-primary); background: var(--primary); border-radius: 50%; }
@@ -81,14 +82,11 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .cal-slot:hover { background: color-mix(in srgb, var(--primary) 6%, transparent); }
 .cal-slot.is-selected { background: color-mix(in srgb, var(--primary) 16%, transparent); box-shadow: inset 0 0 0 2px var(--primary); }
 .cal-slot:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.cal-block { position: absolute; z-index: 1; top: calc(var(--start) * var(--slot-h) + 1px); right: 3px; left: 3px; display: grid; align-content: start; gap: 1px; height: calc(var(--span) * var(--slot-h) - 2px); min-height: 22px; overflow: hidden; padding: 4px 7px; color: var(--text); text-align: left; background: color-mix(in srgb, var(--primary) 13%, var(--surface)); border: 0; border-left: 3px solid var(--primary); border-radius: 8px; box-shadow: var(--shadow-sm); cursor: pointer; font: inherit; }
-.cal-block strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.cal-block small { overflow: hidden; font-size: 11px; opacity: .85; text-overflow: ellipsis; white-space: nowrap; }
+.cal-block { position: absolute; z-index: 1; top: calc(var(--start) * var(--slot-h) + 1px); right: 3px; left: 3px; display: grid; align-content: start; gap: 1px; height: calc(var(--span) * var(--slot-h) - 2px); min-height: 22px; overflow: hidden; padding: 4px 7px; color: var(--text); text-align: left; background: color-mix(in srgb, var(--block, var(--primary)) 14%, var(--surface)); border: 0; border-left: 3px solid var(--block, var(--primary)); border-radius: 8px; box-shadow: var(--shadow-sm); cursor: pointer; font: inherit; }
+.cal-block strong { overflow: hidden; font-size: 12px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.cal-block small { overflow: hidden; color: var(--text-muted); font-size: 11px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 /* ponytail: only paused batches can overlap (active ones are blocked by the API), so paused take the right half; two overlapping paused batches still stack. */
 .cal-block.is-paused { left: 50%; z-index: 2; color: var(--text-muted); background: repeating-linear-gradient(135deg, var(--surface-strong) 0 6px, var(--surface) 6px 12px); border: 1px dashed var(--border-strong); }
-.day-tabs { display: none; gap: 6px; overflow-x: auto; margin-bottom: 10px; }
-.day-tabs button { flex: 0 0 auto; min-height: 40px; padding: 6px 12px; color: var(--text-muted); background: var(--surface-soft); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font: inherit; }
-.day-tabs button.active { color: var(--on-primary); background: var(--primary); border-color: transparent; }
 
 .batch-dialog { width: min(100% - 32px, 560px); max-height: calc(100vh - 32px); padding: clamp(18px, 4vw, 28px); color: var(--text); background: var(--bg-raised); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
 .batch-dialog::backdrop { background: var(--overlay); backdrop-filter: blur(4px); }
@@ -109,9 +107,6 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .notice ul { margin: 6px 0 0; padding-left: 18px; }
 
 @media (max-width: 700px) {
-  .calendar-grid { grid-template-columns: 64px minmax(0, 1fr); }
-  .cal-day:not(.is-focus) { display: none; }
-  .day-tabs { display: flex; }
   .time-row { grid-template-columns: 1fr; }
 }
 
@@ -143,3 +138,56 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .answers { display: grid; gap: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
 .answer { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; }
 .feedback-box { display: grid; gap: 4px; padding: 12px 14px; color: var(--text); background: color-mix(in srgb, var(--success) 8%, transparent); border: 1px solid color-mix(in srgb, var(--success) 30%, transparent); border-radius: 11px; }
+
+/* Phase 3: teacher workspace. Today panel + stat tiles in a bento row; calendar views, legend, now line; phone sheet. */
+.workspace-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(240px, 1fr); gap: 16px; margin: 24px 0 20px; }
+.workspace-stats { display: grid; gap: 12px; }
+.workspace-stats .stat-card { padding: 16px 20px; }
+.stat-link { color: inherit; text-align: left; font: inherit; cursor: pointer; transition: border-color var(--ease), background var(--ease); }
+.stat-link:hover { background: var(--surface-strong); border-color: var(--border-strong); }
+.stat-link small { display: inline-flex; align-items: center; gap: 6px; }
+.stat-link.has-items { border-color: color-mix(in srgb, var(--warning) 45%, transparent); }
+.today-panel h2 { margin-bottom: 14px; }
+.today-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.today-list button { display: grid; grid-template-columns: minmax(130px, auto) minmax(0, 1fr) auto; align-items: center; gap: 14px; width: 100%; padding: 12px 14px; color: var(--text); text-align: left; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; font: inherit; }
+.today-list button:hover { border-color: var(--border-strong); }
+.today-list .is-live button { border-color: color-mix(in srgb, var(--success) 55%, transparent); box-shadow: inset 3px 0 var(--success); }
+.today-list .is-upNext button { box-shadow: inset 3px 0 var(--primary); }
+.today-list .is-finished button { color: var(--text-muted); }
+.today-time { font-size: 14px; font-variant-numeric: tabular-nums; font-weight: 650; }
+.today-name { display: grid; gap: 2px; min-width: 0; }
+.today-name small { color: var(--text-subtle); }
+.today-next { margin: 14px 0 0; font-size: 14px; }
+.view-toggle { display: inline-flex; margin-left: 6px; padding: 3px; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 12px; }
+.view-toggle button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; color: var(--text-muted); background: transparent; border-radius: 9px; cursor: pointer; font: inherit; font-size: 13px; }
+.view-toggle button[aria-pressed="true"] { color: var(--on-primary); background: var(--primary); }
+.view-week .cal-agenda, .view-list .calendar-grid { display: none; }
+.cal-agenda { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.cal-agenda > li { display: grid; gap: 8px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.cal-agenda > li:last-child { padding-bottom: 0; border-bottom: 0; }
+.cal-agenda h3 { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 15px; }
+.cal-agenda ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.cal-agenda .calendar-note { margin: 0; }
+.cal-agenda-item { display: grid; grid-template-columns: minmax(120px, auto) minmax(0, 1fr); gap: 2px 14px; width: 100%; min-height: 48px; padding: 10px 12px; color: var(--text); text-align: left; background: color-mix(in srgb, var(--block, var(--primary)) 10%, var(--surface)); border: 0; border-left: 3px solid var(--block, var(--primary)); border-radius: 10px; cursor: pointer; font: inherit; }
+.cal-agenda-time { grid-row: span 2; font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 650; }
+.cal-agenda-item small { color: var(--text-muted); }
+.cal-agenda-item.is-paused { color: var(--text-muted); background: repeating-linear-gradient(135deg, var(--surface-strong) 0 6px, var(--surface) 6px 12px); border-left-style: dashed; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 14px 0 0; padding: 0; color: var(--text-muted); font-size: 13px; list-style: none; }
+.cal-legend li { display: inline-flex; align-items: center; gap: 8px; }
+.cal-legend li::before { width: 12px; height: 12px; content: ""; background: color-mix(in srgb, var(--block) 30%, var(--surface)); border-left: 3px solid var(--block); border-radius: 3px; }
+.cal-now { position: absolute; z-index: 3; top: calc(var(--at) * var(--slot-h)); right: 0; left: 0; height: 2px; background: var(--error); pointer-events: none; }
+.cal-now::before { position: absolute; top: -4px; left: -5px; width: 10px; height: 10px; content: ""; background: var(--error); border-radius: 50%; }
+@media (max-width: 850px) { .workspace-grid { grid-template-columns: minmax(0, 1fr); } .workspace-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .workspace-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace-stats .stat-link { grid-column: 1 / -1; }
+  .today-list button { grid-template-columns: minmax(0, 1fr) auto; }
+  .today-time { grid-column: 1 / -1; }
+  .cal-agenda-item { grid-template-columns: minmax(0, 1fr); }
+  .cal-agenda-time { grid-row: auto; }
+  /* Create/edit batch becomes a full-screen sheet with the actions pinned to the bottom. */
+  .batch-dialog { width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 20px 16px 0; border: 0; border-radius: 0; }
+  .batch-dialog .form-actions { position: sticky; bottom: 0; margin: 0 -16px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--bg-raised); border-top: 1px solid var(--border); }
+}
+/* Phones always get the agenda; it must come after the view rules above. */
+@media (max-width: 700px) { .calendar-panel .calendar-grid, .view-toggle { display: none; } .calendar-panel .cal-agenda { display: grid; } }

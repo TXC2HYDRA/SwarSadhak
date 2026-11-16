@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { CalendarPlus, ClipboardList, LayoutDashboard, Search } from 'lucide-react';
+import { ArrowRight, CalendarPlus, ClipboardList, LayoutDashboard, Search } from 'lucide-react';
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
 import { BatchCalendar, BatchDialog, timeRange } from './BatchCalendar.jsx';
 import { TeacherAssignments } from './Assignments.jsx';
 import { apiErrorKey } from './auth.js';
-import { slotForm, todayIn } from './schedule.js';
+import { DAYS, classesOn, formatDate, nextClass, nowIn, slotForm, todayIn } from './schedule.js';
 
 export function TeacherPortal({ shell, client, user }) {
   const [page, setPage] = useUrlPage('teacher', ['dashboard', 'assignments'], 'dashboard');
   const { t } = shell;
   return <PortalShell {...shell} kicker={t.portal.roles.teacher} nav={[['dashboard', t.portal.nav.dashboard, LayoutDashboard], ['assignments', t.portal.assignments.nav, ClipboardList]]} page={page} onPage={setPage}>
-    {page === 'dashboard' && <TeacherDashboard t={t} locale={shell.locale} client={client} />}
+    {page === 'dashboard' && <TeacherDashboard t={t} locale={shell.locale} client={client} onReviews={() => setPage('assignments')} />}
     {page === 'assignments' && <TeacherAssignments t={t} locale={shell.locale} client={client} user={user} />}
   </PortalShell>;
 }
@@ -24,13 +24,14 @@ export function filterStudents(students = [], query = '', courseId = '') {
 
 const emptyBatch = { name: '', course_id: '', start_time: '18:00', end_time: '19:00', days: [], student_ids: [] };
 
-export function TeacherDashboard({ t, locale = 'en', client, now }) {
+export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
   const p = t.portal.teacher; const b = t.portal.batches;
   const summary = useApi(t, () => client.teacher.summary());
   const courses = useApi(t, () => client.teacher.courses());
   const students = useApi(t, () => client.teacher.students());
   const batches = useApi(t, () => client.teacher.batches.list());
   const academy = useApi(t, () => client.academy());
+  const assignments = useApi(t, () => client.teacher.assignments.list());
   const [query, setQuery] = useState('');
   const [courseId, setCourseId] = useState('');
   const [dialog, setDialog] = useState(null);
@@ -38,6 +39,8 @@ export function TeacherDashboard({ t, locale = 'en', client, now }) {
   const [notice, setNotice] = useState(null);
   const timezone = academy.data?.timezone || 'Asia/Kolkata';
   const today = todayIn(timezone, now);
+  const clock = nowIn(timezone, now);
+  const reviews = assignments.data?.reduce((sum, item) => sum + (item.submitted_count || 0), 0);
   const visible = filterStudents(students.data || [], query, courseId);
   const courseList = courses.data || [];
   const defaultCourse = courseList.length === 1 ? courseList[0].id : '';
@@ -79,15 +82,19 @@ export function TeacherDashboard({ t, locale = 'en', client, now }) {
   return <div className="page portal-page teacher-page">
     <div className="page-heading-row"><div><h1>{p.title}</h1><p className="page-lede">{p.lede}</p></div>
       <button className="button primary create-batch" onClick={() => openCreate(null)}><CalendarPlus size={18} aria-hidden="true" />{b.create}</button></div>
-    <section className="stats-grid portal-stats">
-      <div className="stat-card"><strong>{summary.data?.student_count ?? '–'}</strong><small>{p.studentCount}</small></div>
-      <div className="stat-card"><strong>{batches.data ? activeCount : '–'}</strong><small>{b.activeBatches}</small></div>
-    </section>
+    <div className="workspace-grid">
+      <TodayPanel t={t} locale={locale} batches={batches.data} today={today} clock={clock} onBatch={openEdit} />
+      <section className="workspace-stats" aria-label={p.title}>
+        <div className="stat-card"><strong>{summary.data?.student_count ?? '–'}</strong><small>{p.studentCount}</small></div>
+        <div className="stat-card"><strong>{batches.data ? activeCount : '–'}</strong><small>{b.activeBatches}</small></div>
+        <button type="button" className={`stat-card stat-link${reviews ? ' has-items' : ''}`} onClick={onReviews}><strong>{reviews ?? '–'}</strong><small>{p.reviews}<ArrowRight size={14} aria-hidden="true" /></small></button>
+      </section>
+    </div>
     {notice && <div className={`notice ${notice.error ? 'error' : notice.warnings?.length ? 'warning' : 'success'}`} role={notice.error ? 'alert' : 'status'}><span>{notice.warnings?.length ? b.warning : notice.text}
       {(notice.warnings?.length > 0 || notice.conflicts?.length > 0) && <ul>{(notice.warnings || []).map((item) => <li key={`${item.student_id}-${item.batch_name}`}>{item.student_name}: {item.batch_name}, {item.days.map((day) => b.dayShort[day]).join(', ')} {timeRange(item, locale)}</li>)}
         {(notice.conflicts || []).map((item) => <li key={item.batch_id}>{item.name}: {item.days.map((day) => b.dayShort[day]).join(', ')} {timeRange(item, locale)}</li>)}</ul>}</span></div>}
     <LoadState t={t} state={batches} />
-    {batches.data && <BatchCalendar t={t} locale={locale} batches={batches.data} timezone={timezone} today={today} selected={selected} onSlot={openCreate} onBatch={openEdit} />}
+    {batches.data && <BatchCalendar t={t} locale={locale} batches={batches.data} timezone={timezone} today={today} now={clock} selected={selected} onSlot={openCreate} onBatch={openEdit} />}
     <BatchDialog t={t} locale={locale} state={dialog} courses={courseList} students={students.data || []} onClose={close} onSave={save} onRemove={remove} onToggle={toggle} />
     <section className="panel" aria-labelledby="my-students-title">
       <h2 id="my-students-title">{p.students}</h2>
@@ -100,4 +107,28 @@ export function TeacherDashboard({ t, locale = 'en', client, now }) {
       {visible.length > 0 && <ul className="student-list">{visible.map((student) => <li key={student.id}><strong>{student.display_name}</strong><small>{student.username}</small><span className="chip-row">{student.courses.map((course) => <span className="chip" key={course.id}>{course.name}</span>)}</span></li>)}</ul>}
     </section>
   </div>;
+}
+
+// Today's classes in order, marking the one running now or next. Only real batches; nothing is shown before they load.
+export function TodayPanel({ t, locale, batches, today, clock, onBatch }) {
+  const p = t.portal.teacher; const b = t.portal.batches;
+  const todays = batches ? classesOn(batches, today) : [];
+  const upNext = todays.find(({ batch }) => batch.start_time > clock);
+  const upcoming = batches ? nextClass(batches, today, clock) : null;
+  const later = upcoming && upcoming.date !== today ? upcoming : null;
+  const state = (item) => (item.batch.end_time <= clock ? 'finished' : item.batch.start_time <= clock ? 'live' : item === upNext ? 'upNext' : '');
+  return <section className="panel today-panel" aria-labelledby="today-title">
+    <p className="eyebrow">{p.today} · {formatDate(today, locale, { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+    <h2 id="today-title">{p.classesToday}</h2>
+    {batches && !todays.length && <p>{p.todayEmpty}</p>}
+    {todays.length > 0 && <ol className="today-list">{todays.map((item) => {
+      const status = state(item);
+      return <li key={item.batch.id} className={status ? `is-${status}` : undefined}><button type="button" onClick={() => onBatch(item.batch)}>
+        <span className="today-time">{timeRange(item.batch, locale)}</span>
+        <span className="today-name"><strong>{item.batch.name}</strong><small>{item.batch.course_name} · {b.studentCount.replace('{count}', item.batch.student_ids.length)}</small></span>
+        {status && <span className={`status-badge ${status === 'live' ? 'success' : status === 'upNext' ? 'warning' : ''}`}>{p[status]}</span>}
+      </button></li>;
+    })}</ol>}
+    {later && <p className="today-next"><span>{p.nextClass}:</span> <strong>{b.dayLong[DAYS[later.dayIndex]]} {formatDate(later.date, locale, { day: 'numeric', month: 'short' })}, {timeRange(later.batch, locale)}</strong> · {later.batch.name}</p>}
+  </section>;
 }

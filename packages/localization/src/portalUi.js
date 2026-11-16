@@ -48,6 +48,7 @@ export const portalUi = {
       duplicate: 'This student is already enrolled in this course.', needTeacher: 'This course has no teacher yet. Assign one on the Courses page.',
     },
     batches: {
+      noClasses: 'No classes', legend: 'Courses', weekView: 'Week', listView: 'List', viewLabel: 'Calendar view',
       title: 'Weekly batch calendar', create: 'Create batch', edit: 'Edit batch', name: 'Batch name', course: 'Course', start: 'Start time', end: 'End time',
       days: 'Repeats every', students: 'Students', searchStudents: 'Search students', selected: '{count} selected',
       chooseCourseFirst: 'Choose a course to see its students.', noCourseStudents: 'No students are enrolled with you in this course yet.',
@@ -65,6 +66,7 @@ export const portalUi = {
       ownerTitle: 'Batches', ownerLede: 'Every teacher’s weekly batches. Teachers create and edit their own batches.', teacher: 'Teacher', schedule: 'Schedule', status: 'Status',
     },
     teacher: {
+      today: 'Today', todayEmpty: 'No classes today.', nextClass: 'Next class', live: 'Now', upNext: 'Next', finished: 'Done', reviews: 'Answers to review', classesToday: 'Classes today',
       title: 'Teacher dashboard', lede: 'Your students and weekly batch calendar.', students: 'My students', studentCount: 'Students assigned to you',
       search: 'Search students', allCourses: 'All courses', courseFilter: 'Course',
       noStudents: 'No students are enrolled with you yet. The academy Owner manages enrollments.', noMatches: 'No students match your search.',
@@ -137,6 +139,7 @@ export const portalUi = {
       duplicate: 'हा विद्यार्थी या अभ्यासक्रमात आधीच आहे.', needTeacher: 'या अभ्यासक्रमाला अद्याप शिक्षक नाही. अभ्यासक्रम पानावर नेमा.',
     },
     batches: {
+      noClasses: 'वर्ग नाहीत', legend: 'अभ्यासक्रम', weekView: 'आठवडा', listView: 'यादी', viewLabel: 'कॅलेंडर दृश्य',
       title: 'साप्ताहिक बॅच कॅलेंडर', create: 'बॅच तयार करा', edit: 'बॅच संपादित करा', name: 'बॅचचे नाव', course: 'अभ्यासक्रम', start: 'सुरू होण्याची वेळ', end: 'संपण्याची वेळ',
       days: 'दर आठवड्याला', students: 'विद्यार्थी', searchStudents: 'विद्यार्थी शोधा', selected: '{count} निवडले',
       chooseCourseFirst: 'विद्यार्थी पाहण्यासाठी अभ्यासक्रम निवडा.', noCourseStudents: 'या अभ्यासक्रमात अद्याप तुमच्याकडे कोणताही विद्यार्थी नाही.',
@@ -154,6 +157,7 @@ export const portalUi = {
       ownerTitle: 'बॅच', ownerLede: 'सर्व शिक्षकांच्या साप्ताहिक बॅच. शिक्षक स्वतःच्या बॅच तयार व संपादित करतात.', teacher: 'शिक्षक', schedule: 'वेळापत्रक', status: 'स्थिती',
     },
     teacher: {
+      today: 'आज', todayEmpty: 'आज वर्ग नाहीत.', nextClass: 'पुढचा वर्ग', live: 'सुरू आहे', upNext: 'पुढे', finished: 'झाला', reviews: 'तपासायची उत्तरे', classesToday: 'आजचे वर्ग',
       title: 'शिक्षक डॅशबोर्ड', lede: 'तुमचे विद्यार्थी आणि साप्ताहिक बॅच कॅलेंडर.', students: 'माझे विद्यार्थी', studentCount: 'तुम्हाला नेमलेले विद्यार्थी',
       search: 'विद्यार्थी शोधा', allCourses: 'सर्व अभ्यासक्रम', courseFilter: 'अभ्यासक्रम',
       noStudents: 'अद्याप तुमच्याकडे कोणत्याही विद्यार्थ्याचा प्रवेश नाही. प्रवेश अकॅडमी मालक व्यवस्थापित करतात.', noMatches: 'शोधाशी जुळणारे विद्यार्थी नाहीत.',
@@ -226,6 +230,7 @@ export const portalUi = {
       duplicate: 'यह विद्यार्थी इस पाठ्यक्रम में पहले से नामांकित है।', needTeacher: 'इस पाठ्यक्रम में अभी कोई शिक्षक नहीं है। पाठ्यक्रम पेज पर नियुक्त करें।',
     },
     batches: {
+      noClasses: 'कोई कक्षा नहीं', legend: 'पाठ्यक्रम', weekView: 'सप्ताह', listView: 'सूची', viewLabel: 'कैलेंडर दृश्य',
       title: 'साप्ताहिक बैच कैलेंडर', create: 'बैच बनाएँ', edit: 'बैच संपादित करें', name: 'बैच का नाम', course: 'पाठ्यक्रम', start: 'शुरू होने का समय', end: 'समाप्ति का समय',
       days: 'हर हफ़्ते', students: 'विद्यार्थी', searchStudents: 'विद्यार्थी खोजें', selected: '{count} चुने गए',
       chooseCourseFirst: 'विद्यार्थी देखने के लिए पाठ्यक्रम चुनें।', noCourseStudents: 'इस पाठ्यक्रम में अभी आपके साथ कोई विद्यार्थी नामांकित नहीं है।',
@@ -243,6 +248,7 @@ export const portalUi = {
       ownerTitle: 'बैच', ownerLede: 'सभी शिक्षकों के साप्ताहिक बैच। शिक्षक अपने बैच खुद बनाते और संपादित करते हैं।', teacher: 'शिक्षक', schedule: 'समय-सारणी', status: 'स्थिति',
     },
     teacher: {
+      today: 'आज', todayEmpty: 'आज कोई कक्षा नहीं है।', nextClass: 'अगली कक्षा', live: 'चल रही है', upNext: 'अगली', finished: 'हो गई', reviews: 'जांचने के उत्तर', classesToday: 'आज की कक्षाएं',
       title: 'शिक्षक डैशबोर्ड', lede: 'आपके विद्यार्थी और साप्ताहिक बैच कैलेंडर।', students: 'मेरे विद्यार्थी', studentCount: 'आपको सौंपे गए विद्यार्थी',
       search: 'विद्यार्थी खोजें', allCourses: 'सभी पाठ्यक्रम', courseFilter: 'पाठ्यक्रम',
       noStudents: 'अभी आपके साथ कोई विद्यार्थी नामांकित नहीं है। नामांकन अकादमी मालिक प्रबंधित करते हैं।', noMatches: 'खोज से मेल खाने वाला कोई विद्यार्थी नहीं।',
