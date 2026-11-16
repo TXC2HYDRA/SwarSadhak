@@ -257,5 +257,26 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
   .summary-row { align-items: stretch; flex-direction: column; }
   .metric-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .metric-strip > div { padding: 0 12px; }
+  .metric-strip > div:nth-child(3n+1) { padding-left: 0; border-left: 0; }
   .metric-strip dd { font-size: 1.25rem; }
 }
+
+/* Counterpoint step 4: tables sit on the canvas; create/edit opens a drawer from the right on tablets and up. */
+.portal-page .table-section { margin-top: 24px; }
+.data-table .button.quiet.danger { border-color: transparent; }
+.data-table .button.quiet.danger:hover { background: color-mix(in srgb, var(--danger) 8%, transparent); }
+@media (min-width: 601px) {
+  .sheet-dialog { width: min(100%, 460px); max-width: none; height: 100dvh; max-height: none; margin: 0 0 0 auto; padding: 28px 28px 0; overflow-y: auto; border-width: 0 0 0 1px; border-radius: var(--radius-dialog) 0 0 var(--radius-dialog); }
+  .sheet-dialog[open] { animation: drawer-in var(--motion-surface) var(--ease-out); }
+  .sheet-dialog .form-actions { position: sticky; bottom: 0; margin: 8px -28px 0; padding: 16px 28px; background: var(--surface-raised); border-top: 1px solid var(--border); }
+}
+@keyframes drawer-in { from { opacity: 0; transform: translateX(24px); } }
+@media (max-width: 600px) {
+  .data-table tr { margin: 0; padding: 14px 0; background: none; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+  .data-table .row-actions .button { flex: 0 1 auto; }
+}
+.password-field { position: relative; margin-top: -8px; }
+.password-field input { padding-right: 52px; }
+.password-field .icon-button { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); border: 0; background: none; }
+.field-hint { margin: -8px 0 0; color: var(--warning); font-size: 13px; }
+@media (min-width: 700px) { .login-card { margin-top: 6vh; } }
