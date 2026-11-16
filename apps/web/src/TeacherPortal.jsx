@@ -46,8 +46,8 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
   const defaultCourse = courseList.length === 1 ? courseList[0].id : '';
 
   const openCreate = (slot) => {
-    setSelected(slot ? { date: slot.date, minutes: slot.minutes } : null);
-    setDialog({ form: { ...emptyBatch, course_id: defaultCourse, ...(slot ? slotForm(slot.dayIndex, slot.minutes) : {}) } });
+    setSelected(slot ? { date: slot.date, minutes: slot.minutes, duration: slot.duration || 60 } : null);
+    setDialog({ form: { ...emptyBatch, course_id: defaultCourse, ...(slot ? slotForm(slot.dayIndex, slot.minutes, slot.duration) : {}) } });
   };
   const openEdit = (batch) => setDialog({ batch, form: { name: batch.name, course_id: batch.course_id, start_time: batch.start_time, end_time: batch.end_time, days: batch.days,
     student_ids: batch.student_ids.filter((id) => (students.data || []).some((student) => student.id === id)) } });

@@ -501,3 +501,13 @@ test('loading shows placeholder rows with screen-reader text, and page changes a
   web.withTransition(() => { changed = true; });
   assert.ok(changed);
 });
+
+test('a dragged calendar range prefills the batch form with its length; a single slot keeps one hour', async () => {
+  const { slotForm } = await server.ssrLoadModule('/src/schedule.js');
+  assert.deepEqual(slotForm(2, 8 * 60, 90), { days: ['wed'], start_time: '08:00', end_time: '09:30' });
+  assert.deepEqual(slotForm(2, 8 * 60, undefined), { days: ['wed'], start_time: '08:00', end_time: '09:00' });
+  const t = getTranslations('en');
+  const html = renderToStaticMarkup(React.createElement(web.BatchCalendar, { t, locale: 'en', batches: [], timezone: 'Asia/Kolkata', today: '2026-11-16', now: '10:00', selected: { date: '2026-11-18', minutes: 8 * 60, duration: 90 }, onSlot() {}, onBatch() {} }));
+  assert.equal((html.match(/cal-slot is-selected/g) || []).length, 3);
+  assert.match(html, new RegExp(t.portal.batches.dragHint));
+});
