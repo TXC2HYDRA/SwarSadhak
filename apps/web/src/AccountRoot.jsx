@@ -8,6 +8,7 @@ import { GUEST_KEY, PORTAL_KEY, choosePortal, clearSession, loginErrorKey, readS
 import { startOptionalSync } from './optionalSync.js';
 import { AccountMenu, LanguagePicker, PortalShell } from './PortalShell.jsx';
 import { ThemeToggle } from './theme.jsx';
+import { roleFromPath } from './router.js';
 import { OwnerPortal } from './OwnerPortal.jsx';
 import { TeacherPortal } from './TeacherPortal.jsx';
 import { StudentTimetable } from './StudentTimetable.jsx';
@@ -20,7 +21,8 @@ const readLocale = () => readPreference('swar-locale', 'en') || 'en';
 export function AccountRoot({ apiUrl = import.meta.env.VITE_API_URL || '' }) {
   const [session, setSession] = useState(() => apiUrl ? readSession() : null);
   const [guest, setGuest] = useState(() => readPreference(GUEST_KEY, 'false') === 'true');
-  const [portal, setPortal] = useState(() => choosePortal(session?.user.roles, readPreference(PORTAL_KEY, '')));
+  // A link to /owner, /teacher or /student opens that portal when the account has the role.
+  const [portal, setPortal] = useState(() => choosePortal(session?.user.roles, roleFromPath() || readPreference(PORTAL_KEY, '')));
   const [locale, setLocale] = useState(readLocale);
   const [notice, setNotice] = useState('');
   const t = getTranslations(locale);
@@ -48,7 +50,7 @@ export function AccountRoot({ apiUrl = import.meta.env.VITE_API_URL || '' }) {
     if (!result.ok) return loginErrorKey(result);
     const next = { token: result.data.access_token, user: result.data.user };
     writeSession(next);
-    setSession(next); setPortal(choosePortal(next.user.roles, readPreference(PORTAL_KEY, ''))); setNotice('');
+    setSession(next); setPortal(choosePortal(next.user.roles, roleFromPath() || readPreference(PORTAL_KEY, ''))); setNotice('');
     return null;
   };
   const switchPortal = (role) => { setPortal(role); writePreference(PORTAL_KEY, role); setLocale(readLocale()); };

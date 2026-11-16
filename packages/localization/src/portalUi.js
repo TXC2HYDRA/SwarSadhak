@@ -7,7 +7,7 @@ export const brandUi = {
 
 export const portalUi = {
   en: {
-    theme: { light: 'Switch to light theme', dark: 'Switch to dark theme' },
+    theme: { light: 'Switch to light theme', dark: 'Switch to dark theme' }, more: 'More', skipToContent: 'Skip to main content',
     signIn: 'Sign in', signInTitle: 'Sign in to NadoPasana', signInLede: 'Use the account your academy created for you.',
     username: 'Username', password: 'Password', signingIn: 'Signing in…',
     continueOffline: 'Practise without an account', offlineNote: 'Practice without an account is saved only in this browser.',
@@ -96,7 +96,7 @@ export const portalUi = {
     },
   },
   mr: {
-    theme: { light: 'लाइट थीम वापरा', dark: 'डार्क थीम वापरा' },
+    theme: { light: 'लाइट थीम वापरा', dark: 'डार्क थीम वापरा' }, more: 'अधिक', skipToContent: 'मुख्य मजकुराकडे जा',
     signIn: 'साइन इन करा', signInTitle: 'नादोपासना मध्ये साइन इन करा', signInLede: 'तुमच्या अकॅडमीने तयार केलेले खाते वापरा.',
     username: 'वापरकर्तानाव', password: 'पासवर्ड', signingIn: 'साइन इन होत आहे…',
     continueOffline: 'खात्याशिवाय सराव करा', offlineNote: 'खात्याशिवाय केलेला सराव फक्त या ब्राउझरमध्ये जतन होतो.',
@@ -185,7 +185,7 @@ export const portalUi = {
     },
   },
   hi: {
-    theme: { light: 'लाइट थीम पर जाएं', dark: 'डार्क थीम पर जाएं' },
+    theme: { light: 'लाइट थीम पर जाएं', dark: 'डार्क थीम पर जाएं' }, more: 'और', skipToContent: 'मुख्य सामग्री पर जाएं',
     signIn: 'साइन इन करें', signInTitle: 'नादोपासना में साइन इन करें', signInLede: 'अपनी अकादमी द्वारा बनाया गया खाता इस्तेमाल करें।',
     username: 'उपयोगकर्ता नाम', password: 'पासवर्ड', signingIn: 'साइन इन हो रहा है…',
     continueOffline: 'बिना खाते के अभ्यास करें', offlineNote: 'बिना खाते का अभ्यास केवल इसी ब्राउज़र में सहेजा जाता है।',

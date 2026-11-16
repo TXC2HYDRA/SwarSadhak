@@ -8,8 +8,8 @@ It holds the Phase 0 audit, the design system (tokens, type, components), the pl
 | --- | --- | --- |
 | 0 | Repository audit, UX inventory, plan | Done (this document) |
 | 1 | Design tokens, light/dark theme, fonts, colour refactor | Done |
-| 2 | Shared shell and navigation (sidebar, bottom nav, URL routes) | Next |
-| 3 | Teacher workspace and batch calendar (flagship) | Planned |
+| 2 | Shared shell and navigation (sidebar, bottom nav, URL routes) | Done |
+| 3 | Teacher workspace and batch calendar (flagship) | Next |
 | 4 | Owner command center | Planned |
 | 5 | Student Riyaz studio | Planned |
 | 6 | Polish, accessibility, performance, QA | Planned |
@@ -214,21 +214,23 @@ Status is never shown by colour alone: badges carry a word, paused batches use a
 
 ## 5. Sitemap, navigation and core journeys
 
-### 5.1 Sitemap (target, Phase 2 adds URLs)
+### 5.1 Sitemap (live since Phase 2)
 
 ```
-/login
-/studio            (guest and student practice)
-  /studio/practice  /studio/library  /studio/alankar  /studio/routines  /studio/progress  /studio/settings
-/student           Riyaz studio home (next class, open assignments, practice)
-  /student/timetable  /student/assignments
-/teacher           Teaching workspace (today, calendar, roster)
+/studio            Guest practice studio (offline or "practise without an account")
+  /studio/practice  /studio/library  /studio/routines  /studio/progress  /studio/settings
+/student           Student home (Riyaz studio)
+  /student/timetable  /student/assignments  + the studio pages above under /student/…
+/teacher           Teaching workspace (stats, calendar, roster)
   /teacher/assignments
 /owner             Command center
-  /owner/accounts  /owner/courses  /owner/enrollments  /owner/batches
+  /owner/users  /owner/courses  /owner/enrollments  /owner/batches
 ```
 
-Routing uses the History API with a small route table (no new dependency). Unknown or unauthorised paths go to the role's home.
+- `src/router.js` uses the History API (no dependency). The sign-in page shows at whatever URL was opened. After signing in, that URL opens if the account has the role.
+- A path for another role, or an unknown page, is replaced by the role's home.
+- Sub-pages share their parent's URL: results under practice, Alankar under library, a running routine under routines. They need in-memory state, so they cannot be opened from a link.
+- `server.mjs`, `vite dev` and `vite preview` all serve `index.html` for unknown paths, so a refresh works everywhere.
 
 ### 5.2 Navigation map
 
@@ -313,6 +315,8 @@ Before the redesign (dark theme only), captured with headless Chrome against a s
 | Student timetable, 390 px | `ui-redesign/before/12-student-timetable-390.jpg` |
 | Student assignments, 1280 px | `ui-redesign/before/13-student-assignments-1280.jpg` |
 
+After Phase 2 (shared shell, bottom navigation, URL routes): `ui-redesign/phase2/`. These cover teacher at 360, 390 (drawer open), 768, 1024 and 1440 px; owner accounts at 390 and 1280 px; owner batches in Marathi at 390 px; student timetable at 390 px; student home at 1280 px; and the guest library at 390 px, in both themes.
+
 After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 | Screen | File |
@@ -331,6 +335,14 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 ## 10. Progress log
 
 - **Phase 0:** audit, token specification with contrast checks, sitemap, component inventory and phased plan written; baseline screenshots captured.
+- **Phase 2:** shared shell and navigation.
+  - New `src/AppShell.jsx` is used by every role. It has a collapsible sidebar on desktop and a drawer from 850 px down. Under 600 px there is a bottom bar with the first four pages plus "More", which opens the drawer with the rest, the account and sign-out. The compact top bar holds the page title, language and theme.
+  - Owner and Teacher lost their separate top-tab header. `PortalShell` is now a thin wrapper around `AppShell`. Nav items have icons; Routine planner and Progress no longer share the trophy icon.
+  - URL routes (`src/router.js`): refresh, Back/Forward, bookmarks and deep links keep the page.
+  - Accessibility: "Skip to main content" link, a real `<main id="main-content">` (the top bar is no longer inside it), `aria-current="page"` in both navs, and focus moves to the new page heading.
+  - The account block (name, portal switcher, sign out) moved to the foot of the sidebar, so the top bar fits on one row at every width from 360 px.
+  - Checked: `npm test` 154/154 (3 new in `test/shell.test.js`, navigation harness updated for the shell), `npm run build`. In headless Chrome: a deep link to `/teacher/assignments` opens Assignments; `/owner/users` as a teacher becomes `/teacher`; Back after two clicks returns to the previous page.
+  - Known: on Owner tables at 1280 px, the action buttons stack because the sidebar takes width. Phase 4 replaces those tables.
 - **Phase 1:** design system foundation.
   - Light and dark tokens from section 3 are in `styles.css`. All 145 hard-coded colours in `styles.css`, `portal.css` and `SaSustainFeedback.css` are replaced by tokens or `color-mix()` tints, and a test keeps it that way.
   - `index.html` picks the theme before the first paint. `src/theme.jsx` adds `ThemeToggle` to the sign-in page, the portal header, the studio top bar and the landing page, and follows live system changes until the person chooses.

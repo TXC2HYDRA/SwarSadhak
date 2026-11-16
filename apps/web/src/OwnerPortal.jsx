@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { BookOpen, CalendarRange, LayoutDashboard, UserCheck, Users } from 'lucide-react';
+import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
 import { timeRange } from './BatchCalendar.jsx';
@@ -9,10 +11,10 @@ const emptyForm = { id: null, username: '', display_name: '', password: '', role
 const noMessage = { text: '', error: false };
 
 export function OwnerPortal({ shell, client, user }) {
-  const [page, setPage] = useState('overview');
   const { t } = shell; const p = t.portal;
-  const nav = [['overview', p.nav.overview], ['users', p.nav.users], ['courses', p.nav.courses], ['enrollments', p.nav.enrollments], ['batches', p.nav.batches]];
-  return <PortalShell {...shell} nav={nav} page={page} onPage={setPage}>
+  const nav = [['overview', p.nav.overview, LayoutDashboard], ['users', p.nav.users, Users], ['courses', p.nav.courses, BookOpen], ['enrollments', p.nav.enrollments, UserCheck], ['batches', p.nav.batches, CalendarRange]];
+  const [page, setPage] = useUrlPage('owner', nav.map(([key]) => key), 'overview');
+  return <PortalShell {...shell} kicker={p.roles.owner} nav={nav} page={page} onPage={setPage}>
     {page === 'overview' && <OverviewPage t={t} client={client} />}
     {page === 'users' && <UsersPage t={t} client={client} me={user} />}
     {page === 'courses' && <CoursesPage t={t} client={client} />}
