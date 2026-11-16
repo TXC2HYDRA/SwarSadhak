@@ -12,7 +12,7 @@ It holds the Phase 0 audit, the design system (tokens, type, components), the pl
 | 3 | Teacher workspace and batch calendar (flagship) | Done |
 | 4 | Owner command center | Done |
 | 5 | Student Riyaz studio | Done |
-| 6 | Polish, accessibility, performance, QA | Next |
+| 6 | Polish, accessibility, performance, QA | Done |
 
 ---
 
@@ -315,6 +315,8 @@ Before the redesign (dark theme only), captured with headless Chrome against a s
 | Student timetable, 390 px | `ui-redesign/before/12-student-timetable-390.jpg` |
 | Student assignments, 1280 px | `ui-redesign/before/13-student-assignments-1280.jpg` |
 
+After Phase 6 (QA): `ui-redesign/phase6/` holds contact sheets of the full matrix. Each `matrix-<screen>.jpg` shows one screen at 360, 390, 768, 1024, 1280 and 1440 px, light on the top row and dark below: sign in, teacher dashboard, teacher assignments, owner overview, owner accounts, student home and student timetable. `matrix-i18n.jpg` shows Marathi (light) and Hindi (dark) at 360 px for owner accounts, student home and teacher dashboard.
+
 After Phase 5 (student studio): `ui-redesign/phase5/`. These cover the signed-in home at 1440 px light, 1280 px dark, 390 px light and in Marathi at 768 px; the timetable at 390 px dark and 1024 px light; and assignments at 390 px.
 
 After Phase 4 (owner command center): `ui-redesign/phase4/`. These cover the overview at 1440 px light, 1280 px dark and 390 px light; accounts at 1280 px light, at 1280 px dark with a search, at 390 px dark (card rows) and with the create sheet at 1280 px; the course sheet at 390 px; enrollments at 768 px dark; and batches in Marathi at 1024 px.
@@ -340,6 +342,14 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 ## 10. Progress log
 
+- **Phase 6:** QA, accessibility and performance.
+  - Matrix: 90 screenshots of seven screens at 360, 390, 768, 1024, 1280 and 1440 px in both themes, plus Marathi and Hindi at 360 px. The harness flags any visible element that ends past the right edge of the viewport and is not inside a scroll container. No screen overflows.
+  - Fixed: the sign-in page at 360 px was wider than the screen (the grid column grew to the header's width; the theme button and the card edge were cut). The column is now `minmax(0, 1fr)`, and the header language picker is compact on phones, like the app top bar.
+  - Fixed: the "Classes today" list adapts to its panel's width with a container query, not the screen width. At 1024 px the student and owner panels are narrow, and the time, name and "Next" badge now stack instead of squeezing (the badge used to stick out of its card).
+  - Performance: the Owner and Teacher portals load on demand (`React.lazy` in `AccountRoot.jsx`), so students and guests do not download them. Main bundle 515 kB to 494.7 kB, below Vite's 500 kB warning. A test keeps both portals out of the static imports.
+  - Contrast: the new pairs from Phases 4-5 pass AA in both themes (warning counts 5.93 light / 9.42 dark; small captions on list rows 5.37 / 6.38).
+  - Checked: `npm test` 158/158, `npm run build`.
+  - Known and accepted: phone card rows set table elements to `display: block`, and some Safari versions then drop table semantics for screen readers (row content and labels are still read in order). A paused batch takes the right half of its calendar column, so its title is shortened in the week grid; the full name is in the tooltip and the agenda. The main bundle has about 5 kB of headroom; the next big addition should be lazy-loaded too.
 - **Phase 5:** student studio.
   - Signed-in home: under the practice hero (still the first thing, with "Start practice"), a two-panel strip shows "Classes today" (the shared `TodayPanel`, with each teacher's name and the next class on a later day) and "To hand in": up to three assignments with no answer or only a draft, with course, due date and status, linking to Assignments. The local-first practice cards follow unchanged. The offline studio has no strip.
   - Timetable: the next class is marked "Next" with a burgundy edge.

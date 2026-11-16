@@ -5,7 +5,7 @@
 }
 .app-shell :focus-visible, .login-shell :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-.login-shell { display: grid; align-content: start; justify-items: center; gap: 28px; min-height: 100vh; padding: 24px 16px 60px; }
+.login-shell { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; justify-items: center; gap: 28px; min-height: 100vh; padding: 24px 16px 60px; }
 .login-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: min(100%, 460px); }
 .login-top .language-picker { margin-left: 0; }
 .login-tools { display: flex; align-items: center; gap: 8px; }
@@ -144,6 +144,8 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .stat-link small { display: inline-flex; align-items: center; gap: 6px; }
 .stat-link.has-items { border-color: color-mix(in srgb, var(--warning) 45%, transparent); }
 .today-panel h2 { margin-bottom: 14px; }
+/* The panel sits in columns of different widths per role, so it adapts to its own width. */
+.today-panel { container-type: inline-size; }
 .today-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .today-list button { display: grid; grid-template-columns: minmax(130px, auto) minmax(0, 1fr) auto; align-items: center; gap: 14px; width: 100%; padding: 12px 14px; color: var(--text); text-align: left; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; font: inherit; }
 .today-list button:hover { border-color: var(--border-strong); }
@@ -154,6 +156,8 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .today-name { display: grid; gap: 2px; min-width: 0; }
 .today-name small { color: var(--text-subtle); }
 .today-next { margin: 14px 0 0; font-size: 14px; }
+/* After the base rules so the narrow layout wins. */
+@container (max-width: 520px) { .today-list button { grid-template-columns: minmax(0, 1fr) auto; } .today-time { grid-column: 1 / -1; } }
 .view-toggle { display: inline-flex; margin-left: 6px; padding: 3px; background: var(--surface-soft); border: 1px solid var(--border); border-radius: 12px; }
 .view-toggle button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; color: var(--text-muted); background: transparent; border-radius: 9px; cursor: pointer; font: inherit; font-size: 13px; }
 .view-toggle button[aria-pressed="true"] { color: var(--on-primary); background: var(--primary); }
@@ -177,8 +181,6 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 @media (max-width: 600px) {
   .workspace-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .workspace-stats .stat-link { grid-column: 1 / -1; }
-  .today-list button { grid-template-columns: minmax(0, 1fr) auto; }
-  .today-time { grid-column: 1 / -1; }
   .cal-agenda-item { grid-template-columns: minmax(0, 1fr); }
   .cal-agenda-time { grid-row: auto; }
   /* Create/edit batch becomes a full-screen sheet with the actions pinned to the bottom. */
