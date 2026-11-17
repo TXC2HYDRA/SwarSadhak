@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowRight, CalendarPlus, ClipboardList, LayoutDashboard, Search, Video } from 'lucide-react';
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
@@ -41,7 +41,7 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
   const timezone = academy.data?.timezone || 'Asia/Kolkata';
   const today = todayIn(timezone, now);
   const clock = nowIn(timezone, now);
-  const classes = useApi(t, () => client.teacher.classes(today, addDays(today, 7)), [today]);
+  const classes = useApi(t, () => client.teacher.classes(addDays(today, -7), addDays(today, 7)), [today]);
   const reviews = assignments.data?.reduce((sum, item) => sum + (item.submitted_count || 0), 0);
   const visible = filterStudents(students.data || [], query, courseId);
   const courseList = courses.data || [];
@@ -127,16 +127,19 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
 
 // Today's classes in order, marking the one running now or next. Only real batches; nothing is shown before they load.
 
-// The next 7 days as dated classes. One class can be moved or cancelled (and restored) without touching the
-// weekly batch; the server checks the new time against the teacher's other classes.
+// Dated classes for the 7 days before and after today. Upcoming ones can be moved or cancelled (and restored)
+// without touching the weekly batch; classes that have started take attendance, which only the teacher records.
 export function UpcomingClasses({ t, locale, client, classes, today, clock, onEdit, onChanged }) {
   const p = t.portal.teacher; const b = t.portal.batches; const c = b.classes;
   const [open, setOpen] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const upcoming = (classes || []).filter((k) => k.date >= today);
+  const recent = (classes || []).filter((k) => k.date < today && k.status !== 'cancelled').reverse();
   const begin = (k, action) => { setError(null); setOpen({ key: classKey(k), action, new_date: k.date < today ? today : k.date, new_start_time: k.start_time, new_end_time: k.end_time, note: k.note || '' }); };
   const set = (changes) => setOpen((form) => ({ ...form, ...changes }));
-  const fail = (key, result) => setError({ key, text: result.status === 409 ? c.overlaps : t.portal.errors[apiErrorKey(result)], conflicts: result.status === 409 ? result.data?.detail?.conflicts || [] : [] });
+  const close = () => { setOpen(null); setError(null); };
+  const fail = (key, result) => setError({ key, text: result.status === 409 ? (result.data?.detail?.conflicts ? c.overlaps : String(result.data?.detail || t.portal.errors.conflict)) : t.portal.errors[apiErrorKey(result)], conflicts: result.data?.detail?.conflicts || [] });
   const submit = async (event, k) => {
     event.preventDefault();
     const move = open.action === 'move';
@@ -145,52 +148,96 @@ export function UpcomingClasses({ t, locale, client, classes, today, clock, onEd
     const result = await client.teacher.changeClass(k.batch_id, k.original_date, move ? { status: 'rescheduled', new_date: open.new_date, new_start_time: open.new_start_time, new_end_time: open.new_end_time, note: open.note } : { status: 'cancelled', note: open.note });
     setBusy(false);
     if (!result.ok) return fail(open.key, result);
-    setOpen(null); onChanged(move ? c.moved : c.cancelled);
+    close(); onChanged(move ? c.moved : c.cancelled);
   };
   const restore = async (k) => {
     setBusy(true);
     const result = await client.teacher.restoreClass(k.batch_id, k.original_date);
     setBusy(false);
     if (!result.ok) return fail(classKey(k), result);
-    setOpen(null); onChanged(c.restored);
+    close(); onChanged(c.restored);
   };
   const day = (iso, weekday = 'short') => formatDate(iso, locale, { weekday, day: 'numeric', month: 'short' });
+  const row = (k) => {
+    const key = classKey(k); const timing = classState(k, today, clock); const editing = open?.key === key;
+    const started = k.status !== 'cancelled' && (k.date < today || timing === 'live' || timing === 'finished');
+    const label = `${k.batch_name}, ${day(k.date, 'long')}`;
+    return <li key={key} className={`is-${timing}`}>
+      <div className="class-row">
+        <span className="class-when"><strong>{day(k.date)}</strong><span>{timeRange(k, locale)}</span></span>
+        <span className="class-what"><strong>{k.batch_name}</strong>
+          <small>{[k.course_name, modeLabel(b, k), k.status === 'rescheduled' && p.movedFrom.replace('{date}', day(k.original_date)), k.note, started && c.marked.replace('{count}', k.attendance_count || 0).replace('{total}', k.student_count)].filter(Boolean).join(' · ')}</small></span>
+        <span className="class-actions">
+          {k.status === 'cancelled' && <span className="status-badge danger">{p.cancelled}</span>}
+          {canJoin(k, today, clock) && <a className="button primary join-link" href={meetLink(k.meeting_url)} target="_blank" rel="noopener noreferrer" aria-label={`${p.startClass}: ${k.batch_name} (${b.newTab})`}><Video size={16} aria-hidden="true" />{p.startClass}</a>}
+          {started && !editing && <button type="button" className="button quiet" onClick={() => { setError(null); setOpen({ key, action: 'attendance' }); }} aria-label={`${c.attendance}: ${label}`}>{c.attendance}</button>}
+          {timing !== 'finished' && k.date >= today && !editing && <>
+            <button type="button" className="button quiet" onClick={() => begin(k, 'move')} aria-label={`${c.moveTitle}: ${label}`}>{c.move}</button>
+            {k.status !== 'cancelled' && <button type="button" className="button quiet danger" onClick={() => begin(k, 'cancel')} aria-label={`${c.cancelTitle}: ${label}`}>{c.cancel}</button>}
+            {k.status !== 'scheduled' && <button type="button" className="button quiet" disabled={busy} onClick={() => restore(k)}>{c.restore}</button>}
+          </>}
+          <button type="button" className="button quiet" onClick={() => onEdit(k)}>{c.editBatch}</button>
+        </span>
+      </div>
+      {editing && open.action === 'attendance' && <AttendanceSheet t={t} client={client} k={k} label={label} onClose={close} onSaved={() => { close(); onChanged(c.attendanceSaved); }} />}
+      {editing && open.action !== 'attendance' && <form className="portal-form class-change" onSubmit={(event) => submit(event, k)}>
+        <fieldset><legend>{open.action === 'move' ? c.moveTitle : c.cancelTitle}</legend>
+          {open.action === 'move' && <div className="class-change-fields">
+            <label className="field-label">{c.newDate}<input type="date" required min={today} value={open.new_date} onChange={(event) => set({ new_date: event.target.value })} autoFocus /></label>
+            <label className="field-label">{b.start}<input type="time" required value={open.new_start_time} onChange={(event) => set({ new_start_time: event.target.value })} /></label>
+            <label className="field-label">{b.end}<input type="time" required value={open.new_end_time} onChange={(event) => set({ new_end_time: event.target.value })} /></label>
+          </div>}
+          <label className="field-label">{c.note}<input value={open.note} maxLength={200} onChange={(event) => set({ note: event.target.value })} autoFocus={open.action === 'cancel'} /></label>
+        </fieldset>
+        <div className="form-actions"><button type="submit" className={`button ${open.action === 'cancel' ? 'danger' : 'primary'}`} disabled={busy}>{open.action === 'cancel' ? c.cancel : c.save}</button>
+          <button type="button" className="button quiet" onClick={close}>{c.close}</button></div>
+      </form>}
+      {error?.key === key && <div className="field-error" role="alert">{error.text}
+        {error.conflicts.length > 0 && <ul>{error.conflicts.map((x) => <li key={classKey(x)}>{x.batch_name}: {day(x.date)}, {timeRange(x, locale)}</li>)}</ul>}</div>}
+    </li>;
+  };
   return <section className="panel upcoming-classes" aria-labelledby="upcoming-title">
     <h2 id="upcoming-title">{c.title}</h2><p className="calendar-note">{c.lede}</p>
-    {classes && !classes.length && <p>{c.none}</p>}
-    {classes?.length > 0 && <ol className="class-list">{classes.map((k) => {
-      const key = classKey(k); const timing = classState(k, today, clock); const editing = open?.key === key;
-      return <li key={key} className={`is-${timing}`}>
-        <div className="class-row">
-          <span className="class-when"><strong>{day(k.date)}</strong><span>{timeRange(k, locale)}</span></span>
-          <span className="class-what"><strong>{k.batch_name}</strong>
-            <small>{[k.course_name, modeLabel(b, k), k.status === 'rescheduled' && p.movedFrom.replace('{date}', day(k.original_date)), k.note].filter(Boolean).join(' · ')}</small></span>
-          <span className="class-actions">
-            {k.status === 'cancelled' && <span className="status-badge danger">{p.cancelled}</span>}
-            {canJoin(k, today, clock) && <a className="button primary join-link" href={meetLink(k.meeting_url)} target="_blank" rel="noopener noreferrer" aria-label={`${p.startClass}: ${k.batch_name} (${b.newTab})`}><Video size={16} aria-hidden="true" />{p.startClass}</a>}
-            {timing !== 'finished' && !editing && <>
-              <button type="button" className="button quiet" onClick={() => begin(k, 'move')} aria-label={`${c.moveTitle}: ${k.batch_name}, ${day(k.date, 'long')}`}>{c.move}</button>
-              {k.status !== 'cancelled' && <button type="button" className="button quiet danger" onClick={() => begin(k, 'cancel')} aria-label={`${c.cancelTitle}: ${k.batch_name}, ${day(k.date, 'long')}`}>{c.cancel}</button>}
-              {k.status !== 'scheduled' && <button type="button" className="button quiet" disabled={busy} onClick={() => restore(k)}>{c.restore}</button>}
-            </>}
-            <button type="button" className="button quiet" onClick={() => onEdit(k)}>{c.editBatch}</button>
-          </span>
-        </div>
-        {editing && <form className="portal-form class-change" onSubmit={(event) => submit(event, k)}>
-          <fieldset><legend>{open.action === 'move' ? c.moveTitle : c.cancelTitle}</legend>
-            {open.action === 'move' && <div className="class-change-fields">
-              <label className="field-label">{c.newDate}<input type="date" required min={today} value={open.new_date} onChange={(event) => set({ new_date: event.target.value })} autoFocus /></label>
-              <label className="field-label">{b.start}<input type="time" required value={open.new_start_time} onChange={(event) => set({ new_start_time: event.target.value })} /></label>
-              <label className="field-label">{b.end}<input type="time" required value={open.new_end_time} onChange={(event) => set({ new_end_time: event.target.value })} /></label>
-            </div>}
-            <label className="field-label">{c.note}<input value={open.note} maxLength={200} onChange={(event) => set({ note: event.target.value })} autoFocus={open.action === 'cancel'} /></label>
-          </fieldset>
-          <div className="form-actions"><button type="submit" className={`button ${open.action === 'cancel' ? 'danger' : 'primary'}`} disabled={busy}>{open.action === 'cancel' ? c.cancel : c.save}</button>
-            <button type="button" className="button quiet" onClick={() => { setOpen(null); setError(null); }}>{c.close}</button></div>
-        </form>}
-        {error?.key === key && <div className="field-error" role="alert">{error.text}
-          {error.conflicts.length > 0 && <ul>{error.conflicts.map((x) => <li key={classKey(x)}>{x.batch_name}: {day(x.date)}, {timeRange(x, locale)}</li>)}</ul>}</div>}
-      </li>;
-    })}</ol>}
+    {classes && !upcoming.length && <p>{c.none}</p>}
+    {upcoming.length > 0 && <ol className="class-list">{upcoming.map(row)}</ol>}
+    {recent.length > 0 && <><h3 className="class-list-heading">{c.recent}</h3><p className="calendar-note">{c.recentLede}</p><ol className="class-list">{recent.map(row)}</ol></>}
   </section>;
+}
+
+// One class's attendance, marked by the teacher: present, late, absent or excused for each student.
+export function AttendanceSheet({ t, client, k, label, onClose, onSaved }) {
+  const c = t.portal.batches.classes;
+  const [sheet, setSheet] = useState(null);
+  const [marks, setMarks] = useState({});
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    client.teacher.attendance(k.batch_id, k.original_date).then((result) => {
+      if (!result.ok) return setError(t.portal.errors[apiErrorKey(result)]);
+      setSheet(result.data); setMarks(Object.fromEntries(result.data.students.map((s) => [s.student_id, s.status])));
+    });
+  }, [k.batch_id, k.original_date]);
+  const save = async (event) => {
+    event.preventDefault(); setBusy(true);
+    const result = await client.teacher.saveAttendance(k.batch_id, k.original_date, sheet.students.map((s) => ({ student_id: s.student_id, status: marks[s.student_id] || null })));
+    setBusy(false);
+    if (!result.ok) return setError(result.status === 409 ? String(result.data?.detail || t.portal.errors.conflict) : t.portal.errors[apiErrorKey(result)]);
+    onSaved();
+  };
+  return <form className="portal-form attendance-sheet" onSubmit={save} aria-label={`${c.attendance}: ${label}`}>
+    {!sheet && !error && <div className="skeleton" role="status"><span className="sr-only">{t.portal.users.loading}</span><span className="skeleton-row" aria-hidden="true" /></div>}
+    {sheet && !sheet.students.length && <p>{c.noStudents}</p>}
+    {sheet?.students.length > 0 && <>
+      <button type="button" className="button quiet" onClick={() => setMarks(Object.fromEntries(sheet.students.map((s) => [s.student_id, 'present'])))}>{c.allPresent}</button>
+      <ul className="attendance-list">{sheet.students.map((s) => <li key={s.student_id}>
+        <fieldset><legend><strong>{s.display_name}</strong><small>{marks[s.student_id] ? c.statuses[marks[s.student_id]] : c.notMarked}</small></legend>
+          <span className="attendance-choices">{['present', 'late', 'absent', 'excused'].map((status) => <label key={status}>
+            <input type="radio" name={`att-${s.student_id}`} value={status} checked={marks[s.student_id] === status} onChange={() => setMarks((m) => ({ ...m, [s.student_id]: status }))} />{c.statuses[status]}</label>)}</span>
+        </fieldset>
+      </li>)}</ul>
+    </>}
+    {error && <p className="field-error" role="alert">{error}</p>}
+    <div className="form-actions">{sheet?.students.length > 0 && <button type="submit" className="button primary" disabled={busy}>{c.saveAttendance}</button>}
+      <button type="button" className="button quiet" onClick={onClose}>{c.close}</button></div>
+  </form>;
 }

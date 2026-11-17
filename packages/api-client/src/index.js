@@ -34,6 +34,8 @@ export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || ''
       classes: (from, to) => request(`/api/teacher/classes?${new URLSearchParams({ from, to })}`),
       changeClass: (batchId, date, body) => send(`/api/teacher/batches/${id(batchId)}/classes/${id(date)}`, 'PUT', body),
       restoreClass: (batchId, date) => send(`/api/teacher/batches/${id(batchId)}/classes/${id(date)}`, 'DELETE'),
+      attendance: (batchId, date) => request(`/api/teacher/batches/${id(batchId)}/classes/${id(date)}/attendance`),
+      saveAttendance: (batchId, date, marks) => send(`/api/teacher/batches/${id(batchId)}/classes/${id(date)}/attendance`, 'PUT', { marks }),
       courses: () => request('/api/teacher/courses'),
       students: ({ q = '', courseId = '' } = {}) => request(`/api/teacher/students?${new URLSearchParams({ q, ...(courseId ? { course_id: courseId } : {}) })}`),
       batches: { list: () => request('/api/teacher/batches'), create: (batch) => request('/api/teacher/batches', { method: 'POST', body: JSON.stringify(batch) }), update: (id, changes) => request(`/api/teacher/batches/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }), remove: (id) => request(`/api/teacher/batches/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
