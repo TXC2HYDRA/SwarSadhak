@@ -5,10 +5,11 @@ from ..accounts import ROLES, academy_settings, create_user, now, public_user
 from ..db import connect
 from ..schedule import check_range, expand, load_exceptions
 from ..dependencies import require_role, user_roles
-from ..schemas import CourseCreate, CourseTeachers, CourseUpdate, EnrollmentCreate, EnrollmentUpdate, IntegrationsUpdate, OwnerUserCreate, OwnerUserUpdate
+from ..reports import attendance_report
+from ..schemas import BatchReassign, CourseCreate, CourseTeachers, CourseUpdate, EnrollmentCreate, EnrollmentUpdate, IntegrationsUpdate, OwnerUserCreate, OwnerUserUpdate
 from .. import google
 from ..security import hash_password
-from .teacher import mask_days
+from .teacher import check_batch, mask_days
 
 owner = require_role("owner")
 router = APIRouter(prefix="/api/owner", dependencies=[Depends(owner)])
@@ -186,3 +187,33 @@ def update_integrations(data: IntegrationsUpdate):
         c.execute("""INSERT INTO academy (id, name, timezone, google_connect_enabled) VALUES (1, ?, ?, ?)
             ON CONFLICT (id) DO UPDATE SET google_connect_enabled=excluded.google_connect_enabled""", (s["name"], s["timezone"], int(data.google_enabled)))
     return integrations()
+
+@router.get("/reports/attendance")
+def academy_attendance_report(start: date = Query(alias="from"), end: date = Query(alias="to")):
+    with connect() as c: return attendance_report(c, start, end)
+
+@router.post("/batches/{bid}/reassign")
+def reassign_batch(bid: str, data: BatchReassign):
+    """Hand a batch to another teacher of its course. The members' enrollments in that course move with it, in the
+    same transaction; past attendance and class changes stay with the batch. Refused rather than half done."""
+    with connect() as c:
+        row = c.execute("SELECT * FROM batches WHERE id=?", (bid,)).fetchone()
+        if not row: raise HTTPException(404, "batch not found")
+        if data.teacher_id == row["teacher_id"]: raise HTTPException(422, "the batch already belongs to this teacher")
+        if not c.execute("SELECT 1 FROM course_teachers WHERE course_id=? AND teacher_id=?", (row["course_id"], data.teacher_id)).fetchone() or not has_role(c, data.teacher_id, "teacher"):
+            raise HTTPException(422, "the new teacher is not assigned to this course")
+        members = [r[0] for r in c.execute("SELECT student_id FROM batch_members WHERE batch_id=?", (bid,))]
+        marks = ",".join("?" * len(members))
+        enrolled = {r[0] for r in c.execute(f"SELECT student_id FROM enrollments WHERE course_id=? AND student_id IN ({marks})", (row["course_id"], *members))} if members else set()
+        elsewhere = {r[0] for r in c.execute(f"""SELECT bm.student_id FROM batch_members bm JOIN batches b ON b.id=bm.batch_id
+            WHERE b.teacher_id=? AND b.course_id=? AND b.id != ? AND bm.student_id IN ({marks})""", (row["teacher_id"], row["course_id"], bid, *members))} if members else set()
+        names = lambda ids: [r[0] for r in c.execute(f"SELECT display_name FROM users WHERE id IN ({','.join('?' * len(ids))}) ORDER BY display_name COLLATE NOCASE", list(ids))]
+        if set(members) - enrolled: raise HTTPException(409, {"message": "some members are not enrolled in this course", "students": names(set(members) - enrolled)})
+        if elsewhere: raise HTTPException(409, {"message": "some members are also in another of this teacher's batches for the course", "students": names(elsewhere)})
+        batch = {"name": row["name"], "course_id": row["course_id"], "start_time": row["start_time"], "end_time": row["end_time"], "days": row["days"], "status": row["status"],
+                 "student_ids": members, "class_mode": row["class_mode"], "meeting_url": row["meeting_url"], "location": row["location"]}
+        check_batch(c, data.teacher_id, batch, exclude_id=bid, check_students=False)  # 409 with conflicts if the new teacher is busy then
+        c.execute("UPDATE batches SET teacher_id=?, meeting_space_id=NULL, updated_at=? WHERE id=?", (data.teacher_id, now(), bid))
+        moved = c.execute(f"UPDATE enrollments SET teacher_id=?, updated_at=? WHERE course_id=? AND student_id IN ({marks})", (data.teacher_id, now(), row["course_id"], *members)).rowcount if members else 0
+    # The Meet link (pasted or created) belongs to the previous teacher's Google account.
+    return {"batch_id": bid, "teacher_id": data.teacher_id, "moved_enrollments": moved, "warnings": ["meeting_link"] if row["class_mode"] != "offline" else []}

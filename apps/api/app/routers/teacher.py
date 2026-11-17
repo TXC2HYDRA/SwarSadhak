@@ -6,6 +6,7 @@ from ..accounts import academy_settings, now
 from ..db import connect
 from ..dependencies import require_role
 from .. import google
+from ..reports import attendance_report
 from ..meetings import PROVIDERS, create_google_space, google_space_link
 from ..schedule import academy_today, check_range, expand, load_exceptions, occurs, teacher_conflicts
 from ..schemas import DAYS, AttendanceSheet, BatchCreate, BatchUpdate, ClassChange
@@ -271,3 +272,7 @@ def google_disconnect(me=Depends(teacher)):
             except google.Reconnect: pass
         c.execute("DELETE FROM google_connections WHERE teacher_id=?", (me["id"],))
     return {"disconnected": True}
+
+@router.get("/reports/attendance")
+def my_attendance_report(start: date = Query(alias="from"), end: date = Query(alias="to"), me=Depends(teacher)):
+    with connect() as c: return attendance_report(c, start, end, me["id"])
