@@ -363,3 +363,7 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .attendance-choices label:has(input:checked) { background: color-mix(in srgb, var(--primary) 12%, var(--surface-raised)); border-color: var(--primary); font-weight: 650; }
 .attendance-choices input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); }
 @container (max-width: 640px) { .attendance-choices { display: grid; grid-template-columns: 1fr 1fr; width: 100%; margin-left: 0; } }
+
+/* Student timetable: dated classes first, then the weekly pattern. */
+.student-classes { container-type: inline-size; margin-bottom: 16px; }
+.timetable-weekly { margin: 28px 0 4px; }

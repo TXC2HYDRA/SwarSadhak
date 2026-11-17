@@ -61,7 +61,7 @@ test('shell renders sidebar, skip link, account and a phone bottom nav of four p
 
 test('staff portals and student assignments stay out of the main bundle (loaded on demand)', () => {
   const source = readFileSync(new URL('../apps/web/src/AccountRoot.jsx', import.meta.url), 'utf8');
-  for (const name of ['OwnerPortal', 'TeacherPortal', 'Assignments']) {
+  for (const name of ['OwnerPortal', 'TeacherPortal', 'Assignments', 'StudentClasses']) {
     assert.match(source, new RegExp(`lazy\\(\\(\\) => import\\('\\./${name}\\.jsx'\\)`), name);
     assert.doesNotMatch(source, new RegExp(`^import .*${name}`, 'm'), name);
   }

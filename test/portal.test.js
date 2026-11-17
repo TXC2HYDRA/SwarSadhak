@@ -22,6 +22,7 @@ before(async () => {
     ...(await server.ssrLoadModule('/src/TeacherPortal.jsx')),
     ...(await server.ssrLoadModule('/src/BatchCalendar.jsx')),
     ...(await server.ssrLoadModule('/src/StudentTimetable.jsx')),
+    ...(await server.ssrLoadModule('/src/StudentClasses.jsx')),
     ...(await server.ssrLoadModule('/src/Assignments.jsx')),
     App: (await server.ssrLoadModule('/src/main.jsx')).App,
     LandingPage: (await server.ssrLoadModule('/src/main.jsx')).LandingPage,
@@ -620,4 +621,21 @@ test('started classes take attendance; past ones are listed under recent classes
   const sheet = renderToStaticMarkup(React.createElement(web.AttendanceSheet, { t, client: { teacher: { attendance: () => new Promise(() => {}) } }, k: classes[0], label: 'Evening, Monday', onClose() {}, onSaved() {} }));
   assert.match(sheet, new RegExp(`aria-label="${c.attendance}: Evening, Monday"`));
   for (const locale of supportedLocales) assert.deepEqual(Object.keys(getTranslations(locale).portal.batches.classes.statuses), ['present', 'late', 'absent', 'excused'], locale);
+});
+
+test('students see classes coming up with Join, and their history with the attendance their teacher marked', () => {
+  const t = getTranslations('en'); const s = t.portal.student; const c = t.portal.batches.classes;
+  const k = (overrides) => ({ batch_id: 'b', batch_name: 'Evening', original_date: '2026-11-18', date: '2026-11-18', start_time: '18:00', end_time: '19:00', status: 'scheduled', note: '', course_name: 'Vocal', teacher_name: 'Guru', class_mode: 'online', meeting_url: 'https://meet.google.com/abc-defg-hij', my_attendance: null, ...overrides });
+  const list = (items, history = false) => renderToStaticMarkup(React.createElement(web.ClassList, { t, locale: 'en', state: { data: items }, items, today: '2026-11-18', clock: '17:50', title: 'T', lede: 'L', empty: 'E', history }));
+  const upcoming = list([k(), k({ batch_id: 'x', date: '2026-11-20', original_date: '2026-11-20', status: 'cancelled', meeting_url: null, note: 'Guru travelling' })]);
+  const [soon, off] = upcoming.split('<li ').slice(1);
+  assert.ok(soon.includes(t.portal.teacher.startingSoon) && soon.includes(`aria-label="${t.portal.teacher.joinClass}: Evening (opens in a new tab)"`));
+  assert.ok(off.includes(t.portal.teacher.cancelled) && off.includes('Guru travelling') && !off.includes('join-link'));
+  const history = list([k({ date: '2026-11-16', original_date: '2026-11-16', my_attendance: 'late' }), k({ date: '2026-11-13', original_date: '2026-11-13' })], true);
+  const [late, unmarked] = history.split('<li ').slice(1);
+  assert.ok(late.includes(`status-badge warning">${c.statuses.late}<`) && !late.includes('join-link'));
+  assert.ok(unmarked.includes(`>${c.notMarked}<`));
+  assert.ok(list([]).includes('<p>E</p>'));
+  for (const locale of supportedLocales) { const ls = getTranslations(locale).portal.student; assert.ok(ls.upcoming && ls.history && ls.weekly && ls.historyLede, locale); }
+  assert.ok(s.historyLede.includes('teacher'));
 });
