@@ -1,44 +1,13 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { LoadState, useApi } from './PortalShell.jsx';
-import { MODE_ICONS, MeetLink, TodayPanel, modeLabel, timeRange } from './ClassViews.jsx';
-import { DAYS, addDays, due, nextClass, nowIn, todayIn } from './schedule.js';
+import { TodayPanel } from './ClassViews.jsx';
+import { addDays, due, nowIn, todayIn } from './schedule.js';
 import './portal.css';
-
-export const timetableDays = (batches) => DAYS.map((day, index) => ({ day, index, items: batches.filter((batch) => batch.days.includes(day)) })).filter((day) => day.items.length);
 
 // Not handed in yet: no answer, or only a draft. The API already sorts by due date.
 export const openAssignments = (items = []) => items.filter((item) => !item.submission || item.submission.status === 'draft');
 
-// A weekly list, not a grid: a student has a few classes, and a list reads well on a phone.
-export function StudentTimetable({ t, locale = 'en', client, now }) {
-  const s = t.portal.student; const b = t.portal.batches;
-  const batches = useApi(t, () => client.student.batches());
-  const academy = useApi(t, () => client.academy());
-  const timezone = academy.data?.timezone || 'Asia/Kolkata';
-  const today = todayIn(timezone, now);
-  const todayIndex = (new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7;
-  const days = timetableDays(batches.data || []);
-  const next = batches.data ? nextClass(batches.data, today, nowIn(timezone, now)) : null;
-  return <div className="page portal-page student-timetable">
-    <h1>{s.title}</h1><p className="page-lede">{s.lede}</p>
-    <p className="calendar-note">{b.timezoneNote.replace('{timezone}', timezone)}</p>
-    <LoadState t={t} state={batches} empty={s.empty} />
-    {days.map(({ day, index, items }) => <section key={day} className={`panel timetable-day${index === todayIndex ? ' is-today' : ''}`} aria-labelledby={`day-${day}`}>
-      <h2 id={`day-${day}`}>{b.dayLong[day]}{index === todayIndex && <span className="chip">{s.today}</span>}</h2>
-      <ul className="student-list">{items.map((batch) => {
-        const isNext = next?.batch.id === batch.id && next.dayIndex === index;
-        return <li key={batch.id} className={batch.status === 'paused' ? 'is-paused' : isNext ? 'is-next' : undefined}>
-          <strong>{timeRange(batch, locale)} · {batch.name}</strong>
-          <small>{batch.course_name} · {s.teacher}: {batch.teacher_name}</small>
-          <small className="class-mode">{React.createElement(MODE_ICONS[batch.class_mode || 'offline'], { size: 14, 'aria-hidden': true })}{modeLabel(b, batch)}</small>
-          <MeetLink b={b} batch={batch} />
-          {(batch.status === 'paused' || isNext) && <span className="chip-row">{batch.status === 'paused' ? <span className="chip">{b.paused}</span> : <span className="status-badge warning">{t.portal.teacher.upNext}</span>}</span>}
-        </li>;
-      })}</ul>
-    </section>)}
-  </div>;
-}
 
 // The academy half of the student home: today's classes and work still to hand in. Practice stays local-first.
 export function StudentToday({ t, locale = 'en', client, now, onTimetable, onAssignments }) {

@@ -99,6 +99,7 @@ export const portalUi = {
     student: {
       nav: 'Timetable', title: 'My timetable', lede: 'Your weekly classes. Your teachers schedule them.', teacher: 'Teacher', today: 'Today',
       empty: 'You are not in a batch yet. Your teacher adds you to one.',
+      upcoming: 'Coming up', upcomingLede: 'The next 7 days, with any change your teacher has made.', upcomingEmpty: 'No classes in the next 7 days.', history: 'Class history', historyLede: 'The last 30 days. Attendance is marked by your teacher.', historyEmpty: 'No classes in the last 30 days.', weekly: 'Every week',
       openWork: 'To hand in', noOpenWork: 'Nothing to hand in right now.', allWork: 'See all {count}',
     },
   },
@@ -195,6 +196,7 @@ export const portalUi = {
     student: {
       nav: 'वेळापत्रक', title: 'माझे वेळापत्रक', lede: 'तुमचे साप्ताहिक वर्ग. ते तुमचे शिक्षक ठरवतात.', teacher: 'शिक्षक', today: 'आज',
       empty: 'तुम्ही अद्याप कोणत्याही बॅचमध्ये नाही. तुमचे शिक्षक तुम्हाला बॅचमध्ये जोडतील.',
+      upcoming: 'पुढचे वर्ग', upcomingLede: 'पुढचे ७ दिवस, शिक्षकांनी केलेल्या बदलांसह.', upcomingEmpty: 'पुढच्या ७ दिवसांत वर्ग नाहीत.', history: 'वर्गांचा इतिहास', historyLede: 'मागचे ३० दिवस. हजेरी तुमचे शिक्षक नोंदवतात.', historyEmpty: 'मागच्या ३० दिवसांत वर्ग नाहीत.', weekly: 'दर आठवड्याला',
       openWork: 'जमा करायचे', noOpenWork: 'सध्या जमा करण्यासारखे काही नाही.', allWork: 'सर्व {count} पाहा',
     },
   },
@@ -291,6 +293,7 @@ export const portalUi = {
     student: {
       nav: 'समय-सारिणी', title: 'मेरी समय-सारिणी', lede: 'आपकी साप्ताहिक कक्षाएँ। इन्हें आपके शिक्षक तय करते हैं।', teacher: 'शिक्षक', today: 'आज',
       empty: 'आप अभी किसी बैच में नहीं हैं। आपके शिक्षक आपको बैच में जोड़ेंगे।',
+      upcoming: 'आने वाली कक्षाएँ', upcomingLede: 'अगले 7 दिन, आपके शिक्षक के किए बदलावों के साथ।', upcomingEmpty: 'अगले 7 दिनों में कोई कक्षा नहीं।', history: 'कक्षाओं का इतिहास', historyLede: 'पिछले 30 दिन। उपस्थिति आपके शिक्षक दर्ज करते हैं।', historyEmpty: 'पिछले 30 दिनों में कोई कक्षा नहीं।', weekly: 'हर सप्ताह',
       openWork: 'जमा करना है', noOpenWork: 'अभी जमा करने के लिए कुछ नहीं है।', allWork: 'सभी {count} देखें',
     },
   },
