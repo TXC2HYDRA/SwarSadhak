@@ -115,7 +115,7 @@ export function BatchCalendar({ t, locale, batches, timezone, today, now, select
   </section>;
 }
 
-export function BatchDialog({ t, locale, state, courses, students, onClose, onSave, onRemove, onToggle }) {
+export function BatchDialog({ t, locale, state, canGenerate = false, courses, students, onClose, onSave, onRemove, onToggle }) {
   const b = t.portal.batches;
   const ref = useRef(null);
   const [form, setForm] = useState(state?.form);
@@ -171,11 +171,19 @@ export function BatchDialog({ t, locale, state, courses, students, onClose, onSa
       <fieldset className="mode-choice"><legend>{b.classMode}</legend>
         {['offline', 'online', 'hybrid'].map((mode) => { const Icon = MODE_ICONS[mode]; return <label key={mode}><input type="radio" name="class_mode" value={mode} checked={form.class_mode === mode} onChange={() => set({ class_mode: mode })} /><Icon size={16} aria-hidden="true" />{b.modes[mode]}</label>; })}
       </fieldset>
-      {form.class_mode !== 'offline' && <>
+      {form.class_mode !== 'offline' && form.generate_meet && <div className="meet-generate" role="group" aria-label={b.meetLink}>
+        <p>{b.generateNote}</p>
+        <button type="button" className="button quiet" onClick={() => set({ generate_meet: false })}>{b.pasteInstead}</button>
+      </div>}
+      {form.class_mode !== 'offline' && !form.generate_meet && <>
         <label className="field-label">{b.meetLink}<input type="url" inputMode="url" autoComplete="off" spellCheck="false" placeholder="https://meet.google.com/abc-defg-hij" value={form.meeting_url} onChange={(event) => set({ meeting_url: event.target.value })} maxLength={300} aria-invalid={errors.includes('meetingUrl')} aria-describedby="meet-hint" /></label>
         <p className="field-hint" id="meet-hint">{b.meetHint}</p>
         {errors.includes('meetingUrl') && <p className="field-error">{b.errors.meetingUrl}</p>}
-        {meetLink(form.meeting_url) && <a className="button quiet meet-open" href={meetLink(form.meeting_url)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" />{b.openLink}</a>}
+        {state.batch?.meeting_generated && form.meeting_url === state.batch.meeting_url && <p className="field-hint">{b.generatedHint}</p>}
+        <div className="meet-actions">
+          {meetLink(form.meeting_url) && <a className="button quiet meet-open" href={meetLink(form.meeting_url)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" />{b.openLink}</a>}
+          {canGenerate && <button type="button" className="button quiet" onClick={() => set({ generate_meet: true })}>{b.generateMeet}</button>}
+        </div>
       </>}
       {form.class_mode !== 'online' && <label className="field-label">{b.location}<input value={form.location} onChange={(event) => set({ location: event.target.value })} maxLength={200} /></label>}
       <fieldset className="student-picker"><legend>{b.students} · {fill(b.selected, { count: form.student_ids.length })}</legend>
