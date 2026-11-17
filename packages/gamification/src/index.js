@@ -1,12 +1,12 @@
 export const XP_RULES = Object.freeze({ item: 10, routine: 25, firstPractice: 20, newDay: 5, warmup: 3, cooldown: 3 });
 export const ACHIEVEMENTS = Object.freeze([
-  { id: 'first-practice', titleKey: 'achievements.firstPractice.title', descriptionKey: 'achievements.firstPractice.description' },
-  { id: 'first-routine', titleKey: 'achievements.firstRoutine.title', descriptionKey: 'achievements.firstRoutine.description' },
-  { id: 'three-sessions', titleKey: 'achievements.threeSessions.title', descriptionKey: 'achievements.threeSessions.description' },
-  { id: 'five-minutes', titleKey: 'achievements.fiveMinutes.title', descriptionKey: 'achievements.fiveMinutes.description' },
-  { id: 'warmup', titleKey: 'achievements.warmup.title', descriptionKey: 'achievements.warmup.description' },
-  { id: 'cooldown', titleKey: 'achievements.cooldown.title', descriptionKey: 'achievements.cooldown.description' },
-  { id: 'three-days', titleKey: 'achievements.threeDays.title', descriptionKey: 'achievements.threeDays.description' },
+  { id: 'first-practice', titleKey: 'achievementList.firstPractice.title', descriptionKey: 'achievementList.firstPractice.description' },
+  { id: 'first-routine', titleKey: 'achievementList.firstRoutine.title', descriptionKey: 'achievementList.firstRoutine.description' },
+  { id: 'three-sessions', titleKey: 'achievementList.threeSessions.title', descriptionKey: 'achievementList.threeSessions.description' },
+  { id: 'five-minutes', titleKey: 'achievementList.fiveMinutes.title', descriptionKey: 'achievementList.fiveMinutes.description' },
+  { id: 'warmup', titleKey: 'achievementList.warmup.title', descriptionKey: 'achievementList.warmup.description' },
+  { id: 'cooldown', titleKey: 'achievementList.cooldown.title', descriptionKey: 'achievementList.cooldown.description' },
+  { id: 'three-days', titleKey: 'achievementList.threeDays.title', descriptionKey: 'achievementList.threeDays.description' },
 ]);
 
 // Participation is deliberately stricter than merely having a completed flag.

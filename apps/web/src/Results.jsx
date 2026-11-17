@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Check } from 'lucide-react';
 import { ALANKARS, getExercise } from '@swarsadhak/exercises';
 import { deterministicCoach } from '@swarsadhak/ai-coach';
 import { createApiClient } from '@swarsadhak/api-client';
@@ -39,7 +40,7 @@ export function Results({ t, session, saved = null, onSaveAgain, onBack, onRetry
   const exercise = getExercise(session?.exerciseId);
   const providerKey = `coachingProvider${provider[0].toUpperCase()}${provider.slice(1)}`;
   return <div className="page results-page"><p className="eyebrow">{t.studioUi.completed}</p><h1>{t.results}</h1>
-    {session && <section className="panel"><h2>{textAt(t, alankar?.nameKey || exercise?.nameKey || 'exercises.saSustain.name')}</h2>
+    {session && <section className="results-block"><h2>{textAt(t, alankar?.nameKey || exercise?.nameKey || 'exercises.saSustain.name')}</h2>
       {alankar && <p>{t[session.completion.direction]} · {session.completion.bpm} {t.bpm} · {session.completion.loops} {t.loops}</p>}
       <p>{session.completion?.reason === 'duration-complete' ? t.studioUi.finishedDuration : t.studioUi.finishedEarly}</p>
       {Number.isFinite(session.tonicFrequency) && <Metric label={t.tonic} value={`${session.tonicFrequency} Hz`} />}
@@ -48,16 +49,18 @@ export function Results({ t, session, saved = null, onSaveAgain, onBack, onRetry
       {(alankar || exercise?.limited) && <p className="notice">{alankar ? t.studioUi.alankarScope : t.studioUi.limited}</p>}
     </section>}
     {sufficient ? <>
-      {saved !== null && <section className={`notice ${saved ? '' : 'warning'}`} role="status"><div><p>{saved ? t.studioUi.saved : t.studioUi.unsaved}</p>{!saved && <button className="button" onClick={onSaveAgain}>{t.studioUi.saveAgain}</button>}</div></section>}
-      <section className="panel"><h2>{t.measurement}</h2>
+      {saved === true && <p className="saved-note" role="status"><Check size={16} aria-hidden="true" />{t.studioUi.saved}</p>}
+      {saved === false && <section className="notice warning" role="status"><div><p>{t.studioUi.unsaved}</p><button className="button" onClick={onSaveAgain}>{t.studioUi.saveAgain}</button></div></section>}
+      <section className="results-block"><h2>{t.measurement}</h2>
         <Metric label={t.reliableMatch} value={measurement(session.metrics.reliablePitchMatchPercent, '%', t.studioUi.notMeasured)} />
         <Metric label={t.deviation} value={measurement(session.metrics.medianAbsoluteCents, ` ${t.cents}`, t.studioUi.notMeasured)} />
         <Metric label={t.stability} value={measurement(session.metrics.pitchStabilityCents, ` ${t.cents}`, t.studioUi.notMeasured)} />
         <Metric label={t.studioUi.evidence} value={`${session.metrics.reliableFrameCount} / ${session.metrics.totalFrameCount}`} />
-        <p>{t.studioUi.measuredOnly}</p><p>{t.noHealthClaim}</p>
+        <p className="results-note">{t.studioUi.measuredOnly} {t.noHealthClaim}</p>
       </section>
-      <section className="panel"><p className="eyebrow">{provider === 'deterministic' ? t.studioUi.localCoach : `${t.coachingProvider}: ${t[providerKey]}`}</p>
-        <h2>{textAt(t, displayed.messageKey)}</h2><p>{textAt(t, displayed.reasonKey)}</p><small>{t.coachingPrivacy}</small>
+      <section className="results-block coach-block"><p className="eyebrow">{provider === 'deterministic' ? t.studioUi.localCoach : `${t.coachingProvider}: ${t[providerKey]}`}</p>
+        {/* Some coach messages and reasons are the same sentence; show it once. */}
+        <h2>{textAt(t, displayed.messageKey)}</h2>{textAt(t, displayed.reasonKey) !== textAt(t, displayed.messageKey) && <p>{textAt(t, displayed.reasonKey)}</p>}<small>{t.coachingPrivacy}</small>
       </section>
     </> : <div className="notice" role="status"><div><p>{t.studioUi.insufficient}</p><p>{t.studioUi.evidencePolicy}</p></div></div>}
     <div className="top-actions">

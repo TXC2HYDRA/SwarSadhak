@@ -121,3 +121,15 @@ test('localizing labels leaves canonical exercises and pitch targets unchanged',
   }
   assert.deepEqual({ ALANKARS, EXERCISES, SWARAS, NOTE_TARGETS }, before);
 });
+
+test('every achievement has a translated title and description in each locale', async () => {
+  const { ACHIEVEMENTS } = await import('../packages/gamification/src/index.js');
+  const { getTranslations: translate } = await import('../packages/localization/src/index.js');
+  const at = (t, key) => key.split('.').reduce((value, part) => value?.[part], t);
+  for (const locale of ['en', 'mr', 'hi']) {
+    const t = translate(locale);
+    for (const achievement of ACHIEVEMENTS) {
+      for (const key of [achievement.titleKey, achievement.descriptionKey]) assert.equal(typeof at(t, key), 'string', `${locale} ${key}`);
+    }
+  }
+});
