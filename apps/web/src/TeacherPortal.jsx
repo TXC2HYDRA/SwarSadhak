@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { ArrowRight, CalendarPlus, ClipboardList, LayoutDashboard, Search } from 'lucide-react';
+import { ArrowRight, CalendarPlus, ClipboardList, LayoutDashboard, Search, Video } from 'lucide-react';
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
 import { BatchCalendar, BatchDialog, timeRange } from './BatchCalendar.jsx';
 import { TeacherAssignments } from './Assignments.jsx';
 import { apiErrorKey } from './auth.js';
-import { DAYS, formatDate, nextClass, nowIn, slotForm, todayIn } from './schedule.js';
+import { addDays, canJoin, classState, formatDate, meetLink, nextOf, nowIn, slotForm, todayIn } from './schedule.js';
 
 export function TeacherPortal({ shell, client, user }) {
   const [page, setPage] = useUrlPage('teacher', ['dashboard', 'assignments'], 'dashboard');
@@ -40,6 +40,7 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
   const timezone = academy.data?.timezone || 'Asia/Kolkata';
   const today = todayIn(timezone, now);
   const clock = nowIn(timezone, now);
+  const classes = useApi(t, () => client.teacher.classes(today, addDays(today, 7)), [today]);
   const reviews = assignments.data?.reduce((sum, item) => sum + (item.submitted_count || 0), 0);
   const visible = filterStudents(students.data || [], query, courseId);
   const courseList = courses.data || [];
@@ -60,7 +61,7 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
   };
   const finish = (result, text) => {
     setNotice({ text, warnings: result.data?.warnings || [] });
-    close(); batches.reload(); summary.reload();
+    close(); batches.reload(); summary.reload(); classes.reload();
   };
   const save = async (form) => {
     const body = { ...form, name: form.name.trim(), meeting_url: form.class_mode === 'offline' ? null : form.meeting_url.trim() };
@@ -79,8 +80,9 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
     if (result.ok) finish(result, b.removed); else { close(); setNotice({ text: problem(result).text, error: true }); }
   };
   const activeCount = (batches.data || []).filter((batch) => batch.status === 'active').length;
-  const upcoming = batches.data ? nextClass(batches.data, today, clock) : null;
-  const live = upcoming?.date === today && upcoming.batch.start_time <= clock;
+  const upcoming = classes.data ? nextOf(classes.data, today, clock) : null;
+  const timing = upcoming && classState(upcoming, today, clock);
+  const batchOf = (k) => (batches.data || []).find((batch) => batch.id === k.batch_id);
 
   return <div className="page portal-page teacher-page">
     <div className="page-heading-row"><div><h1>{p.title}</h1><p className="page-lede">{p.lede}</p></div>
@@ -92,12 +94,14 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
         <div><dt>{b.activeBatches}</dt><dd>{batches.data ? activeCount : '–'}</dd></div>
         <div><dt>{p.reviews}</dt><dd><button type="button" className={`metric-link${reviews ? ' has-items' : ''}`} onClick={onReviews} aria-label={`${p.reviews}: ${reviews ?? '–'}`}>{reviews ?? '–'}<ArrowRight size={16} aria-hidden="true" /></button></dd></div>
       </dl>
-      {upcoming && <button type="button" className="next-inline" onClick={() => openEdit(upcoming.batch)}>
-        <span className={`status-badge ${live ? 'success' : 'next'}`}>{live ? p.live : p.nextClass}</span>
-        <strong>{upcoming.batch.name}</strong>
-        <span>{upcoming.date === today ? p.today : `${b.dayLong[DAYS[upcoming.dayIndex]]} ${formatDate(upcoming.date, locale, { day: 'numeric', month: 'short' })}`}, {timeRange(upcoming.batch, locale)}</span>
-      </button>}
-      {batches.data && !upcoming && <p className="next-inline is-empty">{p.todayEmpty}</p>}
+      {upcoming && <div className="next-group"><button type="button" className="next-inline" onClick={() => batchOf(upcoming) && openEdit(batchOf(upcoming))}>
+        <span className={`status-badge ${timing === 'live' ? 'success' : 'next'}`}>{timing === 'live' ? p.live : timing === 'soon' ? p.startingSoon : p.nextClass}</span>
+        <strong>{upcoming.batch_name}</strong>
+        <span>{upcoming.date === today ? p.today : formatDate(upcoming.date, locale, { weekday: 'long', day: 'numeric', month: 'short' })}, {timeRange(upcoming, locale)}</span>
+      </button>
+        {canJoin(upcoming, today, clock) && <a className="button primary join-link" href={meetLink(upcoming.meeting_url)} target="_blank" rel="noopener noreferrer" aria-label={`${p.startClass}: ${upcoming.batch_name} (${b.newTab})`}><Video size={16} aria-hidden="true" />{p.startClass}</a>}
+      </div>}
+      {classes.data && !upcoming && <p className="next-inline is-empty">{p.todayEmpty}</p>}
     </div>
     {notice && <div className={`notice ${notice.error ? 'error' : notice.warnings?.length ? 'warning' : 'success'}`} role={notice.error ? 'alert' : 'status'}><span>{notice.warnings?.length ? b.warning : notice.text}
       {(notice.warnings?.length > 0 || notice.conflicts?.length > 0) && <ul>{(notice.warnings || []).map((item) => <li key={`${item.student_id}-${item.batch_name}`}>{item.student_name}: {item.batch_name}, {item.days.map((day) => b.dayShort[day]).join(', ')} {timeRange(item, locale)}</li>)}

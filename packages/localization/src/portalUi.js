@@ -68,7 +68,7 @@ export const portalUi = {
       ownerTitle: 'Batches', ownerLede: 'Every teacher’s weekly batches. Teachers create and edit their own batches.', teacher: 'Teacher', schedule: 'Schedule', status: 'Status',
     },
     teacher: {
-      today: 'Today', todayEmpty: 'No classes today.', nextClass: 'Next class', live: 'Now', upNext: 'Next', finished: 'Done', reviews: 'Answers to review', classesToday: 'Classes today',
+      today: 'Today', todayEmpty: 'No classes today.', nextClass: 'Next class', live: 'Class time', startingSoon: 'Starting soon', cancelled: 'Cancelled', movedFrom: 'Moved from {date}', startClass: 'Start class', joinClass: 'Join class', upNext: 'Next', finished: 'Done', reviews: 'Answers to review', classesToday: 'Classes today',
       title: 'Teacher dashboard', lede: 'Your students and weekly batch calendar.', students: 'My students', studentCount: 'Students assigned to you',
       search: 'Search students', allCourses: 'All courses', courseFilter: 'Course',
       noStudents: 'No students are enrolled with you yet. The academy Owner manages enrollments.', noMatches: 'No students match your search.',
@@ -163,7 +163,7 @@ export const portalUi = {
       ownerTitle: 'बॅच', ownerLede: 'सर्व शिक्षकांच्या साप्ताहिक बॅच. शिक्षक स्वतःच्या बॅच तयार व संपादित करतात.', teacher: 'शिक्षक', schedule: 'वेळापत्रक', status: 'स्थिती',
     },
     teacher: {
-      today: 'आज', todayEmpty: 'आज वर्ग नाहीत.', nextClass: 'पुढचा वर्ग', live: 'सुरू आहे', upNext: 'पुढे', finished: 'झाला', reviews: 'तपासायची उत्तरे', classesToday: 'आजचे वर्ग',
+      today: 'आज', todayEmpty: 'आज वर्ग नाहीत.', nextClass: 'पुढचा वर्ग', live: 'वर्गाची वेळ', startingSoon: 'लवकरच सुरू', cancelled: 'रद्द', movedFrom: '{date} वरून हलवला', startClass: 'वर्ग सुरू करा', joinClass: 'वर्गात सामील व्हा', upNext: 'पुढे', finished: 'झाला', reviews: 'तपासायची उत्तरे', classesToday: 'आजचे वर्ग',
       title: 'शिक्षक डॅशबोर्ड', lede: 'तुमचे विद्यार्थी आणि साप्ताहिक बॅच कॅलेंडर.', students: 'माझे विद्यार्थी', studentCount: 'तुम्हाला नेमलेले विद्यार्थी',
       search: 'विद्यार्थी शोधा', allCourses: 'सर्व अभ्यासक्रम', courseFilter: 'अभ्यासक्रम',
       noStudents: 'अद्याप तुमच्याकडे कोणत्याही विद्यार्थ्याचा प्रवेश नाही. प्रवेश अकॅडमी मालक व्यवस्थापित करतात.', noMatches: 'शोधाशी जुळणारे विद्यार्थी नाहीत.',
@@ -258,7 +258,7 @@ export const portalUi = {
       ownerTitle: 'बैच', ownerLede: 'सभी शिक्षकों के साप्ताहिक बैच। शिक्षक अपने बैच खुद बनाते और संपादित करते हैं।', teacher: 'शिक्षक', schedule: 'समय-सारणी', status: 'स्थिति',
     },
     teacher: {
-      today: 'आज', todayEmpty: 'आज कोई कक्षा नहीं है।', nextClass: 'अगली कक्षा', live: 'चल रही है', upNext: 'अगली', finished: 'हो गई', reviews: 'जांचने के उत्तर', classesToday: 'आज की कक्षाएं',
+      today: 'आज', todayEmpty: 'आज कोई कक्षा नहीं है।', nextClass: 'अगली कक्षा', live: 'कक्षा का समय', startingSoon: 'जल्द शुरू', cancelled: 'रद्द', movedFrom: '{date} से बदली गई', startClass: 'कक्षा शुरू करें', joinClass: 'कक्षा में शामिल हों', upNext: 'अगली', finished: 'हो गई', reviews: 'जांचने के उत्तर', classesToday: 'आज की कक्षाएं',
       title: 'शिक्षक डैशबोर्ड', lede: 'आपके विद्यार्थी और साप्ताहिक बैच कैलेंडर।', students: 'मेरे विद्यार्थी', studentCount: 'आपको सौंपे गए विद्यार्थी',
       search: 'विद्यार्थी खोजें', allCourses: 'सभी पाठ्यक्रम', courseFilter: 'पाठ्यक्रम',
       noStudents: 'अभी आपके साथ कोई विद्यार्थी नामांकित नहीं है। नामांकन अकादमी मालिक प्रबंधित करते हैं।', noMatches: 'खोज से मेल खाने वाला कोई विद्यार्थी नहीं।',

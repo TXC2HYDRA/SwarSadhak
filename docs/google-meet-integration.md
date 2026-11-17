@@ -149,6 +149,7 @@ CREATE TABLE attendance (batch_id TEXT NOT NULL REFERENCES batches(id) ON DELETE
 
 **Progress.**
 - 2a (API): migration 7 (`class_exceptions`, `attendance`), `app/schedule.py` (`expand`, `teacher_conflicts`), `GET /api/{teacher,student,owner}/classes`, `PUT`/`DELETE /api/teacher/batches/{id}/classes/{date}`. Rules settled while building: any real class of an active batch can be cancelled, past or future (an honest record); a class can only be moved to today or later; only the teacher's own classes are checked for overlap (student clashes are not checked for one-off moves); a moved class appears on its new date only, carrying `original_date`. pytest 88/88 (8 new in `tests/test_classes.py`).
+- 2b (web): the Today panels of all three roles and the teacher's next-class strip now read `/classes`, so cancelled classes show as Cancelled (and are skipped for "next"), moved classes show "Moved from …", and each row shows the mode. States come from `classState()`: Starting soon (15 minutes before), Class time (renamed from "Now"), Done, Cancelled. Start class (teacher) and Join class (student) are real links to the batch's Meet, shown only inside that window for online or hybrid classes with a link; the Owner gets none. node 171/171.  Screenshot: [today panels](meet-integration/phase2-today-panels.jpg) (student at 5:50 PM and 6:20 PM, teacher, owner).
 
 **Delivery.** 2a server expansion + exceptions; 2b teacher Online classes + cancel/reschedule; 2c student My online classes + history; 2d attendance; 2e owner views.
 

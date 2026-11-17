@@ -4,7 +4,7 @@ import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, Sheet, TableSearch, Toast, matches, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
 import { TodayPanel, modeLabel, timeRange } from './BatchCalendar.jsx';
-import { nowIn, todayIn } from './schedule.js';
+import { addDays, nowIn, todayIn } from './schedule.js';
 
 const ROLES = ['owner', 'teacher', 'student'];
 const emptyForm = { id: null, username: '', display_name: '', password: '', roles: [] };
@@ -48,6 +48,8 @@ export function OverviewPage({ t, locale = 'en', client, now, onNavigate = () =>
   const enrollments = useApi(t, () => client.owner.enrollments.list());
   const academy = useApi(t, () => client.academy());
   const timezone = academy.data?.timezone || 'Asia/Kolkata';
+  const today = todayIn(timezone, now);
+  const classes = useApi(t, () => client.owner.classes(today, addDays(today, 7)), [today]);
   const stats = [['teachers', o.teachers, 'users'], ['students', o.students, 'users'], ['courses', o.courses, 'courses'], ['active_enrollments', o.enrollments, 'enrollments'], ['active_batches', o.batches, 'batches']];
   const loaded = [batches, courses, students, enrollments].every((state) => state.data);
   const attention = loaded ? ownerAttention({ courses: courses.data, students: students.data, enrollments: enrollments.data, batches: batches.data }) : [];
@@ -56,7 +58,7 @@ export function OverviewPage({ t, locale = 'en', client, now, onNavigate = () =>
     <LoadState t={t} state={summary} />
     {summary.data && <div className="summary-row"><dl className="metric-strip">{stats.map(([key, label, page]) => <div key={key}><dt>{label}</dt><dd><button type="button" className="metric-link" onClick={() => onNavigate(page)} aria-label={`${label}: ${summary.data[key]}`}>{summary.data[key]}<ArrowRight size={16} aria-hidden="true" /></button></dd></div>)}</dl></div>}
     <div className="workspace-grid owner-grid">
-      <TodayPanel t={t} locale={locale} batches={batches.data} today={todayIn(timezone, now)} clock={nowIn(timezone, now)} onBatch={() => onNavigate('batches')} />
+      <TodayPanel t={t} locale={locale} classes={classes.data} today={today} clock={nowIn(timezone, now)} onClass={() => onNavigate('batches')} />
       <section className="panel attention-panel" aria-labelledby="attention-title">
         <h2 id="attention-title">{o.attention}</h2>
         {!loaded ? <div className="skeleton" role="status"><span className="sr-only">{t.portal.users.loading}</span>{[0, 1].map((row) => <span key={row} className="skeleton-row" aria-hidden="true" />)}</div> : !attention.length ? <p>{o.allClear}</p>
