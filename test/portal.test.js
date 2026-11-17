@@ -316,6 +316,28 @@ test('owner batches page and teacher create button render in every locale', () =
   }
 });
 
+test('API client builds Google account and integration requests', async () => {
+  const calls = [];
+  const client = createApiClient({ baseUrl: 'http://api.test', token: 't', fetchImpl: async (url, options) => { calls.push([url, options.method || 'GET', options.body]); return new Response('{}'); } });
+  await client.teacher.google.status();
+  await client.teacher.google.connect();
+  await client.teacher.google.disconnect();
+  await client.owner.integrations.get();
+  await client.owner.integrations.update({ google_enabled: true });
+  assert.deepEqual(calls, [
+    ['http://api.test/api/teacher/google', 'GET', undefined],
+    ['http://api.test/api/teacher/google/connect', 'POST', undefined],
+    ['http://api.test/api/teacher/google', 'DELETE', undefined],
+    ['http://api.test/api/owner/integrations', 'GET', undefined],
+    ['http://api.test/api/owner/integrations', 'PATCH', '{"google_enabled":true}'],
+  ]);
+  for (const locale of supportedLocales) {
+    const g = getTranslations(locale).portal.google;
+    assert.deepEqual(Object.keys(g.results).sort(), ['connected', 'denied', 'expired', 'failed', 'missing_scope'], locale);
+    assert.ok(g.connectedAs.includes('{email}') && g.connectedTeachers.includes('{count}'), locale);
+  }
+});
+
 test('API client builds batch and academy requests', async () => {
   const calls = [];
   const client = createApiClient({ baseUrl: 'http://api.test', token: 't', fetchImpl: async (url, options) => { calls.push([url, options.method || 'GET', options.body]); return new Response('{}'); } });

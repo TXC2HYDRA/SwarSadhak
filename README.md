@@ -154,6 +154,7 @@ Open `http://localhost:4173` and sign in as `owner`. The API runs at `http://loc
   - `API_PORT` and `WEB_PORT` change the host ports (defaults 8020 and 4173).
   - `PUBLIC_API_URL` and `PUBLIC_WEB_URL` are the addresses browsers use, when not `http://localhost:<port>`, for example behind a domain.
   - `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET` switch file storage to Cloudflare R2.
+  - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` and `TOKEN_ENCRYPTION_KEY` let teachers connect Google to create Meet links (optional; see `docs/google-meet-integration.md`).
 - The web app is built with `PUBLIC_API_URL` baked in. Rebuild with `docker compose up --build -d` after changing it.
 - Check storage inside the container: `docker compose exec api python run.py check-storage`.
 - Logs: `docker compose logs -f api`. Stop: `docker compose down`.

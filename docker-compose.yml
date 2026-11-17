@@ -16,6 +16,12 @@ services:
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
       R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
       R2_BUCKET: ${R2_BUCKET:-}
+      # Optional: teachers connect Google to create Meet links (docs/google-meet-integration.md, "Setting up Google").
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:-}
+      WEB_APP_URL: ${PUBLIC_WEB_URL:-http://localhost:${WEB_PORT:-4173}}
     ports:
       - "${API_PORT:-8020}:8020"
     volumes:

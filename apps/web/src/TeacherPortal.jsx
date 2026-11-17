@@ -38,6 +38,13 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
   const [dialog, setDialog] = useState(null);
   const [selected, setSelected] = useState(null);
   const [notice, setNotice] = useState(null);
+  // Back from Google's consent screen: /teacher?google=connected|denied|expired|missing_scope|failed.
+  useEffect(() => {
+    const result = new URLSearchParams(globalThis.location?.search || '').get('google');
+    if (!result || !t.portal.google.results[result]) return;
+    setNotice({ text: t.portal.google.results[result], error: result !== 'connected' });
+    globalThis.history?.replaceState(null, '', globalThis.location.pathname);
+  }, []);
   const timezone = academy.data?.timezone || 'Asia/Kolkata';
   const today = todayIn(timezone, now);
   const clock = nowIn(timezone, now);
@@ -111,6 +118,7 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
     {batches.data && <BatchCalendar t={t} locale={locale} batches={batches.data} timezone={timezone} today={today} now={clock} selected={selected} onSlot={openCreate} onBatch={openEdit} />}
     <UpcomingClasses t={t} locale={locale} client={client} classes={classes.data} today={today} clock={clock}
       onEdit={(k) => batchOf(k) && openEdit(batchOf(k))} onChanged={(text) => { setNotice({ text }); classes.reload(); }} />
+    <GoogleAccount t={t} client={client} onNotice={setNotice} />
     <BatchDialog t={t} locale={locale} state={dialog} courses={courseList} students={students.data || []} onClose={close} onSave={save} onRemove={remove} onToggle={toggle} />
     <section className="teacher-students" aria-labelledby="my-students-title">
       <h2 id="my-students-title">{p.students}</h2>
@@ -240,4 +248,36 @@ export function AttendanceSheet({ t, client, k, label, onClose, onSaved }) {
     <div className="form-actions">{sheet?.students.length > 0 && <button type="submit" className="button primary" disabled={busy}>{c.saveAttendance}</button>}
       <button type="button" className="button quiet" onClick={onClose}>{c.close}</button></div>
   </form>;
+}
+
+// The teacher's Google account, used to create Meet links (Phase 4). Hidden unless the academy allows it or the
+// teacher is already connected. The browser never sees tokens: connecting sends it to Google's consent screen.
+export function GoogleAccount({ t, client, onNotice }) {
+  const g = t.portal.google;
+  const state = useApi(t, () => client.teacher.google.status());
+  const [busy, setBusy] = useState(false);
+  const connection = state.data?.connection;
+  if (!state.data || (!state.data.available && !connection)) return null;
+  const connect = async () => {
+    setBusy(true);
+    const result = await client.teacher.google.connect();
+    if (result.ok) return globalThis.location?.assign(result.data.url);
+    setBusy(false); onNotice({ text: t.portal.errors[apiErrorKey(result)], error: true });
+  };
+  const disconnect = async () => {
+    if (!globalThis.confirm?.(g.confirmDisconnect)) return;
+    setBusy(true);
+    const result = await client.teacher.google.disconnect();
+    setBusy(false);
+    if (result.ok) state.reload(); else onNotice({ text: t.portal.errors[apiErrorKey(result)], error: true });
+  };
+  return <section className="panel google-account" aria-labelledby="google-title">
+    <h2 id="google-title">{g.title}</h2>
+    {connection?.status === 'connected' ? <p>{g.connectedAs.replace('{email}', connection.google_email)}</p> : <p>{g.lede}</p>}
+    {connection?.status === 'needs_reconnect' && <p className="notice warning">{g.needsReconnect}</p>}
+    <div className="form-actions">
+      {state.data.available && connection?.status !== 'connected' && <button type="button" className="button primary" disabled={busy} onClick={connect}>{connection ? g.reconnect : g.connect}</button>}
+      {connection && <button type="button" className="button quiet danger" disabled={busy} onClick={disconnect}>{g.disconnect}</button>}
+    </div>
+  </section>;
 }
