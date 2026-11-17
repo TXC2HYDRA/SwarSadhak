@@ -92,7 +92,7 @@ export function batchFormErrors(form) {
   if (!form.course_id) errors.push('course');
   if (!form.days.length) errors.push('days');
   if (!form.start_time || !form.end_time || form.end_time <= form.start_time) errors.push('endAfterStart');
-  if (form.class_mode && form.class_mode !== 'offline' && !meetLink(form.meeting_url)) errors.push('meetingUrl');
+  if (form.class_mode && form.class_mode !== 'offline' && !form.generate_meet && !meetLink(form.meeting_url)) errors.push('meetingUrl');
   return errors;
 }
 

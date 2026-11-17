@@ -581,6 +581,7 @@ test('Meet links follow the API rule, and online or hybrid batches need one', ()
   assert.deepEqual(batchFormErrors({ ...form, class_mode: 'hybrid', meeting_url: '' }), ['meetingUrl']);
   assert.deepEqual(batchFormErrors({ ...form, class_mode: 'online', meeting_url: link }), []);
   assert.deepEqual(batchFormErrors({ ...form, class_mode: 'offline', meeting_url: 'not a link' }), []);
+  assert.deepEqual(batchFormErrors({ ...form, class_mode: 'online', meeting_url: '', generate_meet: true }), []);
 });
 
 test('the batch drawer asks for a Meet link or a place depending on the class mode', () => {
@@ -594,6 +595,15 @@ test('the batch drawer asks for a Meet link or a place depending on the class mo
   assert.match(online, /href="https:\/\/meet\.google\.com\/abc-defg-hij" target="_blank" rel="noopener noreferrer"/);
   const hybrid = render({ class_mode: 'hybrid', meeting_url: 'https://evil.com/x' });
   assert.ok(hybrid.includes(b.meetLink) && hybrid.includes(b.location) && !hybrid.includes('href="https://evil.com'));
+  // Creating the link with Google is offered only to connected teachers, and can be swapped back for a pasted link.
+  assert.ok(!online.includes(b.generateMeet));
+  const dialog = (form, extra) => renderToStaticMarkup(React.createElement(web.BatchDialog, { t, locale: 'en', canGenerate: true, state: { form: { name: 'Evening', course_id: 'c1', start_time: '18:00', end_time: '19:00', days: ['mon'], student_ids: [], meeting_url: '', location: '', ...form }, ...extra }, courses: [{ id: 'c1', name: 'Vocal' }], students: [], onClose() {}, onSave() {}, onRemove() {}, onToggle() {} }));
+  assert.ok(dialog({ class_mode: 'online' }).includes(b.generateMeet));
+  const generating = dialog({ class_mode: 'online', generate_meet: true });
+  assert.ok(generating.includes(b.generateNote) && generating.includes(b.pasteInstead) && !generating.includes('type="url"'));
+  const link = 'https://meet.google.com/abc-defg-hij';
+  assert.ok(dialog({ class_mode: 'online', meeting_url: link }, { batch: { id: 'b1', meeting_url: link, meeting_generated: true } }).includes(b.generatedHint));
+  assert.ok(!dialog({ class_mode: 'online', meeting_url: link }, { batch: { id: 'b1', meeting_url: link, meeting_generated: false } }).includes(b.generatedHint));
 });
 
 test('students get an Open Google Meet link only for online classes with a valid link; the owner sees mode text', () => {

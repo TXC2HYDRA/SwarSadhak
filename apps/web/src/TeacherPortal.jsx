@@ -23,7 +23,7 @@ export function filterStudents(students = [], query = '', courseId = '') {
     && (!needle || student.display_name.toLocaleLowerCase().includes(needle) || student.username.toLocaleLowerCase().includes(needle)));
 }
 
-const emptyBatch = { name: '', course_id: '', start_time: '18:00', end_time: '19:00', days: [], student_ids: [], class_mode: 'offline', meeting_url: '', location: '' };
+const emptyBatch = { name: '', course_id: '', start_time: '18:00', end_time: '19:00', days: [], student_ids: [], class_mode: 'offline', meeting_url: '', location: '', generate_meet: false };
 
 export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
   const p = t.portal.teacher; const b = t.portal.batches;
@@ -33,6 +33,8 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
   const batches = useApi(t, () => client.teacher.batches.list());
   const academy = useApi(t, () => client.academy());
   const assignments = useApi(t, () => client.teacher.assignments.list());
+  const google = useApi(t, () => client.teacher.google.status());
+  const canGenerate = Boolean(google.data?.available && google.data.connection?.status === 'connected');
   const [query, setQuery] = useState('');
   const [courseId, setCourseId] = useState('');
   const [dialog, setDialog] = useState(null);
@@ -59,10 +61,13 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
     setDialog({ form: { ...emptyBatch, course_id: defaultCourse, ...(slot ? slotForm(slot.dayIndex, slot.minutes, slot.duration) : {}) } });
   };
   const openEdit = (batch) => setDialog({ batch, form: { name: batch.name, course_id: batch.course_id, start_time: batch.start_time, end_time: batch.end_time, days: batch.days,
-    class_mode: batch.class_mode || 'offline', meeting_url: batch.meeting_url || '', location: batch.location || '',
+    class_mode: batch.class_mode || 'offline', meeting_url: batch.meeting_url || '', location: batch.location || '', generate_meet: false,
     student_ids: batch.student_ids.filter((id) => (students.data || []).some((student) => student.id === id)) } });
   const close = () => { setDialog(null); setSelected(null); };
   const problem = (result) => {
+    const code = result.data?.detail?.code;
+    if (code === 'google_reconnect') { google.reload(); return { text: b.errors.googleReconnect }; }
+    if (code === 'google_failed') return { text: b.errors.googleFailed };
     if (result.status === 409) return { text: b.errors.conflict, conflicts: result.data?.detail?.conflicts || [] };
     if (result.status === 403) return { text: b.errors.forbidden };
     return { text: t.portal.errors[apiErrorKey(result)] };
@@ -72,7 +77,7 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
     close(); batches.reload(); summary.reload(); classes.reload();
   };
   const save = async (form) => {
-    const body = { ...form, name: form.name.trim(), meeting_url: form.class_mode === 'offline' ? null : form.meeting_url.trim() };
+    const body = { ...form, name: form.name.trim(), meeting_url: form.class_mode === 'offline' || form.generate_meet ? null : form.meeting_url.trim(), generate_meet: form.class_mode !== 'offline' && form.generate_meet };
     const result = dialog.batch ? await client.teacher.batches.update(dialog.batch.id, body) : await client.teacher.batches.create(body);
     if (!result.ok) return problem(result);
     finish(result, dialog.batch ? b.saved : b.created);
@@ -118,8 +123,8 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
     {batches.data && <BatchCalendar t={t} locale={locale} batches={batches.data} timezone={timezone} today={today} now={clock} selected={selected} onSlot={openCreate} onBatch={openEdit} />}
     <UpcomingClasses t={t} locale={locale} client={client} classes={classes.data} today={today} clock={clock}
       onEdit={(k) => batchOf(k) && openEdit(batchOf(k))} onChanged={(text) => { setNotice({ text }); classes.reload(); }} />
-    <GoogleAccount t={t} client={client} onNotice={setNotice} />
-    <BatchDialog t={t} locale={locale} state={dialog} courses={courseList} students={students.data || []} onClose={close} onSave={save} onRemove={remove} onToggle={toggle} />
+    <GoogleAccount t={t} client={client} state={google} onNotice={setNotice} />
+    <BatchDialog t={t} locale={locale} state={dialog} canGenerate={canGenerate} courses={courseList} students={students.data || []} onClose={close} onSave={save} onRemove={remove} onToggle={toggle} />
     <section className="teacher-students" aria-labelledby="my-students-title">
       <h2 id="my-students-title">{p.students}</h2>
       <div className="filter-controls">
@@ -252,9 +257,8 @@ export function AttendanceSheet({ t, client, k, label, onClose, onSaved }) {
 
 // The teacher's Google account, used to create Meet links (Phase 4). Hidden unless the academy allows it or the
 // teacher is already connected. The browser never sees tokens: connecting sends it to Google's consent screen.
-export function GoogleAccount({ t, client, onNotice }) {
+export function GoogleAccount({ t, client, state, onNotice }) {
   const g = t.portal.google;
-  const state = useApi(t, () => client.teacher.google.status());
   const [busy, setBusy] = useState(false);
   const connection = state.data?.connection;
   if (!state.data || (!state.data.available && !connection)) return null;
