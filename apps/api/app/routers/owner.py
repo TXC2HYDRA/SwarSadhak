@@ -1,7 +1,9 @@
 import sqlite3, uuid
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException, Query
 from ..accounts import ROLES, create_user, now, public_user
 from ..db import connect
+from ..schedule import check_range, expand, load_exceptions
 from ..dependencies import require_role, user_roles
 from ..schemas import CourseCreate, CourseTeachers, CourseUpdate, EnrollmentCreate, EnrollmentUpdate, OwnerUserCreate, OwnerUserUpdate
 from ..security import hash_password
@@ -154,3 +156,14 @@ def all_batches():
                  "student_ids": members.get(r["id"], []),
                  # Owners administer; teachers host. The mode and whether a link exists, never the link itself.
                  "class_mode": r["class_mode"], "location": r["location"], "has_meeting_link": bool(r["meeting_url"])} for r in rows]
+
+@router.get("/classes")
+def all_classes(start: date = Query(alias="from"), end: date = Query(alias="to")):
+    """Every teacher's dated classes in a range, read-only. Mode and whether a link exists, never the link."""
+    check_range(start, end)
+    with connect() as c:
+        batches = {b["id"]: b for b in c.execute("""SELECT b.*, u.display_name AS teacher_name, co.name AS course_name, (SELECT COUNT(*) FROM batch_members m WHERE m.batch_id=b.id) AS student_count
+            FROM batches b JOIN users u ON u.id=b.teacher_id JOIN courses co ON co.id=b.course_id WHERE b.status='active'""")}
+        classes = expand(batches.values(), load_exceptions(c, list(batches), start, end), start, end)
+    return [{**k, **{f: batches[k["batch_id"]][f] for f in ("teacher_id", "teacher_name", "course_name", "student_count", "class_mode", "location")},
+             "has_meeting_link": bool(batches[k["batch_id"]]["meeting_url"])} for k in classes]
