@@ -373,3 +373,8 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .check-filter { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; cursor: pointer; }
 .check-filter input { width: 18px; height: 18px; margin: 0; accent-color: var(--primary); }
 .status-cell { display: grid; justify-items: start; gap: 4px; }
+
+/* Google account (teacher) and integrations (owner). */
+.google-account, .integration-card { display: grid; gap: 12px; justify-items: start; margin-top: 24px; max-width: 720px; }
+.google-account h2, .integration-card h2 { margin: 0; }
+.google-account p, .integration-card p { margin: 0; }

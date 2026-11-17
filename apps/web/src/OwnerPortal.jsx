@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, BookOpen, CalendarRange, LayoutDashboard, Plus, UserCheck, Users } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, BookOpen, CalendarRange, LayoutDashboard, Plus, Settings as SettingsIcon, UserCheck, Users } from 'lucide-react';
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, Sheet, TableSearch, Toast, matches, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
@@ -13,7 +13,7 @@ const noMessage = { text: '', error: false };
 
 export function OwnerPortal({ shell, client, user }) {
   const { t } = shell; const p = t.portal;
-  const nav = [['overview', p.nav.overview, LayoutDashboard], ['users', p.nav.users, Users], ['courses', p.nav.courses, BookOpen], ['enrollments', p.nav.enrollments, UserCheck], ['batches', p.nav.batches, CalendarRange]];
+  const nav = [['overview', p.nav.overview, LayoutDashboard], ['users', p.nav.users, Users], ['courses', p.nav.courses, BookOpen], ['enrollments', p.nav.enrollments, UserCheck], ['batches', p.nav.batches, CalendarRange], ['settings', p.nav.settings, SettingsIcon]];
   const [page, setPage] = useUrlPage('owner', nav.map(([key]) => key), 'overview');
   return <PortalShell {...shell} kicker={p.roles.owner} nav={nav} page={page} onPage={setPage}>
     {page === 'overview' && <OverviewPage t={t} locale={shell.locale} client={client} onNavigate={setPage} />}
@@ -21,6 +21,7 @@ export function OwnerPortal({ shell, client, user }) {
     {page === 'courses' && <CoursesPage t={t} client={client} />}
     {page === 'enrollments' && <EnrollmentsPage t={t} client={client} />}
     {page === 'batches' && <BatchesPage t={t} locale={shell.locale} client={client} />}
+    {page === 'settings' && <SettingsPage t={t} client={client} />}
   </PortalShell>;
 }
 
@@ -359,4 +360,33 @@ export function OwnerClasses({ t, locale, client, now }) {
       </tr>)}</tbody>
     </table></div>}
   </section>;
+}
+
+// Academy integrations. Google credentials are environment variables on the API server; the Owner only decides
+// whether teachers may connect their own Google accounts.
+export function SettingsPage({ t, client }) {
+  const g = t.portal.google;
+  const state = useApi(t, () => client.owner.integrations.get());
+  const [message, setMessage] = useState(noMessage);
+  const [busy, setBusy] = useState(false);
+  const meet = state.data?.google;
+  const toggle = async (enabled) => {
+    setBusy(true);
+    const result = await client.owner.integrations.update({ google_enabled: enabled });
+    setBusy(false);
+    if (!result.ok) return setMessage({ text: t.portal.errors[apiErrorKey(result)], error: true });
+    setMessage({ text: g.saved, error: false }); state.reload();
+  };
+  return <div className="page portal-page">
+    <h1>{g.settingsTitle}</h1><p className="page-lede">{g.settingsLede}</p>
+    {message.text && <div className={`notice ${message.error ? 'error' : 'success'}`} role={message.error ? 'alert' : 'status'}>{message.text}</div>}
+    <LoadState t={t} state={state} />
+    {meet && <section className="panel integration-card" aria-labelledby="meet-integration-title">
+      <h2 id="meet-integration-title">{g.meetTitle}</h2>
+      <p className={meet.configured ? undefined : 'notice warning'}>{meet.configured ? g.configured : g.notConfigured}</p>
+      <label className="check-filter"><input type="checkbox" checked={meet.enabled} disabled={!meet.configured || busy} onChange={(event) => toggle(event.target.checked)} />{g.allow}</label>
+      <p className="calendar-note">{g.connectedTeachers.replace('{count}', meet.connected_teachers)}</p>
+      <p className="calendar-note">{g.testingNote}</p>
+    </section>}
+  </div>;
 }

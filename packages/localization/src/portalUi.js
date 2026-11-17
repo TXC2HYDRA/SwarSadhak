@@ -15,7 +15,7 @@ export const portalUi = {
     noAccess: 'This account has no role yet. Contact your academy.',
     roles: { owner: 'Owner', teacher: 'Teacher', student: 'Student' },
     search: 'Search', noMatches: 'Nothing matches your search.',
-    nav: { users: 'Accounts', dashboard: 'Dashboard', overview: 'Overview', courses: 'Courses', enrollments: 'Enrollments', batches: 'Batches' },
+    nav: { users: 'Accounts', dashboard: 'Dashboard', overview: 'Overview', courses: 'Courses', enrollments: 'Enrollments', batches: 'Batches', settings: 'Settings' },
     errors: {
       invalidCredentials: 'Username or password is incorrect.', tooManyAttempts: 'Too many failed attempts. Wait 15 minutes and try again.',
       deactivated: 'This account is deactivated. Contact your academy.', network: 'Cannot reach the academy server. Check your connection and try again.',
@@ -68,6 +68,14 @@ export const portalUi = {
       errors: { meetingUrl: 'Online and hybrid classes need a Google Meet link like https://meet.google.com/abc-defg-hij.', name: 'Enter a batch name.', course: 'Choose a course.', days: 'Choose at least one day.', endAfterStart: 'End time must be after start time.', conflict: 'This time overlaps another of your active batches:', forbidden: 'You cannot schedule this course or one of these students. Refresh and try again.' },
       ownerTitle: 'Batches', ownerLede: 'Every teacher’s weekly batches. Teachers create and edit their own batches.', teacher: 'Teacher', schedule: 'Schedule', status: 'Status',
     },
+    google: {
+      title: 'Google account', lede: 'Connect your Google account so Nado Pasana can create a Meet link for each online batch. Links you paste keep working either way.', connect: 'Connect Google account', reconnect: 'Reconnect Google', disconnect: 'Disconnect', connectedAs: 'Connected as {email}',
+      needsReconnect: 'Google stopped accepting this connection. Reconnect to create links again; pasted links keep working.', confirmDisconnect: 'Disconnect your Google account? Existing Meet links stay on your batches.',
+      results: { connected: 'Google account connected.', denied: 'Google connection cancelled.', expired: 'That sign-in link expired. Try connecting again.', missing_scope: 'Google did not grant permission to create Meet links. Connect again and allow it.', failed: 'Google could not be connected. Try again.' },
+      settingsTitle: 'Settings', settingsLede: 'Academy integrations. Credentials live in the server environment, never in this page.', meetTitle: 'Google Meet links', configured: 'Server credentials: set.',
+      notConfigured: 'Server credentials: not set. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI and TOKEN_ENCRYPTION_KEY to the API environment, then restart it.', allow: 'Allow teachers to connect their Google account', connectedTeachers: 'Teachers connected: {count}',
+      testingNote: 'While your Google OAuth app is in Testing, Google limits it to 100 test users and teachers must reconnect every 7 days. Verification, or marking the app Trusted in Google Workspace, removes both limits.', saved: 'Settings saved.',
+    },
     teacher: {
       today: 'Today', todayEmpty: 'No classes today.', nextClass: 'Next class', live: 'Class time', startingSoon: 'Starting soon', cancelled: 'Cancelled', movedFrom: 'Moved from {date}', startClass: 'Start class', joinClass: 'Join class', upNext: 'Next', finished: 'Done', reviews: 'Answers to review', classesToday: 'Classes today',
       title: 'Teacher dashboard', lede: 'Your students and weekly batch calendar.', students: 'My students', studentCount: 'Students assigned to you',
@@ -112,7 +120,7 @@ export const portalUi = {
     noAccess: 'या खात्याला अद्याप कोणतीही भूमिका दिलेली नाही. तुमच्या अकॅडमीशी संपर्क साधा.',
     roles: { owner: 'मालक', teacher: 'शिक्षक', student: 'विद्यार्थी' },
     search: 'शोधा', noMatches: 'शोधाशी जुळणारे काही नाही.',
-    nav: { users: 'खाती', dashboard: 'डॅशबोर्ड', overview: 'आढावा', courses: 'अभ्यासक्रम', enrollments: 'प्रवेश', batches: 'बॅच' },
+    nav: { users: 'खाती', dashboard: 'डॅशबोर्ड', overview: 'आढावा', courses: 'अभ्यासक्रम', enrollments: 'प्रवेश', batches: 'बॅच' , settings: 'सेटिंग्ज' },
     errors: {
       invalidCredentials: 'वापरकर्तानाव किंवा पासवर्ड चुकीचा आहे.', tooManyAttempts: 'खूप अयशस्वी प्रयत्न झाले. १५ मिनिटांनी पुन्हा प्रयत्न करा.',
       deactivated: 'हे खाते निष्क्रिय केले आहे. तुमच्या अकॅडमीशी संपर्क साधा.', network: 'अकॅडमी सर्व्हरशी संपर्क होत नाही. कनेक्शन तपासून पुन्हा प्रयत्न करा.',
@@ -165,6 +173,14 @@ export const portalUi = {
       errors: { meetingUrl: 'ऑनलाइन आणि हायब्रिड वर्गांसाठी https://meet.google.com/abc-defg-hij अशी Google Meet लिंक लागते.', name: 'बॅचचे नाव लिहा.', course: 'अभ्यासक्रम निवडा.', days: 'किमान एक दिवस निवडा.', endAfterStart: 'संपण्याची वेळ सुरू होण्याच्या वेळेनंतर असावी.', conflict: 'ही वेळ तुमच्या दुसऱ्या सक्रिय बॅचशी जुळते:', forbidden: 'हा अभ्यासक्रम किंवा यापैकी काही विद्यार्थी तुम्ही नियोजित करू शकत नाही. रीफ्रेश करून पुन्हा प्रयत्न करा.' },
       ownerTitle: 'बॅच', ownerLede: 'सर्व शिक्षकांच्या साप्ताहिक बॅच. शिक्षक स्वतःच्या बॅच तयार व संपादित करतात.', teacher: 'शिक्षक', schedule: 'वेळापत्रक', status: 'स्थिती',
     },
+    google: {
+      title: 'Google खाते', lede: 'प्रत्येक ऑनलाइन बॅचसाठी Nado Pasana ला Meet लिंक तयार करता यावी म्हणून तुमचे Google खाते जोडा. तुम्ही पेस्ट केलेल्या लिंक तरीही चालत राहतील.', connect: 'Google खाते जोडा', reconnect: 'Google पुन्हा जोडा', disconnect: 'जोडणी काढा', connectedAs: '{email} म्हणून जोडले',
+      needsReconnect: 'Google ने ही जोडणी स्वीकारणे थांबवले आहे. पुन्हा लिंक तयार करण्यासाठी पुन्हा जोडा; पेस्ट केलेल्या लिंक चालत राहतील.', confirmDisconnect: 'तुमचे Google खाते काढायचे? बॅचवरील सध्याच्या Meet लिंक तशाच राहतील.',
+      results: { connected: 'Google खाते जोडले.', denied: 'Google जोडणी रद्द केली.', expired: 'ती लिंक कालबाह्य झाली. पुन्हा जोडून पाहा.', missing_scope: 'Google ने Meet लिंक तयार करण्याची परवानगी दिली नाही. पुन्हा जोडा आणि परवानगी द्या.', failed: 'Google जोडता आले नाही. पुन्हा प्रयत्न करा.' },
+      settingsTitle: 'सेटिंग्ज', settingsLede: 'अकॅडमीच्या जोडण्या. गोपनीय माहिती सर्व्हरच्या वातावरणात असते, या पानावर कधीच नाही.', meetTitle: 'Google Meet लिंक', configured: 'सर्व्हर क्रेडेन्शियल: सेट आहेत.',
+      notConfigured: 'सर्व्हर क्रेडेन्शियल: सेट नाहीत. API च्या वातावरणात GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI आणि TOKEN_ENCRYPTION_KEY जोडा आणि सर्व्हर पुन्हा सुरू करा.', allow: 'शिक्षकांना त्यांचे Google खाते जोडू द्या', connectedTeachers: 'जोडलेले शिक्षक: {count}',
+      testingNote: 'तुमचे Google OAuth अ‍ॅप Testing मध्ये असेपर्यंत Google फक्त 100 चाचणी वापरकर्ते परवानगी देते आणि शिक्षकांना दर 7 दिवसांनी पुन्हा जोडावे लागते. पडताळणी केल्यावर किंवा Google Workspace मध्ये अ‍ॅप Trusted केल्यावर दोन्ही मर्यादा जातात.', saved: 'सेटिंग्ज जतन केल्या.',
+    },
     teacher: {
       today: 'आज', todayEmpty: 'आज वर्ग नाहीत.', nextClass: 'पुढचा वर्ग', live: 'वर्गाची वेळ', startingSoon: 'लवकरच सुरू', cancelled: 'रद्द', movedFrom: '{date} वरून हलवला', startClass: 'वर्ग सुरू करा', joinClass: 'वर्गात सामील व्हा', upNext: 'पुढे', finished: 'झाला', reviews: 'तपासायची उत्तरे', classesToday: 'आजचे वर्ग',
       title: 'शिक्षक डॅशबोर्ड', lede: 'तुमचे विद्यार्थी आणि साप्ताहिक बॅच कॅलेंडर.', students: 'माझे विद्यार्थी', studentCount: 'तुम्हाला नेमलेले विद्यार्थी',
@@ -209,7 +225,7 @@ export const portalUi = {
     noAccess: 'इस खाते को अभी कोई भूमिका नहीं दी गई है। अपनी अकादमी से संपर्क करें।',
     roles: { owner: 'मालिक', teacher: 'शिक्षक', student: 'विद्यार्थी' },
     search: 'खोजें', noMatches: 'खोज से कुछ मेल नहीं खाता।',
-    nav: { users: 'खाते', dashboard: 'डैशबोर्ड', overview: 'सारांश', courses: 'पाठ्यक्रम', enrollments: 'नामांकन', batches: 'बैच' },
+    nav: { users: 'खाते', dashboard: 'डैशबोर्ड', overview: 'सारांश', courses: 'पाठ्यक्रम', enrollments: 'नामांकन', batches: 'बैच' , settings: 'सेटिंग्स' },
     errors: {
       invalidCredentials: 'उपयोगकर्ता नाम या पासवर्ड गलत है।', tooManyAttempts: 'बहुत अधिक असफल प्रयास हुए। 15 मिनट बाद फिर प्रयास करें।',
       deactivated: 'यह खाता निष्क्रिय है। अपनी अकादमी से संपर्क करें।', network: 'अकादमी सर्वर से संपर्क नहीं हो पा रहा। कनेक्शन जाँचकर फिर प्रयास करें।',
@@ -261,6 +277,14 @@ export const portalUi = {
       dayLong: { mon: 'सोमवार', tue: 'मंगलवार', wed: 'बुधवार', thu: 'गुरुवार', fri: 'शुक्रवार', sat: 'शनिवार', sun: 'रविवार' },
       errors: { meetingUrl: 'ऑनलाइन और हाइब्रिड कक्षाओं के लिए https://meet.google.com/abc-defg-hij जैसा Google Meet लिंक चाहिए।', name: 'बैच का नाम लिखें।', course: 'पाठ्यक्रम चुनें।', days: 'कम से कम एक दिन चुनें।', endAfterStart: 'समाप्ति का समय शुरू होने के समय के बाद होना चाहिए।', conflict: 'यह समय आपके दूसरे सक्रिय बैच से टकराता है:', forbidden: 'आप यह पाठ्यक्रम या इनमें से कुछ विद्यार्थी शेड्यूल नहीं कर सकते। रीफ़्रेश करके फिर प्रयास करें।' },
       ownerTitle: 'बैच', ownerLede: 'सभी शिक्षकों के साप्ताहिक बैच। शिक्षक अपने बैच खुद बनाते और संपादित करते हैं।', teacher: 'शिक्षक', schedule: 'समय-सारणी', status: 'स्थिति',
+    },
+    google: {
+      title: 'Google खाता', lede: 'अपना Google खाता जोड़ें ताकि Nado Pasana हर ऑनलाइन बैच के लिए Meet लिंक बना सके। आपके चिपकाए लिंक हर हाल में काम करते रहेंगे।', connect: 'Google खाता जोड़ें', reconnect: 'Google फिर से जोड़ें', disconnect: 'हटाएँ', connectedAs: '{email} के रूप में जुड़ा',
+      needsReconnect: 'Google ने यह जुड़ाव स्वीकार करना बंद कर दिया है। फिर से लिंक बनाने के लिए दोबारा जोड़ें; चिपकाए लिंक काम करते रहेंगे।', confirmDisconnect: 'अपना Google खाता हटाएँ? बैचों पर मौजूद Meet लिंक वैसे ही रहेंगे।',
+      results: { connected: 'Google खाता जुड़ गया।', denied: 'Google जोड़ना रद्द किया गया।', expired: 'वह लिंक समाप्त हो गया। फिर से जोड़ें।', missing_scope: 'Google ने Meet लिंक बनाने की अनुमति नहीं दी। फिर से जोड़ें और अनुमति दें।', failed: 'Google नहीं जुड़ सका। फिर कोशिश करें।' },
+      settingsTitle: 'सेटिंग्स', settingsLede: 'अकादमी के इंटीग्रेशन। गोपनीय जानकारी सर्वर के वातावरण में रहती है, इस पेज पर कभी नहीं।', meetTitle: 'Google Meet लिंक', configured: 'सर्वर क्रेडेंशियल: सेट हैं।',
+      notConfigured: 'सर्वर क्रेडेंशियल: सेट नहीं हैं। API के वातावरण में GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI और TOKEN_ENCRYPTION_KEY जोड़ें और सर्वर फिर से चालू करें।', allow: 'शिक्षकों को अपना Google खाता जोड़ने दें', connectedTeachers: 'जुड़े शिक्षक: {count}',
+      testingNote: 'जब तक आपका Google OAuth ऐप Testing में है, Google केवल 100 टेस्ट उपयोगकर्ता देता है और शिक्षकों को हर 7 दिन में फिर से जोड़ना पड़ता है। सत्यापन, या Google Workspace में ऐप को Trusted करने से दोनों सीमाएँ हट जाती हैं।', saved: 'सेटिंग्स सहेजी गईं।',
     },
     teacher: {
       today: 'आज', todayEmpty: 'आज कोई कक्षा नहीं है।', nextClass: 'अगली कक्षा', live: 'कक्षा का समय', startingSoon: 'जल्द शुरू', cancelled: 'रद्द', movedFrom: '{date} से बदली गई', startClass: 'कक्षा शुरू करें', joinClass: 'कक्षा में शामिल हों', upNext: 'अगली', finished: 'हो गई', reviews: 'जांचने के उत्तर', classesToday: 'आज की कक्षाएं',

@@ -27,11 +27,13 @@ export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || ''
       summary: () => request('/api/owner/summary'),
       batches: () => request('/api/owner/batches'),
       classes: (from, to) => request(`/api/owner/classes?${new URLSearchParams({ from, to })}`),
+      integrations: { get: () => request('/api/owner/integrations'), update: (body) => send('/api/owner/integrations', 'PATCH', body) },
       courses: { list: () => request('/api/owner/courses'), create: (course) => request('/api/owner/courses', { method: 'POST', body: JSON.stringify(course) }), update: (id, changes) => request(`/api/owner/courses/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }), setTeachers: (id, teacherIds) => request(`/api/owner/courses/${encodeURIComponent(id)}/teachers`, { method: 'PUT', body: JSON.stringify({ teacher_ids: teacherIds }) }) },
       enrollments: { list: () => request('/api/owner/enrollments'), create: (enrollment) => request('/api/owner/enrollments', { method: 'POST', body: JSON.stringify(enrollment) }), update: (id, changes) => request(`/api/owner/enrollments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }), remove: (id) => request(`/api/owner/enrollments/${encodeURIComponent(id)}`, { method: 'DELETE' }) } },
     teacher: {
       summary: () => request('/api/teacher/summary'),
       classes: (from, to) => request(`/api/teacher/classes?${new URLSearchParams({ from, to })}`),
+      google: { status: () => request('/api/teacher/google'), connect: () => send('/api/teacher/google/connect', 'POST'), disconnect: () => send('/api/teacher/google', 'DELETE') },
       changeClass: (batchId, date, body) => send(`/api/teacher/batches/${id(batchId)}/classes/${id(date)}`, 'PUT', body),
       restoreClass: (batchId, date) => send(`/api/teacher/batches/${id(batchId)}/classes/${id(date)}`, 'DELETE'),
       attendance: (batchId, date) => request(`/api/teacher/batches/${id(batchId)}/classes/${id(date)}/attendance`),
