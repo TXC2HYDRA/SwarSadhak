@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { LoadState, useApi } from './PortalShell.jsx';
-import { MODE_ICONS, MeetLink, TodayPanel, modeLabel, timeRange } from './BatchCalendar.jsx';
+import { MODE_ICONS, MeetLink, TodayPanel, modeLabel, timeRange } from './ClassViews.jsx';
 import { DAYS, addDays, due, nextClass, nowIn, todayIn } from './schedule.js';
 import './portal.css';
 
