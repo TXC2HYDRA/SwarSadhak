@@ -9,7 +9,7 @@ def test_student_timetable_shows_only_own_batches_without_other_members(client, 
                                               "days": ["sat"], "student_ids": [ravi["id"]]}, headers=th)
 
     [mine] = client.get("/api/student/batches", headers=ah).json()
-    assert set(mine) == {"id", "name", "start_time", "end_time", "days", "starts_on", "status", "course_name", "teacher_name"}
+    assert set(mine) == {"id", "name", "start_time", "end_time", "days", "starts_on", "status", "course_name", "teacher_name", "class_mode", "location", "meeting_url"}
     assert (mine["id"], mine["days"], mine["teacher_name"], mine["course_name"]) == (batch["id"], ["tue", "thu"], teacher["display_name"], vocal["name"])
     assert [b["name"] for b in client.get("/api/student/batches", headers=rh).json()] == ["Morning", "Evening"]
     assert client.get("/api/student/batches", headers=outsider).json() == []

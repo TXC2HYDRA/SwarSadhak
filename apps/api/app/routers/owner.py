@@ -151,4 +151,6 @@ def all_batches():
         for m in c.execute("SELECT batch_id, student_id FROM batch_members"): members.setdefault(m["batch_id"], []).append(m["student_id"])
         return [{"id": r["id"], "name": r["name"], "teacher_id": r["teacher_id"], "teacher_name": r["teacher_name"], "course_id": r["course_id"], "course_name": r["course_name"],
                  "days": mask_days(r["days"]), "start_time": r["start_time"], "end_time": r["end_time"], "status": r["status"], "student_count": r["student_count"],
-                 "student_ids": members.get(r["id"], [])} for r in rows]
+                 "student_ids": members.get(r["id"], []),
+                 # Owners administer; teachers host. The mode and whether a link exists, never the link itself.
+                 "class_mode": r["class_mode"], "location": r["location"], "has_meeting_link": bool(r["meeting_url"])} for r in rows]

@@ -4,7 +4,7 @@ Tracking document for online classes in Nado Pasana (Owner, Teacher and Student 
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 | Manual Google Meet links on batches | Approved, in progress |
+| 1 | Manual Google Meet links on batches | 1a backend done; 1b web in progress |
 | 2 | Class sessions, Start/Join, cancel and reschedule one class, manual attendance | Planned |
 | 3 | Teacher Google account connection (OAuth 2.0) | Planned, needs decisions |
 | 4 | Automatic Meet link creation (Meet REST API) | Planned, needs Phase 3 |
@@ -94,6 +94,9 @@ ALTER TABLE batches ADD COLUMN location TEXT NOT NULL DEFAULT '';
 **Manual verification.** On the local demo: create an online batch with a pasted link and refresh; sign in as an enrolled student and open the link; sign in as a student outside the batch (no link); Owner batches page shows the mode only; paste `meet.google.com.evil.com/abc-defg-hij` (inline error); switch to offline (link cleared).
 
 **Delivery.** PR 1a backend + pytest; PR 1b web + strings + tests + screenshots.
+
+**Progress.**
+- 1a (backend): migration 6, `app/meetings.py`, mode rules in `check_batch`, named-column INSERT, student link only for active batches, owner `has_meeting_link`. pytest 80/80 (23 new in `tests/test_meetings.py`: 5 accepted and 12 refused link forms, mode rules, member/paused/ended visibility, other teacher 404, owner without URL, version-5 upgrade). The student timetable privacy test now lists the three new fields.
 
 **Known limitations.** No generated links; no per-class cancel or reschedule; the "Now" badge stays clock-only; no overnight classes.
 

@@ -64,6 +64,14 @@ MIGRATIONS = [
         CREATE INDEX attachments_assignment ON attachments(assignment_id);
         CREATE INDEX attachments_submission ON attachments(submission_id);
         ''',
+        # 6: online classes. A batch is offline, online or hybrid; online and hybrid carry one meeting link
+        # reused every week (validated and normalised by app/meetings.py). Existing batches become offline.
+        '''
+        ALTER TABLE batches ADD COLUMN class_mode TEXT NOT NULL DEFAULT 'offline' CHECK (class_mode IN ('online','offline','hybrid'));
+        ALTER TABLE batches ADD COLUMN meeting_provider TEXT CHECK (meeting_provider IN ('google_meet'));
+        ALTER TABLE batches ADD COLUMN meeting_url TEXT;
+        ALTER TABLE batches ADD COLUMN location TEXT NOT NULL DEFAULT '';
+        ''',
 ]
 
 def init_db():
