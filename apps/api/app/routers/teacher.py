@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from ..accounts import academy_settings, now
 from ..db import connect
 from ..dependencies import require_role
+from ..meetings import PROVIDERS
 from ..schemas import DAYS, BatchCreate, BatchUpdate
 
 teacher = require_role("teacher")
@@ -50,7 +51,8 @@ def batch_json(c, row):
     members = [r[0] for r in c.execute("SELECT student_id FROM batch_members WHERE batch_id=? ORDER BY student_id", (row["id"],))]
     course = c.execute("SELECT name FROM courses WHERE id=?", (row["course_id"],)).fetchone()
     return {"id": row["id"], "name": row["name"], "course_id": row["course_id"], "course_name": course["name"] if course else "", "start_time": row["start_time"],
-            "end_time": row["end_time"], "days": mask_days(row["days"]), "starts_on": row["starts_on"], "status": row["status"], "student_ids": members, "updated_at": row["updated_at"]}
+            "end_time": row["end_time"], "days": mask_days(row["days"]), "starts_on": row["starts_on"], "status": row["status"], "student_ids": members, "updated_at": row["updated_at"],
+            "class_mode": row["class_mode"], "meeting_provider": row["meeting_provider"], "meeting_url": row["meeting_url"], "location": row["location"]}
 
 def own_batch(c, bid, teacher_id):
     row = c.execute("SELECT * FROM batches WHERE id=? AND teacher_id=?", (bid, teacher_id)).fetchone()
@@ -61,6 +63,7 @@ def check_batch(c, teacher_id, batch, exclude_id="", check_students=True):
     """Validate a complete batch; returns student-overlap warnings. Raises on hard errors.
     check_students=False keeps existing members whose enrollment has since ended (e.g. when pausing)."""
     if not batch["name"].strip(): raise HTTPException(422, "batch name is required")
+    check_meeting(batch)
     if batch["end_time"] <= batch["start_time"]: raise HTTPException(422, "end time must be after start time")
     if not c.execute("SELECT 1 FROM course_teachers ct JOIN courses co ON co.id=ct.course_id WHERE ct.course_id=? AND ct.teacher_id=? AND co.active=1", (batch["course_id"], teacher_id)).fetchone():
         raise HTTPException(403, "you do not teach this course")
@@ -81,6 +84,17 @@ def check_batch(c, teacher_id, batch, exclude_id="", check_students=True):
     # Warnings name the other batch and time but never the other teacher.
     return [{"student_id": r[0], "student_name": r[1], "batch_name": r[2], "days": mask_days(r[3]), "start_time": r[4], "end_time": r[5]} for r in clashes]
 
+def check_meeting(batch):
+    """Online and hybrid batches need a valid meeting link; offline batches carry none. Online classes have no room."""
+    batch["location"] = "" if batch["class_mode"] == "online" else (batch.get("location") or "").strip()
+    if batch["class_mode"] == "offline":
+        batch["meeting_provider"] = batch["meeting_url"] = None
+        return
+    if not (batch.get("meeting_url") or "").strip(): raise HTTPException(422, "a Google Meet link is required for online and hybrid classes")
+    try: batch["meeting_url"] = PROVIDERS["google_meet"](batch["meeting_url"])
+    except ValueError: raise HTTPException(422, "enter a Google Meet link like https://meet.google.com/abc-defg-hij") from None
+    batch["meeting_provider"] = "google_meet"
+
 def save_members(c, bid, student_ids):
     c.execute("DELETE FROM batch_members WHERE batch_id=?", (bid,))
     c.executemany("INSERT INTO batch_members VALUES (?,?)", [(bid, sid) for sid in sorted(set(student_ids))])
@@ -98,7 +112,9 @@ def create_batch(data: BatchCreate, me=Depends(teacher)):
         bid, stamp = str(uuid.uuid4()), now()
         # Recurrence starts on today's date in the academy timezone.
         starts_on = datetime.now(ZoneInfo(academy_settings(c)["timezone"])).date().isoformat()
-        c.execute("INSERT INTO batches VALUES (?,?,?,?,?,?,?,?,?,?,?)", (bid, me["id"], batch["course_id"], batch["name"], batch["start_time"], batch["end_time"], batch["days"], starts_on, "active", stamp, stamp))
+        c.execute("""INSERT INTO batches (id, teacher_id, course_id, name, start_time, end_time, days, starts_on, status, created_at, updated_at, class_mode, meeting_provider, meeting_url, location)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (bid, me["id"], batch["course_id"], batch["name"], batch["start_time"], batch["end_time"], batch["days"], starts_on, "active", stamp, stamp,
+            batch["class_mode"], batch["meeting_provider"], batch["meeting_url"], batch["location"]))
         save_members(c, bid, batch["student_ids"])
         return {**batch_json(c, own_batch(c, bid, me["id"])), "warnings": warnings}
 
@@ -110,10 +126,11 @@ def update_batch(bid: str, data: BatchUpdate, me=Depends(teacher)):
         batch = {"name": changes.get("name", row["name"]).strip(), "course_id": changes.get("course_id", row["course_id"]),
                  "start_time": changes.get("start_time", row["start_time"]), "end_time": changes.get("end_time", row["end_time"]),
                  "days": days_mask(changes["days"]) if "days" in changes else row["days"], "status": changes.get("status", row["status"]),
-                 "student_ids": changes.get("student_ids", batch_json(c, row)["student_ids"])}
+                 "student_ids": changes.get("student_ids", batch_json(c, row)["student_ids"]),
+                 "class_mode": changes.get("class_mode", row["class_mode"]), "meeting_url": changes.get("meeting_url", row["meeting_url"]), "location": changes.get("location", row["location"])}
         warnings = check_batch(c, me["id"], batch, exclude_id=bid, check_students="student_ids" in changes or "course_id" in changes)
-        c.execute("UPDATE batches SET name=?, course_id=?, start_time=?, end_time=?, days=?, status=?, updated_at=? WHERE id=?",
-                  (batch["name"], batch["course_id"], batch["start_time"], batch["end_time"], batch["days"], batch["status"], now(), bid))
+        c.execute("UPDATE batches SET name=?, course_id=?, start_time=?, end_time=?, days=?, status=?, class_mode=?, meeting_provider=?, meeting_url=?, location=?, updated_at=? WHERE id=?",
+                  (batch["name"], batch["course_id"], batch["start_time"], batch["end_time"], batch["days"], batch["status"], batch["class_mode"], batch["meeting_provider"], batch["meeting_url"], batch["location"], now(), bid))
         save_members(c, bid, batch["student_ids"])
         return {**batch_json(c, own_batch(c, bid, me["id"])), "warnings": warnings}
 

@@ -10,8 +10,10 @@ router = APIRouter(prefix="/api/student")
 def my_batches(me=Depends(student)):
     """The signed-in student's weekly timetable. Only batches backed by an active enrollment
     with that teacher in that course; never other members."""
+    # The meeting link is only handed out while the batch is active.
     with connect() as c:
-        rows = c.execute("""SELECT b.id, b.name, b.start_time, b.end_time, b.days, b.starts_on, b.status,
+        rows = c.execute("""SELECT b.id, b.name, b.start_time, b.end_time, b.days, b.starts_on, b.status, b.class_mode, b.location,
+                CASE WHEN b.status='active' THEN b.meeting_url END AS meeting_url,
                 co.name AS course_name, u.display_name AS teacher_name
             FROM batch_members bm JOIN batches b ON b.id=bm.batch_id
             JOIN courses co ON co.id=b.course_id JOIN users u ON u.id=b.teacher_id
