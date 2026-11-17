@@ -73,7 +73,7 @@ def test_owner_moves_a_batch_and_its_enrollments_together(client, setup):
     client.delete(f"/api/teacher/batches/{busy}", headers=s["h3"])
     second = s["batch"](s["h1"], s["vocal"], [s["asha"]], start="09:00", end="10:00")
     split = move(s["t3"])
-    assert split.status_code == 409 and split.json()["detail"]["students"] == [s["asha"]["display_name"]]
+    assert split.status_code == 409 and split.json()["detail"]["code"] == "in_other_batch" and split.json()["detail"]["students"] == [s["asha"]["display_name"]]
     with connect() as c: assert {r[0] for r in c.execute("SELECT teacher_id FROM enrollments WHERE course_id=?", (s["vocal"]["id"],))} == {s["t1"]["id"]}  # nothing half moved
     client.delete(f"/api/teacher/batches/{second}", headers=s["h1"])
     done = move(s["t3"])
@@ -87,4 +87,4 @@ def test_owner_moves_a_batch_and_its_enrollments_together(client, setup):
     eid = next(e["id"] for e in client.get("/api/owner/enrollments", headers=s["owner"]).json() if e["student_id"] == s["ravi"]["id"])
     client.delete(f"/api/owner/enrollments/{eid}", headers=s["owner"])
     back = move(s["t1"])
-    assert back.status_code == 409 and back.json()["detail"]["students"] == [s["ravi"]["display_name"]]
+    assert back.status_code == 409 and back.json()["detail"]["code"] == "not_enrolled" and back.json()["detail"]["students"] == [s["ravi"]["display_name"]]

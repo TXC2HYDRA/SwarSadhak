@@ -15,7 +15,7 @@ export const portalUi = {
     noAccess: 'This account has no role yet. Contact your academy.',
     roles: { owner: 'Owner', teacher: 'Teacher', student: 'Student' },
     search: 'Search', noMatches: 'Nothing matches your search.',
-    nav: { users: 'Accounts', dashboard: 'Dashboard', overview: 'Overview', courses: 'Courses', enrollments: 'Enrollments', batches: 'Batches', settings: 'Settings' },
+    nav: { users: 'Accounts', dashboard: 'Dashboard', overview: 'Overview', courses: 'Courses', enrollments: 'Enrollments', batches: 'Batches', settings: 'Settings' , reports: 'Reports' },
     errors: {
       invalidCredentials: 'Username or password is incorrect.', tooManyAttempts: 'Too many failed attempts. Wait 15 minutes and try again.',
       deactivated: 'This account is deactivated. Contact your academy.', network: 'Cannot reach the academy server. Check your connection and try again.',
@@ -120,7 +120,7 @@ export const portalUi = {
     noAccess: 'या खात्याला अद्याप कोणतीही भूमिका दिलेली नाही. तुमच्या अकॅडमीशी संपर्क साधा.',
     roles: { owner: 'मालक', teacher: 'शिक्षक', student: 'विद्यार्थी' },
     search: 'शोधा', noMatches: 'शोधाशी जुळणारे काही नाही.',
-    nav: { users: 'खाती', dashboard: 'डॅशबोर्ड', overview: 'आढावा', courses: 'अभ्यासक्रम', enrollments: 'प्रवेश', batches: 'बॅच' , settings: 'सेटिंग्ज' },
+    nav: { users: 'खाती', dashboard: 'डॅशबोर्ड', overview: 'आढावा', courses: 'अभ्यासक्रम', enrollments: 'प्रवेश', batches: 'बॅच' , settings: 'सेटिंग्ज' , reports: 'अहवाल' },
     errors: {
       invalidCredentials: 'वापरकर्तानाव किंवा पासवर्ड चुकीचा आहे.', tooManyAttempts: 'खूप अयशस्वी प्रयत्न झाले. १५ मिनिटांनी पुन्हा प्रयत्न करा.',
       deactivated: 'हे खाते निष्क्रिय केले आहे. तुमच्या अकॅडमीशी संपर्क साधा.', network: 'अकॅडमी सर्व्हरशी संपर्क होत नाही. कनेक्शन तपासून पुन्हा प्रयत्न करा.',
@@ -225,7 +225,7 @@ export const portalUi = {
     noAccess: 'इस खाते को अभी कोई भूमिका नहीं दी गई है। अपनी अकादमी से संपर्क करें।',
     roles: { owner: 'मालिक', teacher: 'शिक्षक', student: 'विद्यार्थी' },
     search: 'खोजें', noMatches: 'खोज से कुछ मेल नहीं खाता।',
-    nav: { users: 'खाते', dashboard: 'डैशबोर्ड', overview: 'सारांश', courses: 'पाठ्यक्रम', enrollments: 'नामांकन', batches: 'बैच' , settings: 'सेटिंग्स' },
+    nav: { users: 'खाते', dashboard: 'डैशबोर्ड', overview: 'सारांश', courses: 'पाठ्यक्रम', enrollments: 'नामांकन', batches: 'बैच' , settings: 'सेटिंग्स' , reports: 'रिपोर्ट' },
     errors: {
       invalidCredentials: 'उपयोगकर्ता नाम या पासवर्ड गलत है।', tooManyAttempts: 'बहुत अधिक असफल प्रयास हुए। 15 मिनट बाद फिर प्रयास करें।',
       deactivated: 'यह खाता निष्क्रिय है। अपनी अकादमी से संपर्क करें।', network: 'अकादमी सर्वर से संपर्क नहीं हो पा रहा। कनेक्शन जाँचकर फिर प्रयास करें।',

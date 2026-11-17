@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, BookOpen, CalendarRange, LayoutDashboard, Plus, Settings as SettingsIcon, UserCheck, Users } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, BarChart3, BookOpen, CalendarRange, LayoutDashboard, Plus, Settings as SettingsIcon, UserCheck, Users } from 'lucide-react';
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, Sheet, TableSearch, Toast, matches, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
 import { TodayPanel, modeLabel, timeRange } from './ClassViews.jsx';
+import { AttendanceReport, fill } from './Reports.jsx';
+import { reportStrings } from '@swarsadhak/localization/reports';
 import { addDays, classKey, formatDate, nowIn, todayIn } from './schedule.js';
 
 const ROLES = ['owner', 'teacher', 'student'];
@@ -13,7 +15,7 @@ const noMessage = { text: '', error: false };
 
 export function OwnerPortal({ shell, client, user }) {
   const { t } = shell; const p = t.portal;
-  const nav = [['overview', p.nav.overview, LayoutDashboard], ['users', p.nav.users, Users], ['courses', p.nav.courses, BookOpen], ['enrollments', p.nav.enrollments, UserCheck], ['batches', p.nav.batches, CalendarRange], ['settings', p.nav.settings, SettingsIcon]];
+  const nav = [['overview', p.nav.overview, LayoutDashboard], ['users', p.nav.users, Users], ['courses', p.nav.courses, BookOpen], ['enrollments', p.nav.enrollments, UserCheck], ['batches', p.nav.batches, CalendarRange], ['reports', p.nav.reports, BarChart3], ['settings', p.nav.settings, SettingsIcon]];
   const [page, setPage] = useUrlPage('owner', nav.map(([key]) => key), 'overview');
   return <PortalShell {...shell} kicker={p.roles.owner} nav={nav} page={page} onPage={setPage}>
     {page === 'overview' && <OverviewPage t={t} locale={shell.locale} client={client} onNavigate={setPage} />}
@@ -21,6 +23,7 @@ export function OwnerPortal({ shell, client, user }) {
     {page === 'courses' && <CoursesPage t={t} client={client} />}
     {page === 'enrollments' && <EnrollmentsPage t={t} client={client} />}
     {page === 'batches' && <BatchesPage t={t} locale={shell.locale} client={client} />}
+    {page === 'reports' && <AttendanceReport t={t} locale={shell.locale} client={client} scope="owner" />}
     {page === 'settings' && <SettingsPage t={t} client={client} />}
   </PortalShell>;
 }
@@ -296,30 +299,75 @@ export function UsersPage({ t, client, me }) {
 }
 
 export function BatchesPage({ t, locale = 'en', client, now }) {
-  const b = t.portal.batches;
+  const b = t.portal.batches; const m = reportStrings(locale).reassign;
   const batches = useApi(t, () => client.owner.batches());
+  const courses = useApi(t, () => client.owner.courses.list());
   const [query, setQuery] = useState('');
+  const [moving, setMoving] = useState(null);
+  const [notice, setNotice] = useState(null);
+  const others = (batch) => (courses.data?.find((course) => course.id === batch.course_id)?.teachers || []).filter((item) => item.id !== batch.teacher_id);
   const rows = (batches.data || []).filter((batch) => matches(query, batch.name, batch.teacher_name, batch.course_name));
   return <div className="page portal-page">
     <h1>{b.ownerTitle}</h1><p className="page-lede">{b.ownerLede}</p>
     {batches.data && <p className="calendar-note">{onlineSummary(b, batches.data)}</p>}
+    {notice && <div className={`notice ${notice.error ? 'error' : 'success'}`} role={notice.error ? 'alert' : 'status'}>{notice.lines.map((line) => <p key={line}>{line}</p>)}</div>}
     <section className="table-section" aria-label={b.ownerTitle}>
       <TableSearch t={t} value={query} onChange={setQuery} />
       <LoadState t={t} state={batches} empty={b.empty} />
       {batches.data?.length > 0 && !rows.length && <p>{t.portal.noMatches}</p>}
       {rows.length > 0 && <div className="table-wrap"><table className="data-table">
-        <thead><tr><th scope="col">{b.name}</th><th scope="col">{b.teacher}</th><th scope="col">{b.course}</th><th scope="col">{b.schedule}</th><th scope="col">{b.mode}</th><th scope="col">{b.students}</th><th scope="col">{b.status}</th></tr></thead>
+        <thead><tr><th scope="col">{b.name}</th><th scope="col">{b.teacher}</th><th scope="col">{b.course}</th><th scope="col">{b.schedule}</th><th scope="col">{b.mode}</th><th scope="col">{b.students}</th><th scope="col">{b.status}</th><th scope="col"><span className="sr-only">{m.action}</span></th></tr></thead>
         <tbody>{rows.map((batch) => <tr key={batch.id}>
           <td><strong>{batch.name}</strong></td><td data-label={b.teacher}>{batch.teacher_name}</td><td data-label={b.course}>{batch.course_name}</td>
           <td data-label={b.schedule}><span>{batch.days.map((day) => b.dayShort[day]).join(', ')}<small>{timeRange(batch, locale)}</small></span></td>
           <td data-label={b.mode}><span>{modeLabel(b, batch)}{batch.class_mode !== 'offline' && <small>{batch.has_meeting_link ? b.linkAdded : b.noLink}</small>}</span></td>
           <td data-label={b.students}>{batch.student_count}</td>
           <td data-label={b.status}><span className={`status-badge ${batch.status === 'active' ? 'success' : 'neutral'}`}>{batch.status === 'active' ? b.active : b.paused}</span></td>
+          <td className="row-actions"><button className="button quiet" onClick={() => setMoving(batch)} aria-label={`${m.action}: ${batch.name}`}>{m.action}</button></td>
         </tr>)}</tbody>
       </table></div>}
     </section>
     <OwnerClasses t={t} locale={locale} client={client} now={now} />
+    <ReassignSheet t={t} m={m} client={client} batch={moving} teachers={moving ? others(moving) : []} onClose={() => setMoving(null)}
+      onDone={(lines) => { setMoving(null); setNotice({ lines }); batches.reload(); }} />
   </div>;
+}
+
+// Owner hands a batch to another teacher of its course; the API moves the members' enrollments in the same step.
+export function ReassignSheet({ t, m, client, batch, teachers, onClose, onDone }) {
+  const [teacherId, setTeacherId] = useState('');
+  const [problem, setProblem] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const chosen = teachers.find((item) => item.id === teacherId) || (teachers.length === 1 ? teachers[0] : null);
+  const close = () => { setTeacherId(''); setProblem(null); onClose(); };
+  const submit = async (event) => {
+    event.preventDefault();
+    if (!chosen) return;
+    setBusy(true);
+    const result = await client.owner.reassignBatch(batch.id, chosen.id);
+    setBusy(false);
+    const detail = result.data?.detail;
+    if (result.ok) {
+      setTeacherId(''); setProblem(null);
+      return onDone([fill(m.done, { teacher: chosen.display_name, count: result.data.moved_enrollments }), ...(result.data.warnings.includes('meeting_link') ? [fill(m.meetWarning, { teacher: chosen.display_name })] : [])]);
+    }
+    if (detail?.conflicts) return setProblem({ text: m.conflict, items: detail.conflicts.map((item) => `${item.name}: ${item.days.map((day) => t.portal.batches.dayShort[day]).join(', ')} ${item.start_time}–${item.end_time}`) });
+    if (detail?.students) return setProblem({ text: fill(detail.code === 'in_other_batch' ? m.elsewhere : m.notEnrolled, { names: detail.students.join(', ') }) });
+    setProblem({ text: t.portal.errors[apiErrorKey(result)] });
+  };
+  return <Sheet open={Boolean(batch)} title={batch ? fill(m.title, { batch: batch.name }) : ''} onClose={close}>
+    {batch && <form className="portal-form" onSubmit={submit}>
+      <h2>{fill(m.title, { batch: batch.name })}</h2>
+      <p className="calendar-note">{fill(m.lede, { course: batch.course_name })}</p>
+      {!teachers.length ? <p className="notice" role="status">{m.noOther}</p> : <label className="field-label">{m.teacher}
+        <select value={chosen?.id || ''} onChange={(event) => setTeacherId(event.target.value)} required>
+          {teachers.length > 1 && <option value="">{t.portal.enrollments.choose}</option>}
+          {teachers.map((item) => <option key={item.id} value={item.id}>{item.display_name}</option>)}
+        </select></label>}
+      {problem && <div className="notice error" role="alert"><span>{problem.text}{problem.items && <ul>{problem.items.map((item) => <li key={item}>{item}</li>)}</ul>}</span></div>}
+      <div className="form-actions"><button className="button primary" type="submit" disabled={busy || !chosen}>{m.submit}</button><button className="button quiet" type="button" onClick={close}>{m.cancel}</button></div>
+    </form>}
+  </Sheet>;
 }
 
 // "Online or hybrid batches: 3. Teachers teaching online: 2." Active batches only.
