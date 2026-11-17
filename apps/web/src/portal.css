@@ -367,3 +367,9 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 /* Student timetable: dated classes first, then the weekly pattern. */
 .student-classes { container-type: inline-size; margin-bottom: 16px; }
 .timetable-weekly { margin: 28px 0 4px; }
+
+/* Owner: classes this week. */
+.owner-classes { margin-top: 36px; }
+.check-filter { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; cursor: pointer; }
+.check-filter input { width: 18px; height: 18px; margin: 0; accent-color: var(--primary); }
+.status-cell { display: grid; justify-items: start; gap: 4px; }

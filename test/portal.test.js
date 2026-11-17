@@ -1,5 +1,6 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -638,4 +639,13 @@ test('students see classes coming up with Join, and their history with the atten
   assert.ok(list([]).includes('<p>E</p>'));
   for (const locale of supportedLocales) { const ls = getTranslations(locale).portal.student; assert.ok(ls.upcoming && ls.history && ls.weekly && ls.historyLede, locale); }
   assert.ok(s.historyLede.includes('teacher'));
+});
+
+test('owner sees every class this week with its status and the online summary, never a link', () => {
+  const t = getTranslations('en'); const b = t.portal.batches; const c = b.classes;
+  assert.equal(web.onlineSummary(b, [{ status: 'active', class_mode: 'online', teacher_id: 't1' }, { status: 'active', class_mode: 'hybrid', teacher_id: 't1' }, { status: 'paused', class_mode: 'online', teacher_id: 't2' }, { status: 'active', class_mode: 'offline', teacher_id: 't3' }]),
+    'Online or hybrid batches: 2. Teachers teaching online: 1.');
+  const html = renderToStaticMarkup(React.createElement(web.OwnerClasses, { t, locale: 'en', client: { academy: pending, owner: { classes: pending } } }));
+  assert.ok(html.includes(c.ownerTitle) && html.includes(c.allTeachers) && html.includes(c.onlineOnly) && html.includes(t.portal.users.loading));
+  assert.doesNotMatch(readFileSync(new URL('../apps/web/src/OwnerPortal.jsx', import.meta.url), 'utf8'), /meeting_url|MeetLink|join-link/);
 });

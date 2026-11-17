@@ -50,8 +50,8 @@ export function BatchCalendar({ t, locale, batches, timezone, today, now, select
     gridRef.current?.querySelector(`[data-cell="${next.day}-${next.row}"]`)?.focus();
   };
   const weekLabel = `${formatDate(dates[0], locale, { day: 'numeric', month: 'short' })} – ${formatDate(dates[6], locale, { day: 'numeric', month: 'short', year: 'numeric' })}`;
-  const blockLabel = (batch, dayIndex) => `${b.edit}: ${batch.name}, ${batch.course_name}, ${b.dayLong[DAYS[dayIndex]]} ${timeRange(batch, locale)}${batch.status === 'paused' ? `, ${b.paused}` : ''}`;
-  const blockDetail = (batch) => (batch.status === 'paused' ? b.paused : fill(b.studentCount, { count: batch.student_ids.length }));
+  const blockLabel = (batch, dayIndex) => `${b.edit}: ${batch.name}, ${batch.course_name}, ${b.modes[batch.class_mode || 'offline']}, ${b.dayLong[DAYS[dayIndex]]} ${timeRange(batch, locale)}${batch.status === 'paused' ? `, ${b.paused}` : ''}`;
+  const blockDetail = (batch) => (batch.status === 'paused' ? b.paused : `${b.modes[batch.class_mode || 'offline']} · ${fill(b.studentCount, { count: batch.student_ids.length })}`);
   return <section className={`panel calendar-panel view-${view}`} aria-labelledby="calendar-title">
     <div className="calendar-toolbar">
       <div><h2 id="calendar-title">{b.title}</h2><p className="calendar-note">{fill(b.timezoneNote, { timezone })} <span className="drag-hint">{b.dragHint}</span></p></div>
