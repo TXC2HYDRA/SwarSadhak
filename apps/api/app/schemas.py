@@ -176,6 +176,10 @@ class AttendanceSheet(BaseModel):
     model_config = ConfigDict(extra="forbid")
     marks: list[AttendanceMark] = Field(max_length=200)
 
+class BatchReassign(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    teacher_id: str
+
 class IntegrationsUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     google_enabled: bool
