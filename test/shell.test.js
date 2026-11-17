@@ -65,6 +65,8 @@ test('staff portals and student assignments stay out of the main bundle (loaded 
     assert.match(source, new RegExp(`lazy\\(\\(\\) => import\\('\\./${name}\\.jsx'\\)`), name);
     assert.doesNotMatch(source, new RegExp(`^import .*${name}`, 'm'), name);
   }
+  // The week calendar and batch drawer belong to the lazy portals; the student pages use the small ClassViews module.
+  for (const file of ['AccountRoot.jsx', 'StudentTimetable.jsx', 'main.jsx']) assert.doesNotMatch(readFileSync(new URL(`../apps/web/src/${file}`, import.meta.url), 'utf8'), /from '\.\/BatchCalendar\.jsx'/, file);
 });
 
 

@@ -3,7 +3,7 @@ import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, BookOpen, CalendarRange, L
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, Sheet, TableSearch, Toast, matches, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
-import { TodayPanel, modeLabel, timeRange } from './BatchCalendar.jsx';
+import { TodayPanel, modeLabel, timeRange } from './ClassViews.jsx';
 import { addDays, nowIn, todayIn } from './schedule.js';
 
 const ROLES = ['owner', 'teacher', 'student'];
