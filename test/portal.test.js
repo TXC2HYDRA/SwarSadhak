@@ -7,6 +7,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { createApiClient, toApiSession } from '@swarsadhak/api-client';
 import { getTranslations, supportedLocales } from '@swarsadhak/localization';
+import { reportLocales, reportStrings } from '@swarsadhak/localization/reports';
 import { apiErrorKey, choosePortal, clearSession, loginErrorKey, readSession, writeSession } from '../apps/web/src/auth.js';
 import { ACCEPT, checkFile, fileErrorKey, fileType, formatSize, uploadFile } from '../apps/web/src/files.js';
 import { addDays, batchFormErrors, canJoin, classState, classesOn, formatTime, meetLink, nextOf, mondayOf, nextClass, nowIn, slotForm, todayIn, visibleRange, weekDates, weekOccurrences } from '../apps/web/src/schedule.js';
@@ -25,6 +26,7 @@ before(async () => {
     ...(await server.ssrLoadModule('/src/StudentTimetable.jsx')),
     ...(await server.ssrLoadModule('/src/StudentClasses.jsx')),
     ...(await server.ssrLoadModule('/src/Assignments.jsx')),
+    ...(await server.ssrLoadModule('/src/Reports.jsx')),
     App: (await server.ssrLoadModule('/src/main.jsx')).App,
     LandingPage: (await server.ssrLoadModule('/src/main.jsx')).LandingPage,
     LoadState: (await server.ssrLoadModule('/src/PortalShell.jsx')).LoadState,
@@ -336,6 +338,33 @@ test('API client builds Google account and integration requests', async () => {
     assert.deepEqual(Object.keys(g.results).sort(), ['connected', 'denied', 'expired', 'failed', 'missing_scope'], locale);
     assert.ok(g.connectedAs.includes('{email}') && g.connectedTeachers.includes('{count}'), locale);
   }
+});
+
+test('attendance reports: API routes, CSV escaping and strings in every language', async () => {
+  const calls = [];
+  const client = createApiClient({ baseUrl: 'http://api.test', token: 't', fetchImpl: async (url, options) => { calls.push([url, options.method || 'GET', options.body]); return new Response('{}'); } });
+  await client.teacher.attendanceReport('2026-10-20', '2026-11-18');
+  await client.owner.attendanceReport('2026-10-20', '2026-11-18');
+  await client.owner.reassignBatch('b/1', 't2');
+  assert.deepEqual(calls, [
+    ['http://api.test/api/teacher/reports/attendance?from=2026-10-20&to=2026-11-18', 'GET', undefined],
+    ['http://api.test/api/owner/reports/attendance?from=2026-10-20&to=2026-11-18', 'GET', undefined],
+    ['http://api.test/api/owner/batches/b%2F1/reassign', 'POST', '{"teacher_id":"t2"}'],
+  ]);
+  assert.equal(web.toCsv([['Name', 'Rate'], ['Asha "Tai" Patil', 50], ['=HYPERLINK("x")', null], ['Ravi, Pune', '-1']]),
+    '"Name","Rate"\r\n"Asha ""Tai"" Patil","50"\r\n"\'=HYPERLINK(""x"")",""\r\n"Ravi, Pune","\'-1"');
+  const shape = (value) => Object.fromEntries(Object.entries(value).map(([key, item]) => [key, typeof item === 'object' ? shape(item) : typeof item]));
+  for (const locale of reportLocales) assert.deepEqual(shape(reportStrings(locale)), shape(reportStrings('en')), locale);
+  for (const locale of supportedLocales) assert.ok(getTranslations(locale).portal.nav.reports, locale);
+});
+
+test('the owner reassign sheet offers the other teachers of the course', () => {
+  const t = getTranslations('en'); const m = reportStrings('en').reassign;
+  const render = (teachers) => renderToStaticMarkup(React.createElement(web.ReassignSheet, { t, m, client: {}, batch: { id: 'b1', name: 'Evening Riyaz', course_name: 'Vocal' }, teachers, onClose() {}, onDone() {} }));
+  const two = render([{ id: 't2', display_name: 'Meera' }, { id: 't3', display_name: 'Kiran' }]);
+  assert.ok(two.includes('Move Evening Riyaz to another teacher') && two.includes('>Meera</option>') && two.includes('>Kiran</option>') && two.includes(t.portal.enrollments.choose));
+  const none = render([]);
+  assert.ok(none.includes(m.noOther) && /<button class="button primary" type="submit" disabled="">/.test(none));
 });
 
 test('API client builds batch and academy requests', async () => {

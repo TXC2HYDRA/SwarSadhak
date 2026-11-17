@@ -8,7 +8,7 @@ Tracking document for online classes in Nado Pasana (Owner, Teacher and Student 
 | 2 | Class sessions, Start/Join, cancel and reschedule one class, manual attendance | Done (PRs #34–#41) |
 | 3 | Teacher Google account connection (OAuth 2.0) | Done (PRs #42, #43); real-account check pending |
 | 4 | Automatic Meet link creation (Meet REST API) | Done (PRs #44, #45); real-account check pending |
-| 5 | Attendance reports, academy analytics, owner batch reassignment | In progress |
+| 5 | Attendance reports, academy analytics, owner batch reassignment | Done (PRs #46, #47) |
 
 ## 0. Audit (November 2026)
 
@@ -252,6 +252,8 @@ ALTER TABLE academy ADD COLUMN google_connect_enabled INTEGER NOT NULL DEFAULT 0
 
 **Progress.**
 - 5a (API): `app/reports.py` and `GET /api/teacher/reports/attendance` (own batches) and `GET /api/owner/reports/attendance` (all), `from`/`to` up to 366 days, counted through today. Per batch: classes held, cancelled and not marked (active batches; a paused batch's past schedule is not recorded, so its class counts are `null`), the four marks and a rate. Per student and batch: marks and rate. Per teacher: held, cancelled, not marked. Rate = (present + late) / (present + late + absent); excused is left out; `null` when nothing counts. Marks are counted by the class's original date. `POST /api/owner/batches/{id}/reassign {teacher_id}` moves a batch and its members' enrollments in that course to another teacher of the course in one transaction. Refused (nothing changes) when the teacher is not on the course, a member has no enrollment in the course, a member is also in another of the old teacher's batches for that course (enrollment is one teacher per student per course), or the new teacher has an overlapping batch. Attendance and class changes stay with the batch. The stored Meet space is dropped and the response warns that the link belongs to the previous teacher's account. pytest 104/104 (2 new in `tests/test_reports.py`).
+- 5b (web): **Reports** in the Teacher and Owner navigation (`Reports.jsx`, loaded with the portal, not the main bundle). Date range (default: the last 30 days), "Counted up to" date and how the rate is worked out; Owner sees a per-teacher table; batches table with not-marked classes highlighted and paused batches labelled; students table with search. Each table has **Download CSV**, generated in the browser: every value quoted, a leading `=`, `+`, `-` or `@` defused so spreadsheets never run it, UTF-8 with BOM so Excel shows Devanagari names. Owner **Batches** page: **Change teacher** opens a sheet with the course's other teachers; refusals name the students or the clashing batch; success says how many enrollments moved and, for online and hybrid batches, that the new teacher needs their own Meet link. Reassignment refusals carry `code: not_enrolled | in_other_batch`. Strings live in `@swarsadhak/localization/reports` (English, Marathi, Hindi) so they stay out of the main bundle. Screenshot: [Reports and reassignment](meet-integration/phase5-reports-reassign.jpg).
+- Automated attendance stays an investigation item, as planned above; nothing is marked from Meet.
 
 **Tests.** Report numbers match seeded attendance; teachers see only their batches; CSV escapes values; reassignment refuses unenrolled members and leaves no half-moved state.
 

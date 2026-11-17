@@ -382,3 +382,10 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .meet-actions .meet-open { margin-top: 0; }
 .meet-generate { display: grid; gap: 8px; justify-items: start; padding: 12px 14px; background: color-mix(in srgb, var(--primary) 8%, var(--surface-raised)); border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border)); border-radius: var(--radius-control); }
 .meet-generate p { margin: 0; }
+
+/* Attendance reports. */
+.report-range { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.report-range .field-label { min-width: 160px; }
+.section-heading-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.section-heading-row h2 { margin: 0; }
+.report-page .table-section { margin-top: 24px; }

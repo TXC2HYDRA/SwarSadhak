@@ -208,8 +208,8 @@ def reassign_batch(bid: str, data: BatchReassign):
         elsewhere = {r[0] for r in c.execute(f"""SELECT bm.student_id FROM batch_members bm JOIN batches b ON b.id=bm.batch_id
             WHERE b.teacher_id=? AND b.course_id=? AND b.id != ? AND bm.student_id IN ({marks})""", (row["teacher_id"], row["course_id"], bid, *members))} if members else set()
         names = lambda ids: [r[0] for r in c.execute(f"SELECT display_name FROM users WHERE id IN ({','.join('?' * len(ids))}) ORDER BY display_name COLLATE NOCASE", list(ids))]
-        if set(members) - enrolled: raise HTTPException(409, {"message": "some members are not enrolled in this course", "students": names(set(members) - enrolled)})
-        if elsewhere: raise HTTPException(409, {"message": "some members are also in another of this teacher's batches for the course", "students": names(elsewhere)})
+        if set(members) - enrolled: raise HTTPException(409, {"code": "not_enrolled", "message": "some members are not enrolled in this course", "students": names(set(members) - enrolled)})
+        if elsewhere: raise HTTPException(409, {"code": "in_other_batch", "message": "some members are also in another of this teacher's batches for the course", "students": names(elsewhere)})
         batch = {"name": row["name"], "course_id": row["course_id"], "start_time": row["start_time"], "end_time": row["end_time"], "days": row["days"], "status": row["status"],
                  "student_ids": members, "class_mode": row["class_mode"], "meeting_url": row["meeting_url"], "location": row["location"]}
         check_batch(c, data.teacher_id, batch, exclude_id=bid, check_students=False)  # 409 with conflicts if the new teacher is busy then

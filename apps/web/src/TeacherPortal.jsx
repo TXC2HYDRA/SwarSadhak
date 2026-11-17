@@ -1,19 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, CalendarPlus, ClipboardList, LayoutDashboard, Search, Video } from 'lucide-react';
+import { ArrowRight, BarChart3, CalendarPlus, ClipboardList, LayoutDashboard, Search, Video } from 'lucide-react';
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
 import { BatchCalendar, BatchDialog } from './BatchCalendar.jsx';
 import { modeLabel, timeRange } from './ClassViews.jsx';
 import { TeacherAssignments } from './Assignments.jsx';
+import { AttendanceReport } from './Reports.jsx';
 import { apiErrorKey } from './auth.js';
 import { addDays, canJoin, classKey, classState, formatDate, meetLink, nextOf, nowIn, slotForm, todayIn } from './schedule.js';
 
 export function TeacherPortal({ shell, client, user }) {
-  const [page, setPage] = useUrlPage('teacher', ['dashboard', 'assignments'], 'dashboard');
+  const [page, setPage] = useUrlPage('teacher', ['dashboard', 'assignments', 'reports'], 'dashboard');
   const { t } = shell;
-  return <PortalShell {...shell} kicker={t.portal.roles.teacher} nav={[['dashboard', t.portal.nav.dashboard, LayoutDashboard], ['assignments', t.portal.assignments.nav, ClipboardList]]} page={page} onPage={setPage}>
+  return <PortalShell {...shell} kicker={t.portal.roles.teacher} nav={[['dashboard', t.portal.nav.dashboard, LayoutDashboard], ['assignments', t.portal.assignments.nav, ClipboardList], ['reports', t.portal.nav.reports, BarChart3]]} page={page} onPage={setPage}>
     {page === 'dashboard' && <TeacherDashboard t={t} locale={shell.locale} client={client} onReviews={() => setPage('assignments')} />}
     {page === 'assignments' && <TeacherAssignments t={t} locale={shell.locale} client={client} user={user} />}
+    {page === 'reports' && <AttendanceReport t={t} locale={shell.locale} client={client} scope="teacher" />}
   </PortalShell>;
 }
 
