@@ -1,8 +1,10 @@
 import json, uuid
 from datetime import datetime, timezone
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.responses import RedirectResponse
+from . import google
 from fastapi.middleware.cors import CORSMiddleware
-from .config import API_VERSION, CORS_ORIGINS
+from .config import API_VERSION, CORS_ORIGINS, WEB_APP_URL
 from .ai_coach import coach as ai_coach
 from .db import connect, init_db
 from .accounts import academy_settings, public_user
@@ -42,6 +44,29 @@ def me(user=Depends(current_user)): return public_user(user,user["roles"])
 @app.get("/api/academy")
 def academy(user=Depends(current_user)):
     with connect() as c: return academy_settings(c)
+
+@app.get("/api/google/callback")
+def google_callback(state: str = "", code: str = "", error: str = ""):
+    """Google sends the browser here after consent. The single-use state identifies the teacher; the result goes
+    back to the web app as ?google=connected|denied|expired|missing_scope|failed."""
+    back = lambda result: RedirectResponse(f"{WEB_APP_URL}/teacher?google={result}", status_code=303)
+    with connect() as c:
+        taken = google.take_state(c, state) if state else None
+        c.commit()  # a state is spent even if what follows fails
+        if not taken: return back("expired")
+        user_id, verifier = taken
+        if error or not code: return back("denied")
+        if not google.enabled(c) or "teacher" not in user_roles(c, user_id): return back("failed")
+        try: email, scopes, refresh = google.exchange(code, verifier)
+        except ValueError: return back("failed")
+        if google.MEET_SCOPE not in scopes.split():
+            google.revoke(refresh)
+            return back("missing_scope")
+        stamp = now()
+        c.execute("""INSERT INTO google_connections VALUES (?,?,?,?,?,?,?) ON CONFLICT (teacher_id) DO UPDATE SET google_email=excluded.google_email,
+            scopes=excluded.scopes, refresh_token_enc=excluded.refresh_token_enc, status='connected', updated_at=excluded.updated_at""",
+            (user_id, email, scopes, google.encrypt(refresh), "connected", stamp, stamp))
+    return back("connected")
 
 @app.get("/api/practice-sessions")
 def sessions(user=Depends(current_user)):

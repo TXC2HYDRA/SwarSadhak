@@ -5,8 +5,8 @@ Tracking document for online classes in Nado Pasana (Owner, Teacher and Student 
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | Manual Google Meet links on batches | Done (PRs #32, #33) |
-| 2 | Class sessions, Start/Join, cancel and reschedule one class, manual attendance | In progress |
-| 3 | Teacher Google account connection (OAuth 2.0) | Planned, needs decisions |
+| 2 | Class sessions, Start/Join, cancel and reschedule one class, manual attendance | Done (PRs #34–#41) |
+| 3 | Teacher Google account connection (OAuth 2.0) | In progress (decisions taken 2026-11-18) |
 | 4 | Automatic Meet link creation (Meet REST API) | Planned, needs Phase 3 |
 | 5 | Attendance reports, academy analytics, owner batch reassignment | Planned |
 
@@ -190,7 +190,12 @@ CREATE TABLE oauth_states (state TEXT PRIMARY KEY, user_id TEXT NOT NULL REFEREN
 ALTER TABLE academy ADD COLUMN google_connect_enabled INTEGER NOT NULL DEFAULT 0;
 ```
 
-**Decisions needed before Phase 3.**
+**Decisions taken (2026-11-18).** Add `cryptography` (Fernet) for refresh tokens at rest, pinned to `>=44.0.1`. Build Phases 3 and 4 against a mocked Google, switched off until the server has the Google variables and the Owner allows connections; the academy does the Google Cloud setup and the gmail.com vs Workspace check with real accounts.
+
+**Progress.**
+- 3a (API): migration 8 (`google_connections`, `oauth_states`, `academy.google_connect_enabled`), `app/google.py` (PKCE S256, single-use 10-minute state bound to the teacher, code exchange and refresh over stdlib `urllib`, Fernet encryption, revoke), `GET/POST/DELETE /api/teacher/google[/connect]`, `GET /api/google/callback` (303 back to `WEB_APP_URL/teacher?google=connected|denied|expired|missing_scope|failed`), `GET/PATCH /api/owner/integrations`. The ID token's claims are read without a signature check because it comes straight from Google's token endpoint over TLS with our client secret (Google's OpenID Connect guidance); `aud` must equal our client ID. If the teacher unticks the Meet permission on Google's consent screen the token is revoked and nothing is stored. pytest 98/98 (6 new in `tests/test_google.py`, Google mocked).
+
+**Original decision list (for reference).**
 1. Encryption library: Python's standard library has no authenticated encryption. Recommended: add the open-source `cryptography` package (Fernet). It is free; it is a new dependency, so it needs your approval.
 2. Google Cloud project and verification: someone at the academy creates the OAuth client and, for production, completes Google's verification (privacy policy, homepage, authorised domain). Until then the app runs in Testing: up to 100 named teachers, reconnect every 7 days. If the academy uses Google Workspace, marking the app Trusted avoids both limits.
 3. Whether personal (gmail.com) teacher accounts must be supported. The Meet documentation does not state account-type eligibility for `spaces.create`; Phase 3 starts with a one-hour spike against a personal account and a Workspace account before any UI work.

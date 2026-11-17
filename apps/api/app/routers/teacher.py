@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from ..accounts import academy_settings, now
 from ..db import connect
 from ..dependencies import require_role
+from .. import google
 from ..meetings import PROVIDERS
 from ..schedule import academy_today, check_range, expand, load_exceptions, occurs, teacher_conflicts
 from ..schemas import DAYS, AttendanceSheet, BatchCreate, BatchUpdate, ClassChange
@@ -230,3 +231,28 @@ def mark_attendance(bid: str, day: date, data: AttendanceSheet, me=Depends(teach
                 ON CONFLICT (batch_id, occurs_on, student_id) DO UPDATE SET status=excluded.status, marked_by=excluded.marked_by, marked_at=excluded.marked_at""",
                 (bid, k["original_date"], m.student_id, m.status, me["id"], stamp))
         return attendance_sheet(c, row, k)
+
+# Google account (Phase 3). The browser learns only whether the teacher is connected and as whom; tokens stay here.
+@router.get("/google")
+def google_status(me=Depends(teacher)):
+    with connect() as c:
+        row = c.execute("SELECT google_email, status, connected_at FROM google_connections WHERE teacher_id=?", (me["id"],)).fetchone()
+        return {"available": google.enabled(c), "connection": dict(row) if row else None}
+
+@router.post("/google/connect")
+def google_connect(me=Depends(teacher)):
+    """Starts the consent flow: the web app sends the browser to the returned Google URL."""
+    with connect() as c:
+        if not google.enabled(c): raise HTTPException(409, "Google connections are not enabled for this academy")
+        return {"url": google.start(c, me["id"])}
+
+@router.delete("/google")
+def google_disconnect(me=Depends(teacher)):
+    """Revokes the token at Google (best effort) and forgets it."""
+    with connect() as c:
+        row = c.execute("SELECT refresh_token_enc FROM google_connections WHERE teacher_id=?", (me["id"],)).fetchone()
+        if row and google.configured():
+            try: google.revoke(google.decrypt(row["refresh_token_enc"]))
+            except google.Reconnect: pass
+        c.execute("DELETE FROM google_connections WHERE teacher_id=?", (me["id"],))
+    return {"disconnected": True}

@@ -93,6 +93,17 @@ MIGRATIONS = [
             PRIMARY KEY (batch_id, occurs_on, student_id)
         );
         ''',
+        # 8: teachers' Google accounts (refresh token encrypted by app/google.py), single-use OAuth states, and
+        # whether the Owner allows teachers to connect.
+        '''
+        CREATE TABLE google_connections (
+            teacher_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, google_email TEXT NOT NULL, scopes TEXT NOT NULL,
+            refresh_token_enc TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('connected','needs_reconnect')),
+            connected_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
+        CREATE TABLE oauth_states (state TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, code_verifier TEXT NOT NULL, expires_at TEXT NOT NULL);
+        ALTER TABLE academy ADD COLUMN google_connect_enabled INTEGER NOT NULL DEFAULT 0;
+        ''',
 ]
 
 def init_db():

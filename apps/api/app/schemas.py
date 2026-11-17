@@ -174,6 +174,10 @@ class AttendanceSheet(BaseModel):
     model_config = ConfigDict(extra="forbid")
     marks: list[AttendanceMark] = Field(max_length=200)
 
+class IntegrationsUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    google_enabled: bool
+
 class RiyazAssignmentCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title: str = Field(min_length=1, max_length=160); instructions: str = Field(default="", max_length=4000); course_id: str
