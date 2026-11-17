@@ -309,6 +309,8 @@ select:disabled, input:disabled { opacity: .6; cursor: not-allowed; }
 .landing-hero, .landing-section { width: min(100% - 44px, var(--content-width)); margin-inline: auto; }
 .landing-hero { padding: clamp(64px, 12vh, 128px) 0 0; }
 .landing-hero h1 { max-width: 16ch; margin: 0 0 20px; color: var(--text); font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 600; letter-spacing: -.03em; line-height: 1.05; }
+/* Phones held sideways (short viewports): size the headline by height so Start stays on the first screen. */
+@media (max-height: 500px) and (orientation: landscape) { .landing-hero { padding-top: 32px; } .landing-hero h1 { margin-bottom: 12px; font-size: clamp(1.75rem, 9vh, 2.5rem); } }
 .landing-hero-description { max-width: 58ch; margin: 0; color: var(--text-muted); font-size: clamp(1.05rem, 1.8vw, 1.25rem); line-height: 1.6; }
 .landing-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
 .landing-privacy-note { display: flex; align-items: center; gap: 8px; margin: 20px 0 0; color: var(--text-muted); font-size: 13px; }

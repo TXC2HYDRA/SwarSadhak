@@ -344,6 +344,7 @@ After Phase 1 (layouts unchanged; tokens, fonts and themes applied):
 
 ## 10. Progress log
 
+- **Counterpoint extras 6:** QA of everything built after step 5: 126-shot matrix including phone landscape, axe on 21 screens in both themes, one landscape fix (section 12). Checked: `npm test` 167/167, `npm run build` (485.6 kB).
 - **Counterpoint extras 5:** secondary student pages (Library, Alankar list, Routines, Progress, Settings, Results) and the missing achievement names (section 12). Checked: `npm test` 167/167, `npm run build` (485.6 kB), 1280 light and dark, 390, Marathi at 390, a real Sa Sustain run to Results.
 - **Counterpoint extras 4:** opt-in tala ruler in alankar practice, and student Assignments loaded on demand (section 12). Checked: `npm test` 166/166, `npm run build` (main bundle 481.0 kB, was 497.1), live studio in Chrome with Teentaal, Rupak and Off at 1280 and 390.
 - **Counterpoint extras 3:** drag to create on the week calendar (section 12). Checked: `npm test` 165/165, `npm run build` (497.1 kB), real mouse drag, Escape, click and keyboard in Chrome.
@@ -503,3 +504,10 @@ Review of Darbar: "simple UI but rich UX", new palette, smoother, nothing that l
   - *Settings*: one labelled row per setting.
   - *Results*: ruled blocks; "saved on this device" is a quiet success line (it was styled as a warning); the coach sentence is shown once when its message and reason are the same text.
   - Page headings no longer draw a focus ring when they receive focus on navigation (they are not controls).
+
+**QA of the extras** (spec section 10, re-run after everything above):
+- Matrix: 126 screenshots, no overflow. 21 screens (landing, sign-in, student home, timetable, assignments, practice, library, alankar list, alankar practice, routines, progress, settings, teacher dashboard, teacher assignments, the batch drawer, owner overview, accounts, courses, enrollments, batches, the account drawer), each at 1440 light, 1024 dark, 768 light, 390 dark, and phone landscape 844 × 390 light and 780 × 360 dark. Contact sheets: `ui-redesign/counterpoint/qa-extras/matrix-<screen>.jpg`.
+- Landscape: the top bar and menu button replace the sidebar; drawers keep Save/Cancel pinned; practice shows the tonic and Start on the first screen. **Fix:** the landing headline was sized by width, so at 390 px tall it pushed Start below the fold; under `max-height: 500px` in landscape it is now sized by height (Start ends at 322 of 390 px and 317 of 360 px).
+- Accessibility: axe-core 4.10.2 (scratch folder, not a project dependency), WCAG 2.0 A/AA, 2.1 AA and 2.2 AA, at 1280 px: 0 violations on all 42 states (the 21 screens above in both themes).
+- Bundle: main chunk 485.6 kB (limit 500 kB); the Owner and Teacher portals and student Assignments are lazy-loaded.
+- Not built, on purpose: an actions menu on phone account rows (Edit and Deactivate already fit inline), dragging an existing batch to move it, and optimistic saves (lists reload from the server after each save).
