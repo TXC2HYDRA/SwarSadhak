@@ -1,5 +1,5 @@
 /* Academy portals: sign-in, Owner and Teacher screens. Reuses tokens from styles.css. */
-.portal-form input:not([type="checkbox"]), .portal-input {
+.portal-form input:not([type="checkbox"], [type="radio"]), .portal-input {
   width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; color: var(--text); background: var(--surface-raised);
   border: 1px solid var(--border-strong); border-radius: var(--radius-control); font: inherit; transition: border-color var(--ease);
 }
@@ -304,3 +304,14 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .calendar-grid.is-dragging { cursor: ns-resize; user-select: none; }
 .cal-drag-guide { position: absolute; z-index: 2; top: calc(var(--start) * var(--slot-h) + 1px); right: 3px; left: 3px; height: calc(var(--span) * var(--slot-h) - 2px); padding: 2px 6px; overflow: hidden; color: var(--primary); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--primary) 14%, var(--surface-raised)); border: 2px dashed var(--primary); border-radius: var(--radius-xs); pointer-events: none; }
 @media (pointer: coarse) { .drag-hint { display: none; } }
+
+/* Class mode (online / offline / hybrid): native radios in a row of bordered labels. */
+.mode-choice { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; border: 0; }
+.mode-choice legend { margin-bottom: 8px; color: var(--text-muted); font-size: 13px; }
+.mode-choice label { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 0; justify-content: center; min-height: 42px; padding: 0 14px; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-control); cursor: pointer; }
+.mode-choice label:has(input:checked) { background: color-mix(in srgb, var(--primary) 12%, var(--surface-raised)); border-color: var(--primary); font-weight: 650; }
+.mode-choice input { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--primary); }
+.mode-choice svg { flex: none; }
+.meet-open { justify-self: start; margin-top: -4px; }
+.class-mode { display: inline-flex; align-items: center; gap: 6px; }
+.student-list .meet-link { justify-self: start; margin: 4px 0 0 -12px; }

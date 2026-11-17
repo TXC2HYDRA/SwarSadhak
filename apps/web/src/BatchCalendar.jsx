@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, List, Pause, Play, Trash2 } from 'lucide-react';
-import { DAYS, SLOT_MINUTES, addDays, batchFormErrors, classesOn, formatDate, formatTime, fromMinutes, mondayOf, nextClass, toMinutes, visibleRange, weekDates, weekOccurrences } from './schedule.js';
+import { CalendarDays, ChevronLeft, ChevronRight, ExternalLink, List, MapPin, MonitorSmartphone, Pause, Play, Trash2, Video } from 'lucide-react';
+import { DAYS, SLOT_MINUTES, addDays, batchFormErrors, meetLink, classesOn, formatDate, formatTime, fromMinutes, mondayOf, nextClass, toMinutes, visibleRange, weekDates, weekOccurrences } from './schedule.js';
 
 // Each course gets a chart colour (with its name in the legend and on every block, so colour is never the only cue).
 export function courseColors(batches) {
@@ -113,6 +113,18 @@ export function BatchCalendar({ t, locale, batches, timezone, today, now, select
   </section>;
 }
 
+export const MODE_ICONS = { online: Video, offline: MapPin, hybrid: MonitorSmartphone };
+
+// "Online", "Offline · Room 2", "Hybrid · Main hall": the class mode with its place, as text (never colour alone).
+export const modeLabel = (b, batch) => [b.modes[batch.class_mode || 'offline'], batch.class_mode !== 'online' && batch.location].filter(Boolean).join(' · ');
+
+// The batch's Meet link, opened in a new tab. Rendered only from a server-normalised URL.
+export function MeetLink({ b, batch }) {
+  const href = meetLink(batch.meeting_url);
+  if (!href || batch.class_mode === 'offline') return null;
+  return <a className="button quiet meet-link" href={href} target="_blank" rel="noopener noreferrer" aria-label={`${b.openMeet}: ${batch.name} (${b.newTab})`}><Video size={16} aria-hidden="true" />{b.openMeet}</a>;
+}
+
 export function BatchDialog({ t, locale, state, courses, students, onClose, onSave, onRemove, onToggle }) {
   const b = t.portal.batches;
   const ref = useRef(null);
@@ -166,6 +178,16 @@ export function BatchDialog({ t, locale, state, courses, students, onClose, onSa
       <fieldset className="day-toggles"><legend>{b.days}</legend>{DAYS.map((day) => <button key={day} type="button" aria-pressed={form.days.includes(day)} aria-label={b.dayLong[day]} onClick={() => set({ days: toggle(form.days, day) })}>{b.dayShort[day]}</button>)}</fieldset>
       {errors.includes('days') && <p className="field-error">{b.errors.days}</p>}
       <p className="calendar-note">{b.recurrence}</p>
+      <fieldset className="mode-choice"><legend>{b.classMode}</legend>
+        {['offline', 'online', 'hybrid'].map((mode) => { const Icon = MODE_ICONS[mode]; return <label key={mode}><input type="radio" name="class_mode" value={mode} checked={form.class_mode === mode} onChange={() => set({ class_mode: mode })} /><Icon size={16} aria-hidden="true" />{b.modes[mode]}</label>; })}
+      </fieldset>
+      {form.class_mode !== 'offline' && <>
+        <label className="field-label">{b.meetLink}<input type="url" inputMode="url" autoComplete="off" spellCheck="false" placeholder="https://meet.google.com/abc-defg-hij" value={form.meeting_url} onChange={(event) => set({ meeting_url: event.target.value })} maxLength={300} aria-invalid={errors.includes('meetingUrl')} aria-describedby="meet-hint" /></label>
+        <p className="field-hint" id="meet-hint">{b.meetHint}</p>
+        {errors.includes('meetingUrl') && <p className="field-error">{b.errors.meetingUrl}</p>}
+        {meetLink(form.meeting_url) && <a className="button quiet meet-open" href={meetLink(form.meeting_url)} target="_blank" rel="noopener noreferrer"><ExternalLink size={16} aria-hidden="true" />{b.openLink}</a>}
+      </>}
+      {form.class_mode !== 'online' && <label className="field-label">{b.location}<input value={form.location} onChange={(event) => set({ location: event.target.value })} maxLength={200} /></label>}
       <fieldset className="student-picker"><legend>{b.students} · {fill(b.selected, { count: form.student_ids.length })}</legend>
         {!form.course_id ? <small>{b.chooseCourseFirst}</small> : !courseStudents.length ? <small>{b.noCourseStudents}</small> : <>
           <input type="search" className="portal-input" placeholder={b.searchStudents} aria-label={b.searchStudents} value={query} onChange={(event) => setQuery(event.target.value)} />

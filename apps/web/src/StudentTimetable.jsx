@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { LoadState, useApi } from './PortalShell.jsx';
-import { TodayPanel, timeRange } from './BatchCalendar.jsx';
+import { MODE_ICONS, MeetLink, TodayPanel, modeLabel, timeRange } from './BatchCalendar.jsx';
 import { DAYS, due, nextClass, nowIn, todayIn } from './schedule.js';
 import './portal.css';
 
@@ -31,6 +31,8 @@ export function StudentTimetable({ t, locale = 'en', client, now }) {
         return <li key={batch.id} className={batch.status === 'paused' ? 'is-paused' : isNext ? 'is-next' : undefined}>
           <strong>{timeRange(batch, locale)} · {batch.name}</strong>
           <small>{batch.course_name} · {s.teacher}: {batch.teacher_name}</small>
+          <small className="class-mode">{React.createElement(MODE_ICONS[batch.class_mode || 'offline'], { size: 14, 'aria-hidden': true })}{modeLabel(b, batch)}</small>
+          <MeetLink b={b} batch={batch} />
           {(batch.status === 'paused' || isNext) && <span className="chip-row">{batch.status === 'paused' ? <span className="chip">{b.paused}</span> : <span className="status-badge warning">{t.portal.teacher.upNext}</span>}</span>}
         </li>;
       })}</ul>
