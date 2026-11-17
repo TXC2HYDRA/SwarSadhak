@@ -13,9 +13,11 @@ from . import config  # noqa: F401  (loads apps/api/.env before the variables be
 AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 REVOKE_URL = "https://oauth2.googleapis.com/revoke"
+MEET_API = "https://meet.googleapis.com/v2/"
 MEET_SCOPE = "https://www.googleapis.com/auth/meetings.space.created"
 SCOPES = f"openid email {MEET_SCOPE}"
 STATE_MINUTES = 10
+RECONNECT = {"code": "google_reconnect", "message": "connect or reconnect your Google account, or paste a link"}
 
 
 class Reconnect(Exception):
@@ -47,14 +49,25 @@ def decrypt(blob: str) -> str:
     except InvalidToken: raise Reconnect() from None  # the key changed; the teacher connects again
 
 
-def _post(url, fields):
-    """POST a form; returns (status, JSON body). Replaced in tests."""
-    request = urllib.request.Request(url, data=urllib.parse.urlencode(fields).encode(), headers={"Content-Type": "application/x-www-form-urlencoded"})
+def _send(request):
+    """Returns (status, JSON body); status 0 when Google could not be reached."""
     try:
         with urllib.request.urlopen(request, timeout=10) as response: return response.status, json.loads(response.read() or b"{}")
     except urllib.error.HTTPError as error:
         try: return error.code, json.loads(error.read() or b"{}")
         except ValueError: return error.code, {}
+    except (urllib.error.URLError, TimeoutError, ValueError): return 0, {}
+
+
+def _post(url, fields):
+    """POST a form to Google's OAuth endpoints. Replaced in tests."""
+    return _send(urllib.request.Request(url, data=urllib.parse.urlencode(fields).encode(), headers={"Content-Type": "application/x-www-form-urlencoded"}))
+
+
+def meet_api(method, path, token, body=None):
+    """Call the Meet REST API (https://meet.googleapis.com/v2/<path>) as the teacher. Replaced in tests."""
+    data = None if body is None else json.dumps(body).encode()
+    return _send(urllib.request.Request(MEET_API + path, data=data, method=method, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}))
 
 
 def start(c, user_id) -> str:
@@ -96,7 +109,7 @@ def access_token(refresh_token):
     s = settings()
     status, body = _post(TOKEN_URL, {"client_id": s["GOOGLE_CLIENT_ID"], "client_secret": s["GOOGLE_CLIENT_SECRET"], "refresh_token": refresh_token, "grant_type": "refresh_token"})
     if status == 400 and body.get("error") == "invalid_grant": raise Reconnect()
-    if status != 200 or not body.get("access_token"): raise HTTPException(502, "Google did not respond; try again or paste a link")
+    if status != 200 or not body.get("access_token"): raise HTTPException(502, {"code": "google_failed", "message": "Google did not respond; try again or paste a link"})
     return body["access_token"]
 
 
@@ -108,10 +121,9 @@ def teacher_access_token(c, teacher_id):
     """An access token for the teacher's connected account. A refused refresh token marks the connection
     needs_reconnect and raises 409; manual links are unaffected."""
     row = c.execute("SELECT * FROM google_connections WHERE teacher_id=?", (teacher_id,)).fetchone()
-    if not row or not enabled(c): raise HTTPException(409, "connect your Google account first")
-    if row["status"] != "connected": raise HTTPException(409, "reconnect your Google account")
+    if not row or not enabled(c) or row["status"] != "connected": raise HTTPException(409, RECONNECT)
     try: return access_token(decrypt(row["refresh_token_enc"]))
     except Reconnect:
         c.execute("UPDATE google_connections SET status='needs_reconnect', updated_at=? WHERE teacher_id=?", (datetime.now(timezone.utc).isoformat(), teacher_id))
         c.commit()
-        raise HTTPException(409, "reconnect your Google account") from None
+        raise HTTPException(409, RECONNECT) from None

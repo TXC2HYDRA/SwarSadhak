@@ -148,6 +148,7 @@ class BatchCreate(BaseModel):
     name: str = Field(min_length=1, max_length=120); course_id: str; start_time: str = Field(pattern=TIME_PATTERN); end_time: str = Field(pattern=TIME_PATTERN)
     days: list[Day] = Field(min_length=1, max_length=7); student_ids: list[str] = Field(default=[], max_length=200)
     class_mode: ClassMode = "offline"; meeting_url: str | None = Field(default=None, max_length=300); location: str = Field(default="", max_length=200)
+    generate_meet: bool = False  # create the link with the teacher's Google account instead of a pasted one
 class BatchUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=120); course_id: str | None = None
@@ -155,6 +156,7 @@ class BatchUpdate(BaseModel):
     days: list[Day] | None = Field(default=None, min_length=1, max_length=7); student_ids: list[str] | None = Field(default=None, max_length=200)
     status: Literal["active", "paused"] | None = None
     class_mode: ClassMode | None = None; meeting_url: str | None = Field(default=None, max_length=300); location: str | None = Field(default=None, max_length=200)
+    generate_meet: bool = False
 class ClassChange(BaseModel):
     """Cancel one class, or move it to another date and time."""
     model_config = ConfigDict(extra="forbid")

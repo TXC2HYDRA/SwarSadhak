@@ -6,7 +6,7 @@ from ..accounts import academy_settings, now
 from ..db import connect
 from ..dependencies import require_role
 from .. import google
-from ..meetings import PROVIDERS
+from ..meetings import PROVIDERS, create_google_space, google_space_link
 from ..schedule import academy_today, check_range, expand, load_exceptions, occurs, teacher_conflicts
 from ..schemas import DAYS, AttendanceSheet, BatchCreate, BatchUpdate, ClassChange
 
@@ -54,7 +54,8 @@ def batch_json(c, row):
     course = c.execute("SELECT name FROM courses WHERE id=?", (row["course_id"],)).fetchone()
     return {"id": row["id"], "name": row["name"], "course_id": row["course_id"], "course_name": course["name"] if course else "", "start_time": row["start_time"],
             "end_time": row["end_time"], "days": mask_days(row["days"]), "starts_on": row["starts_on"], "status": row["status"], "student_ids": members, "updated_at": row["updated_at"],
-            "class_mode": row["class_mode"], "meeting_provider": row["meeting_provider"], "meeting_url": row["meeting_url"], "location": row["location"]}
+            "class_mode": row["class_mode"], "meeting_provider": row["meeting_provider"], "meeting_url": row["meeting_url"], "location": row["location"],
+            "meeting_generated": bool(row["meeting_space_id"])}
 
 def own_batch(c, bid, teacher_id):
     row = c.execute("SELECT * FROM batches WHERE id=? AND teacher_id=?", (bid, teacher_id)).fetchone()
@@ -92,10 +93,22 @@ def check_meeting(batch):
     if batch["class_mode"] == "offline":
         batch["meeting_provider"] = batch["meeting_url"] = None
         return
+    batch["meeting_provider"] = "google_meet"
+    if batch.get("generate_meet"): return  # place_meeting creates it once everything else is valid
     if not (batch.get("meeting_url") or "").strip(): raise HTTPException(422, "a Google Meet link is required for online and hybrid classes")
     try: batch["meeting_url"] = PROVIDERS["google_meet"](batch["meeting_url"])
     except ValueError: raise HTTPException(422, "enter a Google Meet link like https://meet.google.com/abc-defg-hij") from None
-    batch["meeting_provider"] = "google_meet"
+
+def place_meeting(c, teacher_id, batch, row=None):
+    """After validation: create the batch's Meet space when asked, keep or drop the stored space, and refresh the
+    link from Google when a paused batch resumes (meeting codes expire 365 days after last use, spaces do not).
+    ponytail: refreshed on resume only; a batch in weekly use keeps its code alive. Add a periodic refresh if links go stale."""
+    space = row["meeting_space_id"] if row else None
+    if batch["class_mode"] == "offline": space = None
+    elif batch.get("generate_meet"): space, batch["meeting_url"] = create_google_space(c, teacher_id)
+    elif row and batch["meeting_url"] != row["meeting_url"]: space = None  # a pasted link replaced it
+    elif space and row["status"] == "paused" and batch["status"] == "active": batch["meeting_url"] = google_space_link(c, teacher_id, space) or batch["meeting_url"]
+    batch["meeting_space_id"] = space
 
 def save_members(c, bid, student_ids):
     c.execute("DELETE FROM batch_members WHERE batch_id=?", (bid,))
@@ -111,12 +124,13 @@ def create_batch(data: BatchCreate, me=Depends(teacher)):
     batch = {**data.model_dump(), "name": data.name.strip(), "days": days_mask(data.days), "status": "active"}
     with connect() as c:
         warnings = check_batch(c, me["id"], batch)
+        place_meeting(c, me["id"], batch)
         bid, stamp = str(uuid.uuid4()), now()
         # Recurrence starts on today's date in the academy timezone.
         starts_on = datetime.now(ZoneInfo(academy_settings(c)["timezone"])).date().isoformat()
-        c.execute("""INSERT INTO batches (id, teacher_id, course_id, name, start_time, end_time, days, starts_on, status, created_at, updated_at, class_mode, meeting_provider, meeting_url, location)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (bid, me["id"], batch["course_id"], batch["name"], batch["start_time"], batch["end_time"], batch["days"], starts_on, "active", stamp, stamp,
-            batch["class_mode"], batch["meeting_provider"], batch["meeting_url"], batch["location"]))
+        c.execute("""INSERT INTO batches (id, teacher_id, course_id, name, start_time, end_time, days, starts_on, status, created_at, updated_at, class_mode, meeting_provider, meeting_url, location, meeting_space_id)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (bid, me["id"], batch["course_id"], batch["name"], batch["start_time"], batch["end_time"], batch["days"], starts_on, "active", stamp, stamp,
+            batch["class_mode"], batch["meeting_provider"], batch["meeting_url"], batch["location"], batch["meeting_space_id"]))
         save_members(c, bid, batch["student_ids"])
         return {**batch_json(c, own_batch(c, bid, me["id"])), "warnings": warnings}
 
@@ -129,10 +143,11 @@ def update_batch(bid: str, data: BatchUpdate, me=Depends(teacher)):
                  "start_time": changes.get("start_time", row["start_time"]), "end_time": changes.get("end_time", row["end_time"]),
                  "days": days_mask(changes["days"]) if "days" in changes else row["days"], "status": changes.get("status", row["status"]),
                  "student_ids": changes.get("student_ids", batch_json(c, row)["student_ids"]),
-                 "class_mode": changes.get("class_mode", row["class_mode"]), "meeting_url": changes.get("meeting_url", row["meeting_url"]), "location": changes.get("location", row["location"])}
+                 "class_mode": changes.get("class_mode", row["class_mode"]), "meeting_url": changes.get("meeting_url", row["meeting_url"]), "location": changes.get("location", row["location"]), "generate_meet": data.generate_meet}
         warnings = check_batch(c, me["id"], batch, exclude_id=bid, check_students="student_ids" in changes or "course_id" in changes)
-        c.execute("UPDATE batches SET name=?, course_id=?, start_time=?, end_time=?, days=?, status=?, class_mode=?, meeting_provider=?, meeting_url=?, location=?, updated_at=? WHERE id=?",
-                  (batch["name"], batch["course_id"], batch["start_time"], batch["end_time"], batch["days"], batch["status"], batch["class_mode"], batch["meeting_provider"], batch["meeting_url"], batch["location"], now(), bid))
+        place_meeting(c, me["id"], batch, row)
+        c.execute("UPDATE batches SET name=?, course_id=?, start_time=?, end_time=?, days=?, status=?, class_mode=?, meeting_provider=?, meeting_url=?, location=?, meeting_space_id=?, updated_at=? WHERE id=?",
+                  (batch["name"], batch["course_id"], batch["start_time"], batch["end_time"], batch["days"], batch["status"], batch["class_mode"], batch["meeting_provider"], batch["meeting_url"], batch["location"], batch["meeting_space_id"], now(), bid))
         save_members(c, bid, batch["student_ids"])
         return {**batch_json(c, own_batch(c, bid, me["id"])), "warnings": warnings}
 

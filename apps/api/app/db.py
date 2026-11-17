@@ -104,6 +104,8 @@ MIGRATIONS = [
         CREATE TABLE oauth_states (state TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, code_verifier TEXT NOT NULL, expires_at TEXT NOT NULL);
         ALTER TABLE academy ADD COLUMN google_connect_enabled INTEGER NOT NULL DEFAULT 0;
         ''',
+        # 9: the Google Meet space behind a generated link (spaces/<id>). Meeting codes can expire; the space name does not.
+        'ALTER TABLE batches ADD COLUMN meeting_space_id TEXT;',
 ]
 
 def init_db():
