@@ -72,6 +72,27 @@ MIGRATIONS = [
         ALTER TABLE batches ADD COLUMN meeting_url TEXT;
         ALTER TABLE batches ADD COLUMN location TEXT NOT NULL DEFAULT '';
         ''',
+        # 7: one class of a weekly batch cancelled or moved (occurs_on is its original date), and the attendance a
+        # teacher marks for a class. Weekly classes themselves are computed (app/schedule.py), never stored.
+        '''
+        CREATE TABLE class_exceptions (
+            id TEXT PRIMARY KEY, batch_id TEXT NOT NULL REFERENCES batches(id) ON DELETE CASCADE, occurs_on TEXT NOT NULL,
+            status TEXT NOT NULL CHECK (status IN ('cancelled','rescheduled')),
+            new_date TEXT, new_start_time TEXT, new_end_time TEXT, note TEXT NOT NULL DEFAULT '',
+            created_by TEXT NOT NULL REFERENCES users(id), created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+            UNIQUE (batch_id, occurs_on),
+            CHECK ((status = 'rescheduled') = (new_date IS NOT NULL AND new_start_time IS NOT NULL AND new_end_time IS NOT NULL)),
+            CHECK (new_end_time IS NULL OR new_end_time > new_start_time)
+        );
+        CREATE INDEX class_exceptions_new_date ON class_exceptions(new_date);
+        CREATE TABLE attendance (
+            batch_id TEXT NOT NULL REFERENCES batches(id) ON DELETE CASCADE, occurs_on TEXT NOT NULL,
+            student_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            status TEXT NOT NULL CHECK (status IN ('present','late','absent','excused')),
+            marked_by TEXT NOT NULL REFERENCES users(id), marked_at TEXT NOT NULL,
+            PRIMARY KEY (batch_id, occurs_on, student_id)
+        );
+        ''',
 ]
 
 def init_db():

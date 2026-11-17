@@ -4,8 +4,8 @@ Tracking document for online classes in Nado Pasana (Owner, Teacher and Student 
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 | Manual Google Meet links on batches | Built (PRs #32, #33); awaiting your validation |
-| 2 | Class sessions, Start/Join, cancel and reschedule one class, manual attendance | Planned |
+| 1 | Manual Google Meet links on batches | Done (PRs #32, #33) |
+| 2 | Class sessions, Start/Join, cancel and reschedule one class, manual attendance | In progress |
 | 3 | Teacher Google account connection (OAuth 2.0) | Planned, needs decisions |
 | 4 | Automatic Meet link creation (Meet REST API) | Planned, needs Phase 3 |
 | 5 | Attendance reports, academy analytics, owner batch reassignment | Planned |
@@ -146,6 +146,9 @@ CREATE TABLE attendance (batch_id TEXT NOT NULL REFERENCES batches(id) ON DELETE
 **Security.** Exceptions and attendance only through `own_batch()`; students read only their own attendance; owner endpoints are read-only and URL-free.
 
 **Tests.** Recurring classes appear on the right weekdays across a month in the academy timezone; cancel one class leaves the rest; reschedule shows on the new date and not the old; cancelled classes have no Join; reschedule conflicts return 409; Join appears only inside the window; a student cannot read another batch's classes or attendance; a teacher cannot touch another teacher's classes; attendance for a future or cancelled class is refused; clicking Join creates no attendance.
+
+**Progress.**
+- 2a (API): migration 7 (`class_exceptions`, `attendance`), `app/schedule.py` (`expand`, `teacher_conflicts`), `GET /api/{teacher,student,owner}/classes`, `PUT`/`DELETE /api/teacher/batches/{id}/classes/{date}`. Rules settled while building: any real class of an active batch can be cancelled, past or future (an honest record); a class can only be moved to today or later; only the teacher's own classes are checked for overlap (student clashes are not checked for one-off moves); a moved class appears on its new date only, carrying `original_date`. pytest 88/88 (8 new in `tests/test_classes.py`).
 
 **Delivery.** 2a server expansion + exceptions; 2b teacher Online classes + cancel/reschedule; 2c student My online classes + history; 2d attendance; 2e owner views.
 

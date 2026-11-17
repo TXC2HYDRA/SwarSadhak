@@ -1,12 +1,13 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from zoneinfo import ZoneInfo
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from ..accounts import academy_settings, now
 from ..db import connect
 from ..dependencies import require_role
 from ..meetings import PROVIDERS
-from ..schemas import DAYS, BatchCreate, BatchUpdate
+from ..schedule import academy_today, check_range, expand, load_exceptions, occurs, teacher_conflicts
+from ..schemas import DAYS, BatchCreate, BatchUpdate, ClassChange
 
 teacher = require_role("teacher")
 router = APIRouter(prefix="/api/teacher")
@@ -140,3 +141,48 @@ def delete_batch(bid: str, me=Depends(teacher)):
         own_batch(c, bid, me["id"])
         c.execute("DELETE FROM batches WHERE id=?", (bid,))
     return {"deleted": True}
+
+@router.get("/classes")
+def my_classes(start: date = Query(alias="from"), end: date = Query(alias="to"), me=Depends(teacher)):
+    """The teacher's dated classes in a range (at most 62 days), with cancellations and moves applied."""
+    check_range(start, end)
+    with connect() as c:
+        batches = {b["id"]: b for b in c.execute("""SELECT b.*, co.name AS course_name, (SELECT COUNT(*) FROM batch_members m WHERE m.batch_id=b.id) AS student_count
+            FROM batches b JOIN courses co ON co.id=b.course_id WHERE b.teacher_id=? AND b.status='active'""", (me["id"],))}
+        classes = expand(batches.values(), load_exceptions(c, list(batches), start, end), start, end)
+    return [{**k, **{f: batches[k["batch_id"]][f] for f in ("course_name", "student_count", "class_mode", "meeting_url", "location")}} for k in classes]
+
+def class_on(c, row, original):
+    """The class of this batch keyed by its original date, wherever it now falls."""
+    x = c.execute("SELECT * FROM class_exceptions WHERE batch_id=? AND occurs_on=?", (row["id"], original)).fetchone()
+    day = date.fromisoformat(x["new_date"] if x and x["new_date"] else original)
+    return next(k for k in expand([row], [x] if x else [], day, day) if k["original_date"] == original)
+
+def refuse_conflicts(clash):
+    if clash: raise HTTPException(409, {"message": "this time overlaps another of your classes", "conflicts": clash})
+
+@router.put("/batches/{bid}/classes/{day}")
+def change_class(bid: str, day: date, data: ClassChange, me=Depends(teacher)):
+    """Cancel one class of a batch, or move it. day is the class's original date."""
+    with connect() as c:
+        row = own_batch(c, bid, me["id"])
+        if not occurs(row, day): raise HTTPException(404, "this batch has no class on that date")
+        if data.status == "rescheduled":
+            if data.new_date < academy_today(c): raise HTTPException(422, "a class can only be moved to today or a later date")
+            refuse_conflicts(teacher_conflicts(c, me["id"], data.new_date, data.new_start_time, data.new_end_time, (bid, day.isoformat())))
+        stamp = now()
+        c.execute("""INSERT INTO class_exceptions (id, batch_id, occurs_on, status, new_date, new_start_time, new_end_time, note, created_by, created_at, updated_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (batch_id, occurs_on) DO UPDATE SET status=excluded.status, new_date=excluded.new_date,
+            new_start_time=excluded.new_start_time, new_end_time=excluded.new_end_time, note=excluded.note, updated_at=excluded.updated_at""",
+            (str(uuid.uuid4()), bid, day.isoformat(), data.status, data.new_date and data.new_date.isoformat(), data.new_start_time, data.new_end_time, data.note.strip(), me["id"], stamp, stamp))
+        return class_on(c, row, day.isoformat())
+
+@router.delete("/batches/{bid}/classes/{day}")
+def restore_class(bid: str, day: date, me=Depends(teacher)):
+    """Undo a cancellation or move: the class returns to its usual date and time."""
+    with connect() as c:
+        row = own_batch(c, bid, me["id"])
+        if not c.execute("SELECT 1 FROM class_exceptions WHERE batch_id=? AND occurs_on=?", (bid, day.isoformat())).fetchone(): raise HTTPException(404, "this class has not been changed")
+        refuse_conflicts(teacher_conflicts(c, me["id"], day, row["start_time"], row["end_time"], (bid, day.isoformat())) if occurs(row, day) else [])
+        c.execute("DELETE FROM class_exceptions WHERE batch_id=? AND occurs_on=?", (bid, day.isoformat()))
+        return class_on(c, row, day.isoformat()) if occurs(row, day) else {"restored": True}

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from math import isfinite
 from typing import Any, Literal
@@ -155,6 +155,17 @@ class BatchUpdate(BaseModel):
     days: list[Day] | None = Field(default=None, min_length=1, max_length=7); student_ids: list[str] | None = Field(default=None, max_length=200)
     status: Literal["active", "paused"] | None = None
     class_mode: ClassMode | None = None; meeting_url: str | None = Field(default=None, max_length=300); location: str | None = Field(default=None, max_length=200)
+class ClassChange(BaseModel):
+    """Cancel one class, or move it to another date and time."""
+    model_config = ConfigDict(extra="forbid")
+    status: Literal["cancelled", "rescheduled"]; note: str = Field(default="", max_length=200)
+    new_date: date | None = None; new_start_time: str | None = Field(default=None, pattern=TIME_PATTERN); new_end_time: str | None = Field(default=None, pattern=TIME_PATTERN)
+    @model_validator(mode="after")
+    def times(self):
+        if self.status == "rescheduled" and not (self.new_date and self.new_start_time and self.new_end_time): raise ValueError("a rescheduled class needs a new date, start and end time")
+        if self.status == "rescheduled" and self.new_end_time <= self.new_start_time: raise ValueError("end time must be after start time")
+        if self.status == "cancelled": self.new_date = self.new_start_time = self.new_end_time = None
+        return self
 
 class RiyazAssignmentCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
