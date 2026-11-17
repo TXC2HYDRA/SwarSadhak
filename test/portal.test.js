@@ -605,3 +605,19 @@ test('upcoming classes offer move, cancel and restore only where they make sense
   assert.match(html, new RegExp(`aria-label="${c.cancelTitle}: Evening, Wednesday, Nov 18"`));
   assert.ok(renderToStaticMarkup(React.createElement(web.UpcomingClasses, { t, locale: 'en', client: {}, classes: [], today: '2026-11-18', clock: '09:00', onEdit() {}, onChanged() {} })).includes(c.none));
 });
+
+test('started classes take attendance; past ones are listed under recent classes', () => {
+  const t = getTranslations('en'); const c = t.portal.batches.classes;
+  const k = (overrides) => ({ batch_id: 'b', batch_name: 'Evening', original_date: '2026-11-18', date: '2026-11-18', start_time: '18:00', end_time: '19:00', status: 'scheduled', note: '', course_name: 'Vocal', class_mode: 'offline', location: '', student_count: 3, attendance_count: 0, ...overrides });
+  const classes = [k({ batch_id: 'past', date: '2026-11-16', original_date: '2026-11-16', attendance_count: 2 }), k({ batch_id: 'gone', date: '2026-11-17', original_date: '2026-11-17', status: 'cancelled' }), k({ batch_id: 'now', start_time: '07:00', end_time: '08:00' }), k({ batch_id: 'later' })];
+  const html = renderToStaticMarkup(React.createElement(web.UpcomingClasses, { t, locale: 'en', client: {}, classes, today: '2026-11-18', clock: '07:30', onEdit() {}, onChanged() {} }));
+  const [upcoming, recent] = html.split(`<h3 class="class-list-heading">${c.recent}</h3>`);
+  assert.ok(recent && recent.includes('2/3 marked') && recent.includes(`>${c.attendance}<`) && !recent.includes(`>${c.move}<`));
+  assert.ok(!html.includes('Tue, Nov 17')); // cancelled past classes are left out
+  const [now, later] = upcoming.split('<li ').slice(1);
+  assert.ok(now.includes(`>${c.attendance}<`) && now.includes('0/3 marked'));
+  assert.ok(!later.includes(`>${c.attendance}<`) && !later.includes('marked'));
+  const sheet = renderToStaticMarkup(React.createElement(web.AttendanceSheet, { t, client: { teacher: { attendance: () => new Promise(() => {}) } }, k: classes[0], label: 'Evening, Monday', onClose() {}, onSaved() {} }));
+  assert.match(sheet, new RegExp(`aria-label="${c.attendance}: Evening, Monday"`));
+  for (const locale of supportedLocales) assert.deepEqual(Object.keys(getTranslations(locale).portal.batches.classes.statuses), ['present', 'late', 'absent', 'excused'], locale);
+});

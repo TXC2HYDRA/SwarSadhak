@@ -348,3 +348,18 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
   .class-change-fields { grid-template-columns: 1fr 1fr; }
   .class-change-fields label:first-child { grid-column: 1 / -1; }
 }
+
+/* Attendance sheet: one fieldset per student with four choices; labels are the hit area. */
+.class-list-heading { margin: 24px 0 4px; font-size: 1rem; }
+.attendance-sheet { display: grid; gap: 12px; justify-items: start; }
+.attendance-list { display: grid; gap: 0; width: 100%; margin: 0; padding: 0; list-style: none; }
+.attendance-list li { padding: 10px 0; border-top: 1px solid var(--border); }
+.attendance-list fieldset { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 0; padding: 0; border: 0; }
+.attendance-list legend { display: contents; }
+.attendance-list legend strong { margin-right: 8px; }
+.attendance-list legend small { color: var(--text-muted); }
+.attendance-choices { display: flex; flex-wrap: wrap; gap: 4px; margin-left: auto; }
+.attendance-choices label { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-control); cursor: pointer; font-size: 14px; }
+.attendance-choices label:has(input:checked) { background: color-mix(in srgb, var(--primary) 12%, var(--surface-raised)); border-color: var(--primary); font-weight: 650; }
+.attendance-choices input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); }
+@container (max-width: 640px) { .attendance-choices { display: grid; grid-template-columns: 1fr 1fr; width: 100%; margin-left: 0; } }
