@@ -1,6 +1,6 @@
 """Meeting providers. A provider turns what a teacher pasted into one canonical meeting URL, or refuses it.
 Phase 1 has Google Meet links only; Jitsi or LiveKit would be another entry in PROVIDERS."""
-import re
+import re, time
 from urllib.parse import urlsplit
 
 MEET_CODE = re.compile(r"[a-z]{3}-[a-z]{4}-[a-z]{3}")
@@ -20,3 +20,34 @@ def normalize_google_meet(raw: str) -> str:
 
 
 PROVIDERS = {"google_meet": normalize_google_meet}
+
+
+# Phase 4: links created with the teacher's Google account (app/google.py holds the token handling).
+SPACE_NAME = re.compile(r"spaces/[A-Za-z0-9_-]{1,128}")
+GOOGLE_FAILED = {"code": "google_failed", "message": "Google could not create a Meet link; paste a link instead"}
+
+
+def create_google_space(c, teacher_id):
+    """One persistent Meet space for a batch (never one per class), owned by the teacher's Google account.
+    Returns (space name, meeting URL). Google busy (HTTP 429): two retries with backoff, then the teacher pastes a link."""
+    from fastapi import HTTPException
+    from . import google
+    token = google.teacher_access_token(c, teacher_id)
+    for wait in (1, 2, None):
+        status, body = google.meet_api("POST", "spaces", token, {})
+        if status != 429 or wait is None: break
+        time.sleep(wait)
+    try:
+        if status != 200 or not SPACE_NAME.fullmatch(str(body.get("name", ""))): raise ValueError(status)
+        return body["name"], normalize_google_meet(str(body.get("meetingUri", "")))
+    except ValueError: raise HTTPException(502, GOOGLE_FAILED) from None
+
+
+def google_space_link(c, teacher_id, space):
+    """The space's current meeting URL from spaces.get, or None when Google can't say (the stored link stays)."""
+    from fastapi import HTTPException
+    from . import google
+    try:
+        status, body = google.meet_api("GET", space, google.teacher_access_token(c, teacher_id))
+        return normalize_google_meet(str(body.get("meetingUri", ""))) if status == 200 else None
+    except (HTTPException, ValueError): return None

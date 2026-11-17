@@ -6,8 +6,8 @@ Tracking document for online classes in Nado Pasana (Owner, Teacher and Student 
 |---|---|---|
 | 1 | Manual Google Meet links on batches | Done (PRs #32, #33) |
 | 2 | Class sessions, Start/Join, cancel and reschedule one class, manual attendance | Done (PRs #34–#41) |
-| 3 | Teacher Google account connection (OAuth 2.0) | In progress (decisions taken 2026-11-18) |
-| 4 | Automatic Meet link creation (Meet REST API) | Planned, needs Phase 3 |
+| 3 | Teacher Google account connection (OAuth 2.0) | Done (PRs #42, #43); real-account check pending |
+| 4 | Automatic Meet link creation (Meet REST API) | In progress |
 | 5 | Attendance reports, academy analytics, owner batch reassignment | Planned |
 
 ## 0. Audit (November 2026)
@@ -232,6 +232,9 @@ ALTER TABLE academy ADD COLUMN google_connect_enabled INTEGER NOT NULL DEFAULT 0
 - Access type: left at the host's default; the teacher admits students from Meet. Changing it is a later setting if the academy asks.
 - Any API failure keeps the drawer open with the typed fields and offers "Paste a link instead".
 - Calendar invitations are not built: users have no email address in Nado Pasana, so there is no one to invite. Revisit if emails are added.
+
+**Progress.**
+- 4a (API): migration 9 (`batches.meeting_space_id`). `POST`/`PATCH /api/teacher/batches` accept `generate_meet: true`: after every other check passes, one space is created with `spaces.create` as the teacher and its `meetingUri` (validated like a pasted link) and `name` are stored; editing the batch never creates another. A pasted link or switching to offline clears the space. HTTP 429 is retried twice (1 s, 2 s), then the save fails with `502 {code: "google_failed"}` and nothing is stored; a missing or refused connection returns `409 {code: "google_reconnect"}`. Resuming a paused batch refreshes the link with `spaces.get` and keeps the old one if Google cannot answer. Batches report `meeting_generated`. Simplified from the plan: the link is refreshed on resume only, not on every open or before Start class, because a batch in weekly use keeps its meeting code alive. Unreachable Google (network errors, timeouts) is treated as a failed call everywhere. No "provider interface" class: `app/meetings.py` holds `create_google_space` and `google_space_link` next to the link normaliser. pytest 102/102 (4 new, Meet API mocked).
 
 **Tests.** Generate stores `meeting_space_id` and the URL; a 429 retries then falls back; a revoked token shows Reconnect and the batch still saves with a pasted link; resume refreshes the URL; switching to a pasted link clears `meeting_space_id`; provider calls are mocked in tests.
 

@@ -5,7 +5,7 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 from cryptography.fernet import Fernet
 
-from app import google
+from app import google, meetings
 from app.config import WEB_APP_URL
 from app.db import connect
 
@@ -35,7 +35,7 @@ def g(client, make_user, academy, monkeypatch):
         url = client.post("/api/teacher/google/connect", headers=th).json()["url"]
         query = {k: v[0] for k, v in parse_qs(urlsplit(url).query).items()}
         return query, client.get("/api/google/callback", params={"state": query["state"], "code": "auth-code"}, follow_redirects=False)
-    yield {"th": th, "teacher": teacher, "calls": calls, "replies": replies, "flow": connect_flow, "owner": academy.headers}
+    yield {"th": th, "teacher": teacher, "calls": calls, "replies": replies, "flow": connect_flow, "owner": academy.headers, "academy": academy}
     with connect() as c: c.execute("UPDATE academy SET google_connect_enabled=0")
 
 
@@ -114,3 +114,77 @@ def test_only_teachers_and_owners(client, make_user, g):
     assert client.post("/api/teacher/google/connect", headers=sh).status_code == 403
     assert client.patch("/api/owner/integrations", json={"google_enabled": False}, headers=g["th"]).status_code == 403
     assert client.patch("/api/owner/integrations", json={"google_enabled": True, "client_secret": "x"}, headers=g["owner"]).status_code == 422
+
+
+# Phase 4: Meet links created with the teacher's account (Meet REST API mocked).
+NEW = "https://meet.google.com/new-abcd-xyz"
+
+
+@pytest.fixture
+def meet(client, g, monkeypatch):
+    g["flow"]()
+    g["replies"][(google.TOKEN_URL, "refresh_token")] = (200, {"access_token": "fresh"})
+    course = g["academy"].course("Meet course", g["teacher"])
+    calls, replies, sleeps = [], [], []
+    def fake_meet(method, path, token, body=None):
+        calls.append((method, path, token, body))
+        return replies.pop(0) if replies else (200, {"name": "spaces/abc123", "meetingUri": NEW, "meetingCode": "new-abcd-xyz"})
+    monkeypatch.setattr(google, "meet_api", fake_meet)
+    monkeypatch.setattr(meetings.time, "sleep", sleeps.append)
+    create = lambda **extra: client.post("/api/teacher/batches", headers=g["th"], json={"name": "Online", "course_id": course["id"], "start_time": "06:00", "end_time": "06:30", "days": ["sun"], "class_mode": "online", **extra})
+    update = lambda bid, **body: client.patch(f"/api/teacher/batches/{bid}", headers=g["th"], json=body)
+    def space(bid):
+        with connect() as c: return c.execute("SELECT meeting_space_id FROM batches WHERE id=?", (bid,)).fetchone()[0]
+    return {**g, "calls": calls, "spaces": replies, "sleeps": sleeps, "create": create, "update": update, "space": space}
+
+
+def test_generate_creates_one_space_per_batch(meet):
+    created = meet["create"](generate_meet=True)
+    assert created.status_code == 201, created.text
+    batch = created.json()
+    assert (batch["meeting_url"], batch["meeting_provider"], batch["meeting_generated"]) == (NEW, "google_meet", True)
+    assert meet["calls"] == [("POST", "spaces", "fresh", {})] and meet["space"](batch["id"]) == "spaces/abc123"
+    assert meet["update"](batch["id"], name="Online Riyaz").json()["meeting_generated"] is True
+    assert len(meet["calls"]) == 1  # editing the batch never creates another space
+    pasted = meet["update"](batch["id"], meeting_url="meet.google.com/abc-defg-hij").json()
+    assert (pasted["meeting_url"], pasted["meeting_generated"], meet["space"](batch["id"])) == ("https://meet.google.com/abc-defg-hij", False, None)
+    regenerated = meet["update"](batch["id"], generate_meet=True).json()
+    assert regenerated["meeting_url"] == NEW and meet["space"](batch["id"]) == "spaces/abc123"
+    offline = meet["update"](batch["id"], class_mode="offline").json()
+    assert (offline["meeting_url"], meet["space"](batch["id"])) == (None, None)
+
+
+def test_busy_or_odd_google_falls_back_to_a_pasted_link(client, meet):
+    meet["spaces"].extend([(429, {})] * 3)
+    refused = meet["create"](generate_meet=True)
+    assert refused.status_code == 502 and refused.json()["detail"]["code"] == "google_failed" and meet["sleeps"] == [1, 2]
+    assert client.get("/api/teacher/batches", headers=meet["th"]).json() == []  # nothing half-saved
+    meet["spaces"].extend([(429, {}), (200, {"name": "spaces/abc123", "meetingUri": NEW})])
+    assert meet["create"](generate_meet=True).status_code == 201 and meet["sleeps"] == [1, 2, 1]
+    meet["spaces"].append((200, {"name": "../../etc", "meetingUri": NEW}))
+    assert meet["create"](generate_meet=True, start_time="09:00", end_time="09:30").status_code == 502
+    meet["spaces"].append((200, {"name": "spaces/x", "meetingUri": "https://evil.example/abc-defg-hij"}))
+    assert meet["create"](generate_meet=True, start_time="09:00", end_time="09:30").status_code == 502
+
+
+def test_reconnect_needed_but_pasted_links_still_save(client, make_user, meet):
+    meet["replies"][(google.TOKEN_URL, "refresh_token")] = (400, {"error": "invalid_grant"})
+    refused = meet["create"](generate_meet=True)
+    assert refused.status_code == 409 and refused.json()["detail"]["code"] == "google_reconnect" and meet["calls"] == []
+    assert meet["create"](meeting_url="https://meet.google.com/abc-defg-hij").status_code == 201
+    other, oh = make_user("teacher")
+    course = meet["academy"].course("Other course", other)
+    body = {"name": "B", "course_id": course["id"], "start_time": "06:00", "end_time": "06:30", "days": ["sun"], "class_mode": "online", "generate_meet": True}
+    assert client.post("/api/teacher/batches", headers=oh, json=body).json()["detail"]["code"] == "google_reconnect"  # never connected
+
+
+def test_resuming_a_batch_refreshes_its_link(meet):
+    bid = meet["create"](generate_meet=True).json()["id"]
+    meet["update"](bid, status="paused")
+    assert len(meet["calls"]) == 1
+    meet["spaces"].append((200, {"name": "spaces/abc123", "meetingUri": "https://meet.google.com/ref-resh-now"}))
+    assert meet["update"](bid, status="active").json()["meeting_url"] == "https://meet.google.com/ref-resh-now"
+    assert meet["calls"][-1] == ("GET", "spaces/abc123", "fresh", None)
+    meet["update"](bid, status="paused")
+    meet["spaces"].append((500, {}))
+    assert meet["update"](bid, status="active").json()["meeting_url"] == "https://meet.google.com/ref-resh-now"  # Google down: link kept
