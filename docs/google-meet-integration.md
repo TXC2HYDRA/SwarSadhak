@@ -4,7 +4,7 @@ Tracking document for online classes in Nado Pasana (Owner, Teacher and Student 
 
 | Phase | Scope | Status |
 |---|---|---|
-| 1 | Manual Google Meet links on batches | 1a backend done; 1b web in progress |
+| 1 | Manual Google Meet links on batches | Built (PRs #32, #33); awaiting your validation |
 | 2 | Class sessions, Start/Join, cancel and reschedule one class, manual attendance | Planned |
 | 3 | Teacher Google account connection (OAuth 2.0) | Planned, needs decisions |
 | 4 | Automatic Meet link creation (Meet REST API) | Planned, needs Phase 3 |
@@ -97,6 +97,8 @@ ALTER TABLE batches ADD COLUMN location TEXT NOT NULL DEFAULT '';
 
 **Progress.**
 - 1a (backend): migration 6, `app/meetings.py`, mode rules in `check_batch`, named-column INSERT, student link only for active batches, owner `has_meeting_link`. pytest 80/80 (23 new in `tests/test_meetings.py`: 5 accepted and 12 refused link forms, mode rules, member/paused/ended visibility, other teacher 404, owner without URL, version-5 upgrade). The student timetable privacy test now lists the three new fields.
+- 1b (web): `meetLink()` in `schedule.js` mirrors the server rule; the batch drawer has the Offline / Online / Hybrid choice, the Meet link field with an Open link, and the location field; the student timetable shows the mode and "Open Google Meet" (new tab); the Owner batches table has a Mode column ("Link added" / "No link yet"). Strings in en, mr, hi. node 170/170 (3 new). Main bundle 491.5 kB of 500 kB. Screenshots: [batch drawer](meet-integration/phase1-batch-drawer.jpg), [student timetable](meet-integration/phase1-student-timetable.jpg), [owner batches](meet-integration/phase1-owner-batches.jpg).
+- Found while checking: the shared form input rule also styled radio buttons as full-width text boxes; radios are now excluded.
 
 **Known limitations.** No generated links; no per-class cancel or reschedule; the "Now" badge stays clock-only; no overnight classes.
 

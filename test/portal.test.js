@@ -8,7 +8,7 @@ import { createApiClient, toApiSession } from '@swarsadhak/api-client';
 import { getTranslations, supportedLocales } from '@swarsadhak/localization';
 import { apiErrorKey, choosePortal, clearSession, loginErrorKey, readSession, writeSession } from '../apps/web/src/auth.js';
 import { ACCEPT, checkFile, fileErrorKey, fileType, formatSize, uploadFile } from '../apps/web/src/files.js';
-import { addDays, batchFormErrors, classesOn, formatTime, mondayOf, nextClass, nowIn, slotForm, todayIn, visibleRange, weekDates, weekOccurrences } from '../apps/web/src/schedule.js';
+import { addDays, batchFormErrors, classesOn, formatTime, meetLink, mondayOf, nextClass, nowIn, slotForm, todayIn, visibleRange, weekDates, weekOccurrences } from '../apps/web/src/schedule.js';
 
 const memoryStorage = () => { const values = new Map(); return { getItem: (k) => values.get(k) ?? null, setItem: (k, v) => values.set(k, String(v)), removeItem: (k) => values.delete(k) }; };
 
@@ -510,4 +510,43 @@ test('a dragged calendar range prefills the batch form with its length; a single
   const html = renderToStaticMarkup(React.createElement(web.BatchCalendar, { t, locale: 'en', batches: [], timezone: 'Asia/Kolkata', today: '2026-11-16', now: '10:00', selected: { date: '2026-11-18', minutes: 8 * 60, duration: 90 }, onSlot() {}, onBatch() {} }));
   assert.equal((html.match(/cal-slot is-selected/g) || []).length, 3);
   assert.match(html, new RegExp(t.portal.batches.dragHint));
+});
+
+test('Meet links follow the API rule, and online or hybrid batches need one', () => {
+  const link = 'https://meet.google.com/abc-defg-hij';
+  for (const raw of [link, 'meet.google.com/abc-defg-hij', ' HTTPS://MEET.GOOGLE.COM/ABC-DEFG-HIJ/ ', `${link}?authuser=1`]) assert.equal(meetLink(raw), link, raw);
+  for (const raw of ['', 'http://meet.google.com/abc-defg-hij', 'https://meet.google.com.evil.com/abc-defg-hij', 'https://meet.google.com/lookup/riyaz', 'https://meet.google.com/abc-defg-hij/x',
+    'https://user@meet.google.com/abc-defg-hij', 'https://meet.google.com:8443/abc-defg-hij', 'javascript:alert(1)//meet.google.com/abc-defg-hij']) assert.equal(meetLink(raw), null, raw);
+  const form = { name: 'Evening', course_id: 'c1', days: ['mon'], start_time: '18:00', end_time: '19:00' };
+  assert.deepEqual(batchFormErrors({ ...form, class_mode: 'online', meeting_url: 'https://zoom.us/j/1' }), ['meetingUrl']);
+  assert.deepEqual(batchFormErrors({ ...form, class_mode: 'hybrid', meeting_url: '' }), ['meetingUrl']);
+  assert.deepEqual(batchFormErrors({ ...form, class_mode: 'online', meeting_url: link }), []);
+  assert.deepEqual(batchFormErrors({ ...form, class_mode: 'offline', meeting_url: 'not a link' }), []);
+});
+
+test('the batch drawer asks for a Meet link or a place depending on the class mode', () => {
+  const t = getTranslations('en'); const b = t.portal.batches;
+  const render = (form) => renderToStaticMarkup(React.createElement(web.BatchDialog, { t, locale: 'en', state: { form: { name: 'Evening', course_id: 'c1', start_time: '18:00', end_time: '19:00', days: ['mon'], student_ids: [], meeting_url: '', location: '', ...form } }, courses: [{ id: 'c1', name: 'Vocal' }], students: [], onClose() {}, onSave() {}, onRemove() {}, onToggle() {} }));
+  const offline = render({ class_mode: 'offline' });
+  assert.match(offline, new RegExp(`<legend>${b.classMode}</legend>`));
+  assert.ok(offline.includes(b.location) && !offline.includes(b.meetLink));
+  const online = render({ class_mode: 'online', meeting_url: 'meet.google.com/abc-defg-hij' });
+  assert.ok(online.includes(b.meetLink) && !online.includes(b.location));
+  assert.match(online, /href="https:\/\/meet\.google\.com\/abc-defg-hij" target="_blank" rel="noopener noreferrer"/);
+  const hybrid = render({ class_mode: 'hybrid', meeting_url: 'https://evil.com/x' });
+  assert.ok(hybrid.includes(b.meetLink) && hybrid.includes(b.location) && !hybrid.includes('href="https://evil.com'));
+});
+
+test('students get an Open Google Meet link only for online classes with a valid link; the owner sees mode text', () => {
+  const t = getTranslations('en'); const b = t.portal.batches;
+  const link = (batch) => renderToStaticMarkup(React.createElement(web.MeetLink, { b, batch: { name: 'Evening Riyaz', ...batch } }));
+  const html = link({ class_mode: 'online', meeting_url: 'https://meet.google.com/abc-defg-hij' });
+  assert.match(html, /^<a class="button quiet meet-link" href="https:\/\/meet\.google\.com\/abc-defg-hij" target="_blank" rel="noopener noreferrer"/);
+  assert.match(html, new RegExp(`aria-label="${b.openMeet}: Evening Riyaz \\(${b.newTab}\\)"`));
+  assert.equal(link({ class_mode: 'offline', meeting_url: 'https://meet.google.com/abc-defg-hij' }), '');
+  assert.equal(link({ class_mode: 'online', meeting_url: null }), '');
+  assert.equal(link({ class_mode: 'online', meeting_url: 'javascript:alert(1)' }), '');
+  assert.equal(web.modeLabel(b, { class_mode: 'hybrid', location: 'Main hall' }), `${b.modes.hybrid} · Main hall`);
+  assert.equal(web.modeLabel(b, { class_mode: 'online', location: 'ignored' }), b.modes.online);
+  assert.equal(web.modeLabel(b, {}), b.modes.offline);
 });

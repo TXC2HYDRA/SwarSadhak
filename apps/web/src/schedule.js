@@ -57,12 +57,26 @@ export function slotForm(dayIndex, startMinutes, durationMinutes = 60) {
   return { days: [DAYS[dayIndex]], start_time: fromMinutes(startMinutes), end_time: fromMinutes(Math.min(startMinutes + durationMinutes, LAST_MINUTE)) };
 }
 
+// Same rule as the API (apps/api/app/meetings.py): returns https://meet.google.com/abc-defg-hij for a pasted
+// Meet link (missing scheme, capitals, trailing slash or query allowed), or null. The server has the final say.
+export function meetLink(raw = '') {
+  let value = String(raw || '').trim();
+  if (!value) return null;
+  if (!value.includes('://')) value = `https://${value}`;
+  let url;
+  try { url = new URL(value); } catch { return null; }
+  const code = url.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+  const ok = url.protocol === 'https:' && url.hostname === 'meet.google.com' && !url.port && !url.username && !url.password && /^[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(code);
+  return ok ? `https://meet.google.com/${code}` : null;
+}
+
 export function batchFormErrors(form) {
   const errors = [];
   if (!form.name.trim()) errors.push('name');
   if (!form.course_id) errors.push('course');
   if (!form.days.length) errors.push('days');
   if (!form.start_time || !form.end_time || form.end_time <= form.start_time) errors.push('endAfterStart');
+  if (form.class_mode && form.class_mode !== 'offline' && !meetLink(form.meeting_url)) errors.push('meetingUrl');
   return errors;
 }
 

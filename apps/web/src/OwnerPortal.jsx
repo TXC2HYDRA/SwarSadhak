@@ -3,7 +3,7 @@ import { ArrowDown, ArrowRight, ArrowUp, ArrowUpDown, BookOpen, CalendarRange, L
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, Sheet, TableSearch, Toast, matches, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
-import { TodayPanel, timeRange } from './BatchCalendar.jsx';
+import { TodayPanel, modeLabel, timeRange } from './BatchCalendar.jsx';
 import { nowIn, todayIn } from './schedule.js';
 
 const ROLES = ['owner', 'teacher', 'student'];
@@ -304,10 +304,11 @@ export function BatchesPage({ t, locale = 'en', client }) {
       <LoadState t={t} state={batches} empty={b.empty} />
       {batches.data?.length > 0 && !rows.length && <p>{t.portal.noMatches}</p>}
       {rows.length > 0 && <div className="table-wrap"><table className="data-table">
-        <thead><tr><th scope="col">{b.name}</th><th scope="col">{b.teacher}</th><th scope="col">{b.course}</th><th scope="col">{b.schedule}</th><th scope="col">{b.students}</th><th scope="col">{b.status}</th></tr></thead>
+        <thead><tr><th scope="col">{b.name}</th><th scope="col">{b.teacher}</th><th scope="col">{b.course}</th><th scope="col">{b.schedule}</th><th scope="col">{b.mode}</th><th scope="col">{b.students}</th><th scope="col">{b.status}</th></tr></thead>
         <tbody>{rows.map((batch) => <tr key={batch.id}>
           <td><strong>{batch.name}</strong></td><td data-label={b.teacher}>{batch.teacher_name}</td><td data-label={b.course}>{batch.course_name}</td>
           <td data-label={b.schedule}><span>{batch.days.map((day) => b.dayShort[day]).join(', ')}<small>{timeRange(batch, locale)}</small></span></td>
+          <td data-label={b.mode}><span>{modeLabel(b, batch)}{batch.class_mode !== 'offline' && <small>{batch.has_meeting_link ? b.linkAdded : b.noLink}</small>}</span></td>
           <td data-label={b.students}>{batch.student_count}</td>
           <td data-label={b.status}><span className={`status-badge ${batch.status === 'active' ? 'success' : 'neutral'}`}>{batch.status === 'active' ? b.active : b.paused}</span></td>
         </tr>)}</tbody>

@@ -22,7 +22,7 @@ export function filterStudents(students = [], query = '', courseId = '') {
     && (!needle || student.display_name.toLocaleLowerCase().includes(needle) || student.username.toLocaleLowerCase().includes(needle)));
 }
 
-const emptyBatch = { name: '', course_id: '', start_time: '18:00', end_time: '19:00', days: [], student_ids: [] };
+const emptyBatch = { name: '', course_id: '', start_time: '18:00', end_time: '19:00', days: [], student_ids: [], class_mode: 'offline', meeting_url: '', location: '' };
 
 export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
   const p = t.portal.teacher; const b = t.portal.batches;
@@ -50,6 +50,7 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
     setDialog({ form: { ...emptyBatch, course_id: defaultCourse, ...(slot ? slotForm(slot.dayIndex, slot.minutes, slot.duration) : {}) } });
   };
   const openEdit = (batch) => setDialog({ batch, form: { name: batch.name, course_id: batch.course_id, start_time: batch.start_time, end_time: batch.end_time, days: batch.days,
+    class_mode: batch.class_mode || 'offline', meeting_url: batch.meeting_url || '', location: batch.location || '',
     student_ids: batch.student_ids.filter((id) => (students.data || []).some((student) => student.id === id)) } });
   const close = () => { setDialog(null); setSelected(null); };
   const problem = (result) => {
@@ -62,7 +63,7 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
     close(); batches.reload(); summary.reload();
   };
   const save = async (form) => {
-    const body = { ...form, name: form.name.trim() };
+    const body = { ...form, name: form.name.trim(), meeting_url: form.class_mode === 'offline' ? null : form.meeting_url.trim() };
     const result = dialog.batch ? await client.teacher.batches.update(dialog.batch.id, body) : await client.teacher.batches.create(body);
     if (!result.ok) return problem(result);
     finish(result, dialog.batch ? b.saved : b.created);
