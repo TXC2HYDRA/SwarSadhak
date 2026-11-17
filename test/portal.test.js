@@ -585,3 +585,23 @@ test('students get an Open Google Meet link only for online classes with a valid
   assert.equal(web.modeLabel(b, { class_mode: 'online', location: 'ignored' }), b.modes.online);
   assert.equal(web.modeLabel(b, {}), b.modes.offline);
 });
+
+test('upcoming classes offer move, cancel and restore only where they make sense', () => {
+  const t = getTranslations('en'); const c = t.portal.batches.classes;
+  const k = (overrides) => ({ batch_id: 'b', batch_name: 'Evening', original_date: '2026-11-18', date: '2026-11-18', start_time: '18:00', end_time: '19:00', status: 'scheduled', note: '', course_name: 'Vocal', class_mode: 'online', meeting_url: 'https://meet.google.com/abc-defg-hij', ...overrides });
+  const classes = [
+    k({ batch_id: 'done', start_time: '07:00', end_time: '08:00' }),
+    k(),
+    k({ batch_id: 'off', original_date: '2026-11-20', date: '2026-11-20', status: 'cancelled', note: 'Guru travelling' }),
+    k({ batch_id: 'mv', original_date: '2026-11-19', date: '2026-11-21', status: 'rescheduled' }),
+  ];
+  const html = renderToStaticMarkup(React.createElement(web.UpcomingClasses, { t, locale: 'en', client: {}, classes, today: '2026-11-18', clock: '17:50', onEdit() {}, onChanged() {} }));
+  const rows = html.split('<li ').slice(1);
+  assert.equal(rows.length, 4);
+  assert.ok(!rows[0].includes(`>${c.move}<`) && rows[0].includes('is-finished')); // finished: nothing to change
+  assert.ok(rows[1].includes('join-link') && rows[1].includes(`>${c.cancel}<`) && !rows[1].includes(`>${c.restore}<`));
+  assert.ok(rows[2].includes(t.portal.teacher.cancelled) && rows[2].includes('Guru travelling') && rows[2].includes(`>${c.restore}<`) && !rows[2].includes(`>${c.cancel}<`) && !rows[2].includes('join-link'));
+  assert.ok(rows[3].includes('Moved from Thu, Nov 19') && rows[3].includes(`>${c.restore}<`) && rows[3].includes(`>${c.cancel}<`));
+  assert.match(html, new RegExp(`aria-label="${c.cancelTitle}: Evening, Wednesday, Nov 18"`));
+  assert.ok(renderToStaticMarkup(React.createElement(web.UpcomingClasses, { t, locale: 'en', client: {}, classes: [], today: '2026-11-18', clock: '09:00', onEdit() {}, onChanged() {} })).includes(c.none));
+});
