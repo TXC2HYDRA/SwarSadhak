@@ -167,6 +167,13 @@ class ClassChange(BaseModel):
         if self.status == "cancelled": self.new_date = self.new_start_time = self.new_end_time = None
         return self
 
+class AttendanceMark(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    student_id: str; status: Literal["present", "late", "absent", "excused"] | None  # None clears the mark
+class AttendanceSheet(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    marks: list[AttendanceMark] = Field(max_length=200)
+
 class RiyazAssignmentCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     title: str = Field(min_length=1, max_length=160); instructions: str = Field(default="", max_length=4000); course_id: str

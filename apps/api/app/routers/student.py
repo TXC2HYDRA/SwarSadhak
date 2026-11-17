@@ -34,5 +34,7 @@ def my_classes(start: date = Query(alias="from"), end: date = Query(alias="to"),
             JOIN enrollments e ON e.student_id=bm.student_id AND e.course_id=b.course_id AND e.teacher_id=b.teacher_id AND e.status='active'
             WHERE bm.student_id=? AND b.status='active'""", (me["id"],))}
         classes = expand(batches.values(), load_exceptions(c, list(batches), start, end), start, end)
+        mine = {(r[0], r[1]): r[2] for r in c.execute("SELECT batch_id, occurs_on, status FROM attendance WHERE student_id=?", (me["id"],))}
     return [{**k, **{f: batches[k["batch_id"]][f] for f in ("course_name", "teacher_name", "class_mode", "location")},
-             "meeting_url": batches[k["batch_id"]]["meeting_url"] if k["status"] != "cancelled" else None} for k in classes]
+             "meeting_url": batches[k["batch_id"]]["meeting_url"] if k["status"] != "cancelled" else None,
+             "my_attendance": mine.get((k["batch_id"], k["original_date"]))} for k in classes]

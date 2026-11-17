@@ -7,7 +7,7 @@ from ..db import connect
 from ..dependencies import require_role
 from ..meetings import PROVIDERS
 from ..schedule import academy_today, check_range, expand, load_exceptions, occurs, teacher_conflicts
-from ..schemas import DAYS, BatchCreate, BatchUpdate, ClassChange
+from ..schemas import DAYS, AttendanceSheet, BatchCreate, BatchUpdate, ClassChange
 
 teacher = require_role("teacher")
 router = APIRouter(prefix="/api/teacher")
@@ -150,7 +150,10 @@ def my_classes(start: date = Query(alias="from"), end: date = Query(alias="to"),
         batches = {b["id"]: b for b in c.execute("""SELECT b.*, co.name AS course_name, (SELECT COUNT(*) FROM batch_members m WHERE m.batch_id=b.id) AS student_count
             FROM batches b JOIN courses co ON co.id=b.course_id WHERE b.teacher_id=? AND b.status='active'""", (me["id"],))}
         classes = expand(batches.values(), load_exceptions(c, list(batches), start, end), start, end)
-    return [{**k, **{f: batches[k["batch_id"]][f] for f in ("course_name", "student_count", "class_mode", "meeting_url", "location")}} for k in classes]
+        marked = {(r[0], r[1]): r[2] for r in c.execute(f"""SELECT batch_id, occurs_on, COUNT(*) FROM attendance WHERE batch_id IN ({','.join('?' * len(batches))})
+            GROUP BY batch_id, occurs_on""", list(batches))} if batches else {}
+    return [{**k, **{f: batches[k["batch_id"]][f] for f in ("course_name", "student_count", "class_mode", "meeting_url", "location")},
+             "attendance_count": marked.get((k["batch_id"], k["original_date"]), 0)} for k in classes]
 
 def class_on(c, row, original):
     """The class of this batch keyed by its original date, wherever it now falls."""
@@ -167,6 +170,8 @@ def change_class(bid: str, day: date, data: ClassChange, me=Depends(teacher)):
     with connect() as c:
         row = own_batch(c, bid, me["id"])
         if not occurs(row, day): raise HTTPException(404, "this batch has no class on that date")
+        if data.status == "cancelled" and c.execute("SELECT 1 FROM attendance WHERE batch_id=? AND occurs_on=?", (bid, day.isoformat())).fetchone():
+            raise HTTPException(409, "attendance has been marked for this class; clear it before cancelling")
         if data.status == "rescheduled":
             if data.new_date < academy_today(c): raise HTTPException(422, "a class can only be moved to today or a later date")
             refuse_conflicts(teacher_conflicts(c, me["id"], data.new_date, data.new_start_time, data.new_end_time, (bid, day.isoformat())))
@@ -186,3 +191,42 @@ def restore_class(bid: str, day: date, me=Depends(teacher)):
         refuse_conflicts(teacher_conflicts(c, me["id"], day, row["start_time"], row["end_time"], (bid, day.isoformat())) if occurs(row, day) else [])
         c.execute("DELETE FROM class_exceptions WHERE batch_id=? AND occurs_on=?", (bid, day.isoformat()))
         return class_on(c, row, day.isoformat()) if occurs(row, day) else {"restored": True}
+
+def markable_class(c, row, day: date):
+    """The class keyed by its original date, if attendance can be taken: it exists, is not cancelled and has started
+    (its actual date is today or earlier in the academy timezone)."""
+    if not occurs(row, day): raise HTTPException(404, "this batch has no class on that date")
+    k = class_on(c, row, day.isoformat())
+    if k["status"] == "cancelled": raise HTTPException(409, "this class was cancelled")
+    return k
+
+def attendance_sheet(c, row, k):
+    # Current members plus anyone already marked for this class (a student may have left the batch since).
+    rows = c.execute("""SELECT u.id, u.display_name, u.username, a.status FROM users u
+        LEFT JOIN attendance a ON a.student_id=u.id AND a.batch_id=? AND a.occurs_on=?
+        WHERE u.id IN (SELECT student_id FROM batch_members WHERE batch_id=?) OR a.status IS NOT NULL
+        ORDER BY u.display_name COLLATE NOCASE""", (row["id"], k["original_date"], row["id"])).fetchall()
+    return {"class": k, "students": [{"student_id": r["id"], "display_name": r["display_name"], "username": r["username"], "status": r["status"]} for r in rows]}
+
+@router.get("/batches/{bid}/classes/{day}/attendance")
+def class_attendance(bid: str, day: date, me=Depends(teacher)):
+    with connect() as c:
+        row = own_batch(c, bid, me["id"])
+        return attendance_sheet(c, row, markable_class(c, row, day))
+
+@router.put("/batches/{bid}/classes/{day}/attendance")
+def mark_attendance(bid: str, day: date, data: AttendanceSheet, me=Depends(teacher)):
+    """The teacher marks each student present, late, absent or excused (null clears). Nothing is marked automatically."""
+    with connect() as c:
+        row = own_batch(c, bid, me["id"])
+        k = markable_class(c, row, day)
+        if k["date"] > academy_today(c).isoformat(): raise HTTPException(409, "attendance can be taken once the class day arrives")
+        allowed = {s["student_id"] for s in attendance_sheet(c, row, k)["students"]}
+        if {m.student_id for m in data.marks} - allowed: raise HTTPException(403, "only students of this batch can be marked")
+        stamp = now()
+        for m in data.marks:
+            if m.status is None: c.execute("DELETE FROM attendance WHERE batch_id=? AND occurs_on=? AND student_id=?", (bid, k["original_date"], m.student_id))
+            else: c.execute("""INSERT INTO attendance (batch_id, occurs_on, student_id, status, marked_by, marked_at) VALUES (?,?,?,?,?,?)
+                ON CONFLICT (batch_id, occurs_on, student_id) DO UPDATE SET status=excluded.status, marked_by=excluded.marked_by, marked_at=excluded.marked_at""",
+                (bid, k["original_date"], m.student_id, m.status, me["id"], stamp))
+        return attendance_sheet(c, row, k)
