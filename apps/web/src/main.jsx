@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, ArrowRight, BarChart3, ChevronRight, Home, Languages, Library, Play, Radio, Route, Search, Settings, ShieldCheck, Sparkles, Target } from 'lucide-react';
+import { Activity, ArrowDown, ArrowRight, ArrowUp, BarChart3, Check, ChevronRight, Home, Languages, Library, Play, Plus, Radio, Route, Search, Settings, ShieldCheck, Sparkles, Target, Trash2 } from 'lucide-react';
 import { getTranslations, localeNames, supportedLocales } from '@swarsadhak/localization';
 import { createSession } from '@swarsadhak/practice-domain';
 import { createStorage } from '@swarsadhak/persistence';
@@ -216,7 +216,28 @@ function PlannerWithAllControls({ t, routines, setRoutines, onStart }) {
   const move = (type, index, delta) => setRoutine((current) => ({ ...current, sections: current.sections.map((section) => { if (section.type !== type) return section; const items = [...section.items]; const target = index + delta; if (target < 0 || target >= items.length) return section; [items[index], items[target]] = [items[target], items[index]]; return { ...section, items }; }) }));
   const remove = (id) => setRoutine((current) => ({ ...current, sections: current.sections.map((section) => ({ ...section, items: section.items.filter((item) => item.id !== id) })) }));
   const save = () => { try { const normalized = normalizeRoutine(routine); const next = [...routines.filter((item) => item.id !== normalized.id), normalized]; const result = store.set(KEYS.routines, next); if (!result.ok) { setError(t.persistenceWarning); return null; } setRoutines(next); setRoutine(normalized); setError(''); return normalized; } catch (cause) { setError(cause.message); return null; } };
-  return <div className="page"><h1 id="routines-title">{t.routinesTitle}</h1><select aria-labelledby="routines-title" value={routine.id} onChange={(event) => setRoutine(routines.find((item) => item.id === event.target.value) || routine)}>{routines.map((item) => <option key={item.id} value={item.id}>{textAt(t, item.nameKey)}</option>)}</select>{routine.sections.map((section) => <section className="panel" key={section.type}><h2>{textAt(t, section.titleKey)}</h2>{section.items.map((item, index) => <div className="routine-item" key={item.id}><select aria-label={t.exercise} value={item.exerciseId} onChange={(event) => update((candidate) => candidate.id === item.id ? { ...candidate, exerciseId: event.target.value } : candidate)}>{EXERCISES.map((exercise) => <option key={exercise.id} value={exercise.id}>{textAt(t, exercise.nameKey)}</option>)}</select><input aria-label={t.duration} type="number" min="10" max="900" value={item.durationSeconds} onChange={(event) => update((candidate) => candidate.id === item.id ? { ...candidate, durationSeconds: Number(event.target.value) } : candidate)} /><button className="button" aria-label={t.moveUp} onClick={() => move(section.type, index, -1)}>{t.moveUp}</button><button className="button" aria-label={t.moveDown} onClick={() => move(section.type, index, 1)}>{t.moveDown}</button><button className="button" aria-label={`${t.remove}: ${textAt(t, getExercise(item.exerciseId)?.nameKey || 'exercises.saSustain.name')}`} onClick={() => remove(item.id)}>{t.remove}</button></div>)}<button className="button" onClick={() => add(section.type)}>{t.addExercise}</button></section>)}{error && <div className="notice" role="alert">{error}</div>}<p>{t.totalDuration}: {Math.ceil(totalRoutineSeconds(routine) / 60)} min</p><button className="button" onClick={save}>{t.saveRoutine}</button><button className="button primary" onClick={() => { const saved = save(); if (saved) onStart(saved); }}>{t.startRoutine}</button></div>;
+  return <div className="page planner-page">
+    <div className="page-heading"><div><h1 id="routines-title">{t.routinesTitle}</h1></div></div>
+    <label className="field-label routine-pick">{t.routineLabel}<select value={routine.id} onChange={(event) => setRoutine(routines.find((item) => item.id === event.target.value) || routine)}>{routines.map((item) => <option key={item.id} value={item.id}>{textAt(t, item.nameKey)}</option>)}</select></label>
+    {routine.sections.map((section) => <section className="routine-section" key={section.type} aria-labelledby={`section-${section.type}`}>
+      <h2 id={`section-${section.type}`}>{textAt(t, section.titleKey)}</h2>
+      {section.items.length > 0 && <ol className="routine-items">{section.items.map((item, index) => {
+        const name = textAt(t, getExercise(item.exerciseId)?.nameKey || 'exercises.saSustain.name');
+        return <li className="routine-item" key={item.id}>
+          <select aria-label={t.exercise} value={item.exerciseId} onChange={(event) => update((candidate) => candidate.id === item.id ? { ...candidate, exerciseId: event.target.value } : candidate)}>{EXERCISES.map((exercise) => <option key={exercise.id} value={exercise.id}>{textAt(t, exercise.nameKey)}</option>)}</select>
+          <label className="duration-field"><input aria-label={t.duration} type="number" min="10" max="900" value={item.durationSeconds} onChange={(event) => update((candidate) => candidate.id === item.id ? { ...candidate, durationSeconds: Number(event.target.value) } : candidate)} /><span aria-hidden="true">{t.secondsShort}</span></label>
+          <span className="routine-item-actions">
+            <button type="button" className="icon-button" aria-label={`${t.moveUp}: ${name}`} disabled={index === 0} onClick={() => move(section.type, index, -1)}><ArrowUp size={18} aria-hidden="true" /></button>
+            <button type="button" className="icon-button" aria-label={`${t.moveDown}: ${name}`} disabled={index === section.items.length - 1} onClick={() => move(section.type, index, 1)}><ArrowDown size={18} aria-hidden="true" /></button>
+            <button type="button" className="icon-button danger" aria-label={`${t.remove}: ${name}`} onClick={() => remove(item.id)}><Trash2 size={18} aria-hidden="true" /></button>
+          </span>
+        </li>;
+      })}</ol>}
+      <button type="button" className="button quiet add-item" onClick={() => add(section.type)}><Plus size={16} aria-hidden="true" />{t.addExercise}</button>
+    </section>)}
+    {error && <div className="notice" role="alert">{error}</div>}
+    <div className="routine-footer"><p>{t.totalDuration}: <strong>{Math.ceil(totalRoutineSeconds(routine) / 60)} min</strong></p><div className="action-row"><button className="button" onClick={save}>{t.saveRoutine}</button><button className="button primary" onClick={() => { const saved = save(); if (saved) onStart(saved); }}>{t.startRoutine}</button></div></div>
+  </div>;
 }
 
 
@@ -226,12 +247,46 @@ export function RoutineRun({ t, routine, onItem, onSkip, onExit }) {
   return <div className="page"><h1>{textAt(t, routine.nameKey)}</h1><p role="status">{t.itemProgress}: {index + 1} / {items.length} · {textAt(t, `routineSections.${item.sectionType}`)}</p><section className="panel"><h2>{textAt(t, item.exercise.nameKey)}</h2><p>{item.durationSeconds}s</p><button className="button primary" onClick={() => onItem(item)}>{t.start}</button><button className="button" onClick={onSkip}>{t.skipItem}</button></section><button className="button" onClick={onExit}>{t.exitRoutine}</button></div>;
 }
 
-function Progress({ t, sessions, rewards, achievements, onClear, streakEnabled, setStreakEnabled }) { const xp = rewards.reduce((sum, item) => sum + item.xp, 0); return <div className="page"><h1>{t.progressTitle}</h1><section className="stats-grid"><div className="stat-card"><strong>{xp}</strong><small>{t.xp}</small></div><div className="stat-card"><strong>{getLevel(xp).level}</strong><small>{t.levelLabel}</small></div><div className="stat-card"><strong>{getStreak(sessions, streakEnabled)}</strong><small>{streakEnabled ? t.streakOptional : t.streakOff}</small></div></section><p className="notice">{t.participationNotice}</p><label><input type="checkbox" checked={streakEnabled} onChange={(event) => setStreakEnabled(event.target.checked)} />{t.enableStreak}</label><section className="panel"><h2>{t.achievements}</h2>{ACHIEVEMENTS.map((achievement) => <div className="metric-row" key={achievement.id}><span><strong>{textAt(t, achievement.titleKey)}</strong><small>{textAt(t, achievement.descriptionKey)}</small></span><strong>{achievements.some((item) => item.id === achievement.id) ? '✓' : t.locked}</strong></div>)}</section><button className="button" onClick={onClear}>{t.clear}</button></div>; }
+function Progress({ t, sessions, rewards, achievements, onClear, streakEnabled, setStreakEnabled }) {
+  const xp = rewards.reduce((sum, item) => sum + item.xp, 0);
+  const earned = new Set(achievements.map((item) => item.id));
+  return <div className="page progress-page">
+    <div className="page-heading"><div><h1>{t.progressTitle}</h1><p className="page-lede">{t.participationNotice}</p></div></div>
+    <section className="stats-grid"><div className="stat-card"><strong>{xp}</strong><small>{t.xp}</small></div><div className="stat-card"><strong>{getLevel(xp).level}</strong><small>{t.levelLabel}</small></div><div className="stat-card"><strong>{getStreak(sessions, streakEnabled)}</strong><small>{streakEnabled ? t.streakOptional : t.streakOff}</small></div></section>
+    <label className="check-row"><input type="checkbox" checked={streakEnabled} onChange={(event) => setStreakEnabled(event.target.checked)} />{t.enableStreak}</label>
+    <section className="achievement-list" aria-labelledby="achievements-title"><h2 id="achievements-title">{t.achievements}</h2>
+      <ul>{ACHIEVEMENTS.map((achievement) => { const got = earned.has(achievement.id); return <li key={achievement.id} className={got ? 'is-earned' : undefined}>
+        <span><strong>{textAt(t, achievement.titleKey)}</strong><small>{textAt(t, achievement.descriptionKey)}</small></span>
+        <span className="achievement-state">{got ? <><Check size={16} aria-hidden="true" />{t.earned}</> : t.notYet}</span>
+      </li>; })}</ul>
+    </section>
+    <button className="button quiet danger clear-history" onClick={onClear}>{t.clear}</button>
+  </div>;
+}
 function exerciseGoalKey(exercise) { if (exercise.id === 'sa-sustain') return 'goalSa'; if (exercise.id === 'ascending-sargam') return 'goalSequence'; return 'goalAlankar'; }
 function LibraryPage({ t, onChoose, onOpenAlankars }) {
   const [query, setQuery] = useState('');
   const [level, setLevel] = useState('all');
   const exercises = EXERCISES.filter((exercise) => exercise.id !== 'sa-re-ga').filter((exercise) => level === 'all' || String(exercise.level) === level).filter((exercise) => `${textAt(t, exercise.nameKey)} ${textAt(t, exercise.descriptionKey)} ${t.exerciseUi[exerciseGoalKey(exercise)]}`.toLowerCase().includes(query.toLowerCase()));
-  return <div className="page library-page"><div className="page-heading"><div><h1>{t.libraryTitle}</h1><p className="page-lede">{t.landing.featureDescription}</p></div></div><button className="alankar-hero" onClick={onOpenAlankars}><span className="feature-icon"><Sparkles size={20} aria-hidden="true" /></span><div><strong>{t.alankar.name}</strong><span>{t.alankar.description}</span></div><ChevronRight size={20} aria-hidden="true" /></button><Surface className="library-filters"><div className="filter-heading"><strong>{t.exerciseUi.filter}</strong><button className="button quiet" onClick={() => { setQuery(''); setLevel('all'); }}>{t.exerciseUi.clearFilters}</button></div><div className="filter-controls"><label className="search-field"><Search size={16} aria-hidden="true" /><span className="sr-only">{t.exerciseUi.search}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.exerciseUi.searchPlaceholder} aria-label={t.exerciseUi.search} /></label><label className="field-label"><span className="sr-only">{t.exerciseUi.difficulty}</span><select aria-label={t.exerciseUi.difficulty} value={level} onChange={(event) => setLevel(event.target.value)}><option value="all">{t.exerciseUi.allLevels}</option><option value="1">{t.exerciseUi.beginner}</option><option value="2">{t.exerciseUi.intermediate}</option></select></label></div></Surface>{exercises.length ? <div className="exercise-list">{exercises.map((exercise) => <button className="exercise-card" key={exercise.id} onClick={() => onChoose(exercise)}><span className="exercise-card-icon"><Target size={19} aria-hidden="true" /></span><div className="exercise-card-content"><strong>{textAt(t, exercise.nameKey)}</strong><span>{textAt(t, exercise.descriptionKey)}</span><div className="exercise-meta"><small>{t.exerciseUi.difficulty}: {exercise.level === 1 ? t.exerciseUi.beginner : t.exerciseUi.intermediate}</small><small>{t.exerciseUi.duration}: {exercise.durationSeconds} {t.exerciseUi.seconds}</small><small>{t.exerciseUi.goal}: {t.exerciseUi[exerciseGoalKey(exercise)]}</small>{exercise.limited && <small className="limited-label">{t.exerciseUi.limited}</small>}</div></div><ArrowRight size={19} aria-hidden="true" /></button>)}</div> : <div className="empty-state panel"><Search size={23} aria-hidden="true" /><p>{t.exerciseUi.noResults}</p></div>}</div>;
+  const filtering = query !== '' || level !== 'all';
+  return <div className="page library-page">
+    <div className="page-heading"><div><h1>{t.libraryTitle}</h1><p className="page-lede">{t.landing.featureDescription}</p></div></div>
+    <button className="alankar-hero" onClick={onOpenAlankars}><span className="feature-icon"><Sparkles size={20} aria-hidden="true" /></span><div><strong>{t.alankar.name}</strong><span>{t.alankar.description}</span></div><ChevronRight size={20} aria-hidden="true" /></button>
+    <div className="library-toolbar" role="search" aria-label={t.exerciseUi.filter}>
+      <label className="search-field"><Search size={16} aria-hidden="true" /><span className="sr-only">{t.exerciseUi.search}</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.exerciseUi.searchPlaceholder} aria-label={t.exerciseUi.search} /></label>
+      <select aria-label={t.exerciseUi.difficulty} value={level} onChange={(event) => setLevel(event.target.value)}><option value="all">{t.exerciseUi.allLevels}</option><option value="1">{t.exerciseUi.beginner}</option><option value="2">{t.exerciseUi.intermediate}</option></select>
+      {filtering && <button type="button" className="button quiet" onClick={() => { setQuery(''); setLevel('all'); }}>{t.exerciseUi.clearFilters}</button>}
+    </div>
+    {exercises.length ? <ul className="exercise-list">{exercises.map((exercise) => <li key={exercise.id}><button className="exercise-card" onClick={() => onChoose(exercise)}>
+      <span className="exercise-card-content"><strong>{textAt(t, exercise.nameKey)}</strong><span>{textAt(t, exercise.descriptionKey)}</span>
+        <span className="exercise-meta"><small>{t.exerciseUi.difficulty}: {exercise.level === 1 ? t.exerciseUi.beginner : t.exerciseUi.intermediate}</small><small>{t.exerciseUi.duration}: {exercise.durationSeconds} {t.exerciseUi.seconds}</small><small>{t.exerciseUi.goal}: {t.exerciseUi[exerciseGoalKey(exercise)]}</small>{exercise.limited && <small className="limited-label">{t.exerciseUi.limited}</small>}</span></span>
+      <ArrowRight size={19} aria-hidden="true" /></button></li>)}</ul>
+      : <div className="empty-state"><Search size={23} aria-hidden="true" /><p>{t.exerciseUi.noResults}</p></div>}
+  </div>;
 }
-function SettingsPage({ t, locale, setLocale }) { return <div className="page settings-page"><div className="page-heading"><div><h1>{t.settingsTitle}</h1><p className="page-lede">{t.privacy}</p></div></div><Surface className="settings-panel"><SectionHeader title={t.language} /><label className="field-label">{t.language}<select value={locale} aria-label={t.language} onChange={(event) => setLocale(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></label></Surface></div>; }
+function SettingsPage({ t, locale, setLocale }) {
+  return <div className="page settings-page">
+    <div className="page-heading"><div><h1>{t.settingsTitle}</h1><p className="page-lede">{t.privacy}</p></div></div>
+    <div className="settings-list"><label className="settings-row"><span>{t.language}</span><select value={locale} onChange={(event) => setLocale(event.target.value)}>{supportedLocales.map((item) => <option key={item} value={item}>{localeNames[item]}</option>)}</select></label></div>
+  </div>;
+}

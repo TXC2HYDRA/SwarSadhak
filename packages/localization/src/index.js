@@ -48,7 +48,34 @@ const tanpuraUi = {
   mr: { tanpuraLabel: 'साथ', tanpuraTitle: 'तानपुरा नाद', tanpuraDescription: 'तुमच्या निवडलेल्या पट्टीत मृदू, सतत तानपुरा नाद.', tanpuraScale: 'तानपुरा पट्टी', tanpuraProfile: 'आवाजाची पट्टी', tanpuraStart: 'तानपुरा सुरू करा', tanpuraStop: 'तानपुरा थांबवा', tanpuraPlaying: 'लूपमध्ये सुरू आहे', tanpuraStopped: 'थांबलेला', tanpuraHint: 'शक्य असल्यास हेडफोन वापरा, म्हणजे नाद मायक्रोफोनमध्ये जाणार नाही.', tanpuraOfflineNote: 'पर्यायी साथ; ऑफलाइन असताना ऑडिओ उपलब्ध नसेल.', tanpuraUnavailable: 'या ब्राउझरमध्ये तानपुरा ऑडिओ उपलब्ध नाही.', tanpuraProfiles: { lowMale: 'खालचा / पुरुष', mediumFemale: 'मध्यम / स्त्री', lowFemale: 'खालचा / स्त्री', mediumMale: 'मध्यम / पुरुष', medium: 'मध्यम' } },
   hi: { tanpuraLabel: 'संगत', tanpuraTitle: 'तानपुरा नाद', tanpuraDescription: 'आपकी चुनी हुई पट्टी में कोमल, लगातार तानपुरा नाद।', tanpuraScale: 'तानपुरा पट्टी', tanpuraProfile: 'आवाज़ की पट्टी', tanpuraStart: 'तानपुरा चलाएं', tanpuraStop: 'तानपुरा रोकें', tanpuraPlaying: 'लूप में चल रहा है', tanpuraStopped: 'रुका हुआ', tanpuraHint: 'संभव हो तो हेडफ़ोन इस्तेमाल करें ताकि नाद माइक्रोफ़ोन तक न पहुंचे।', tanpuraOfflineNote: 'वैकल्पिक संगत; ऑफ़लाइन होने पर ऑडियो उपलब्ध नहीं हो सकता।', tanpuraUnavailable: 'इस ब्राउज़र में तानपुरा ऑडियो उपलब्ध नहीं है।', tanpuraProfiles: { lowMale: 'निचला / पुरुष', mediumFemale: 'मध्य / महिला', lowFemale: 'निचला / महिला', mediumMale: 'मध्य / पुरुष', medium: 'मध्य' } },
 };
-export const translations = { en: { ...en, ...phase2.en, ...phase3.en, ...alankarMetadata.en, ...alankarUi.en, ...tanpuraUi.en, studioUi: studioUi.en, brand: brandUi.en, portal: portalUi.en }, mr: { ...mr, ...phase2.mr, ...phase3.mr, ...alankarMetadata.mr, ...alankarUi.mr, ...tanpuraUi.mr, studioUi: studioUi.mr, brand: brandUi.mr, portal: portalUi.mr }, hi: { ...hi, ...phase2.hi, ...phase3.hi, ...alankarMetadata.hi, ...alankarUi.hi, ...tanpuraUi.hi, studioUi: studioUi.hi, brand: brandUi.hi, portal: portalUi.hi } };
+// Secondary student pages: achievement names (the gamification package refers to achievementList.*), routine and progress labels.
+const pageUi = {
+  en: { earned: 'Earned', notYet: 'Not yet', routineLabel: 'Routine', secondsShort: 'sec', achievementList: {
+    firstPractice: { title: 'First practice', description: 'Complete one practice session with a clear voice signal.' },
+    firstRoutine: { title: 'First routine', description: 'Finish every item in a routine.' },
+    threeSessions: { title: 'Three sessions', description: 'Complete three practice sessions.' },
+    fiveMinutes: { title: 'Five minutes', description: 'Practise for five minutes in total.' },
+    warmup: { title: 'Warm-up done', description: 'Complete a warm-up item in a routine.' },
+    cooldown: { title: 'Cool-down done', description: 'Complete a cool-down item in a routine.' },
+    threeDays: { title: 'Three days', description: 'Practise on three different days.' } } },
+  mr: { earned: 'मिळाले', notYet: 'अजून नाही', routineLabel: 'दिनचर्या', secondsShort: 'से.', achievementList: {
+    firstPractice: { title: 'पहिला सराव', description: 'स्पष्ट आवाजासह एक सराव सत्र पूर्ण करा.' },
+    firstRoutine: { title: 'पहिली दिनचर्या', description: 'दिनचर्येतील प्रत्येक भाग पूर्ण करा.' },
+    threeSessions: { title: 'तीन सत्रे', description: 'तीन सराव सत्रे पूर्ण करा.' },
+    fiveMinutes: { title: 'पाच मिनिटे', description: 'एकूण पाच मिनिटे सराव करा.' },
+    warmup: { title: 'वॉर्म-अप पूर्ण', description: 'दिनचर्येतील एक वॉर्म-अप भाग पूर्ण करा.' },
+    cooldown: { title: 'कूल-डाऊन पूर्ण', description: 'दिनचर्येतील एक कूल-डाऊन भाग पूर्ण करा.' },
+    threeDays: { title: 'तीन दिवस', description: 'तीन वेगवेगळ्या दिवशी सराव करा.' } } },
+  hi: { earned: 'मिला', notYet: 'अभी नहीं', routineLabel: 'दिनचर्या', secondsShort: 'से.', achievementList: {
+    firstPractice: { title: 'पहला अभ्यास', description: 'साफ़ आवाज़ के साथ एक अभ्यास सत्र पूरा करें।' },
+    firstRoutine: { title: 'पहली दिनचर्या', description: 'दिनचर्या का हर हिस्सा पूरा करें।' },
+    threeSessions: { title: 'तीन सत्र', description: 'तीन अभ्यास सत्र पूरे करें।' },
+    fiveMinutes: { title: 'पाँच मिनट', description: 'कुल पाँच मिनट अभ्यास करें।' },
+    warmup: { title: 'वार्म-अप पूरा', description: 'दिनचर्या में एक वार्म-अप हिस्सा पूरा करें।' },
+    cooldown: { title: 'कूल-डाउन पूरा', description: 'दिनचर्या में एक कूल-डाउन हिस्सा पूरा करें।' },
+    threeDays: { title: 'तीन दिन', description: 'तीन अलग-अलग दिनों पर अभ्यास करें।' } } },
+};
+export const translations = { en: { ...en, ...phase2.en, ...phase3.en, ...alankarMetadata.en, ...alankarUi.en, ...tanpuraUi.en, ...pageUi.en, studioUi: studioUi.en, brand: brandUi.en, portal: portalUi.en }, mr: { ...mr, ...phase2.mr, ...phase3.mr, ...alankarMetadata.mr, ...alankarUi.mr, ...tanpuraUi.mr, ...pageUi.mr, studioUi: studioUi.mr, brand: brandUi.mr, portal: portalUi.mr }, hi: { ...hi, ...phase2.hi, ...phase3.hi, ...alankarMetadata.hi, ...alankarUi.hi, ...tanpuraUi.hi, ...pageUi.hi, studioUi: studioUi.hi, brand: brandUi.hi, portal: portalUi.hi } };
 const localizedUi = {
   en: { persistenceWarning: 'This result could not be saved locally.', pitchFeedback: { waiting: 'Sing a steady Sa', silence: 'Sing a steady Sa', lowConfidence: 'Keep singing steadily', clipping: 'Move a little farther from the microphone', inTune: 'In tune', flat: 'A little flat', sharp: 'A little sharp' } },
   mr: {
