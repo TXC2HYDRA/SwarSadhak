@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { LoadState, useApi } from './PortalShell.jsx';
 import { MODE_ICONS, MeetLink, TodayPanel, modeLabel, timeRange } from './BatchCalendar.jsx';
-import { DAYS, due, nextClass, nowIn, todayIn } from './schedule.js';
+import { DAYS, addDays, due, nextClass, nowIn, todayIn } from './schedule.js';
 import './portal.css';
 
 export const timetableDays = (batches) => DAYS.map((day, index) => ({ day, index, items: batches.filter((batch) => batch.days.includes(day)) })).filter((day) => day.items.length);
@@ -43,14 +43,15 @@ export function StudentTimetable({ t, locale = 'en', client, now }) {
 // The academy half of the student home: today's classes and work still to hand in. Practice stays local-first.
 export function StudentToday({ t, locale = 'en', client, now, onTimetable, onAssignments }) {
   const s = t.portal.student; const a = t.portal.assignments;
-  const batches = useApi(t, () => client.student.batches());
   const academy = useApi(t, () => client.academy());
   const assignments = useApi(t, () => client.student.assignments.list());
   const timezone = academy.data?.timezone || 'Asia/Kolkata';
+  const today = todayIn(timezone, now);
+  const classes = useApi(t, () => client.student.classes(today, addDays(today, 7)), [today]);
   const open = openAssignments(assignments.data || []);
   // Two sections laid out by the home grid (classes on the left, work on the right).
   return <>
-    <TodayPanel t={t} locale={locale} batches={batches.data} today={todayIn(timezone, now)} clock={nowIn(timezone, now)} onBatch={onTimetable} dated={false} />
+    <TodayPanel t={t} locale={locale} classes={classes.data} today={today} clock={nowIn(timezone, now)} onClass={onTimetable} joinLabel={t.portal.teacher.joinClass} dated={false} />
     <section className="home-work" aria-labelledby="open-work-title">
       <h2 id="open-work-title">{s.openWork}</h2>
       {!assignments.data ? <LoadState t={t} state={assignments} /> : !open.length ? <p>{s.noOpenWork}</p>

@@ -315,3 +315,12 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .meet-open { justify-self: start; margin-top: -4px; }
 .class-mode { display: inline-flex; align-items: center; gap: 6px; }
 .student-list .meet-link { justify-self: start; margin: 4px 0 0 -12px; }
+
+/* Start class / Join class under a class row (beside it in wide panels): a real link to Meet, outside the row's button. */
+.today-list li:has(> .join-link) { display: grid; gap: 8px; }
+.today-list .join-link { justify-self: start; }
+.join-link { gap: 8px; white-space: nowrap; text-decoration: none; }
+@container (min-width: 640px) { .today-list li:has(> .join-link) { grid-template-columns: minmax(0, 1fr) auto; align-items: center; } }
+.today-list .is-cancelled button { color: var(--text-muted); }
+.today-list .is-cancelled .today-time { text-decoration: line-through; }
+.next-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }

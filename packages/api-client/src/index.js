@@ -26,10 +26,14 @@ export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || ''
     owner: { users: { list: (role) => request(`/api/owner/users${role ? `?role=${encodeURIComponent(role)}` : ''}`), create: (user) => request('/api/owner/users', { method: 'POST', body: JSON.stringify(user) }), update: (id, changes) => request(`/api/owner/users/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }) },
       summary: () => request('/api/owner/summary'),
       batches: () => request('/api/owner/batches'),
+      classes: (from, to) => request(`/api/owner/classes?${new URLSearchParams({ from, to })}`),
       courses: { list: () => request('/api/owner/courses'), create: (course) => request('/api/owner/courses', { method: 'POST', body: JSON.stringify(course) }), update: (id, changes) => request(`/api/owner/courses/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }), setTeachers: (id, teacherIds) => request(`/api/owner/courses/${encodeURIComponent(id)}/teachers`, { method: 'PUT', body: JSON.stringify({ teacher_ids: teacherIds }) }) },
       enrollments: { list: () => request('/api/owner/enrollments'), create: (enrollment) => request('/api/owner/enrollments', { method: 'POST', body: JSON.stringify(enrollment) }), update: (id, changes) => request(`/api/owner/enrollments/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }), remove: (id) => request(`/api/owner/enrollments/${encodeURIComponent(id)}`, { method: 'DELETE' }) } },
     teacher: {
       summary: () => request('/api/teacher/summary'),
+      classes: (from, to) => request(`/api/teacher/classes?${new URLSearchParams({ from, to })}`),
+      changeClass: (batchId, date, body) => send(`/api/teacher/batches/${id(batchId)}/classes/${id(date)}`, 'PUT', body),
+      restoreClass: (batchId, date) => send(`/api/teacher/batches/${id(batchId)}/classes/${id(date)}`, 'DELETE'),
       courses: () => request('/api/teacher/courses'),
       students: ({ q = '', courseId = '' } = {}) => request(`/api/teacher/students?${new URLSearchParams({ q, ...(courseId ? { course_id: courseId } : {}) })}`),
       batches: { list: () => request('/api/teacher/batches'), create: (batch) => request('/api/teacher/batches', { method: 'POST', body: JSON.stringify(batch) }), update: (id, changes) => request(`/api/teacher/batches/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(changes) }), remove: (id) => request(`/api/teacher/batches/${encodeURIComponent(id)}`, { method: 'DELETE' }) },
@@ -42,6 +46,7 @@ export function createApiClient({ baseUrl = import.meta?.env?.VITE_API_URL || ''
     academy: () => request('/api/academy'),
     student: {
       batches: () => request('/api/student/batches'),
+      classes: (from, to) => request(`/api/student/classes?${new URLSearchParams({ from, to })}`),
       assignments: { list: () => request('/api/student/assignments'), saveSubmission: (aid, body) => send(`/api/student/assignments/${id(aid)}/submission`, 'PUT', body) },
     },
     // Files go straight to storage with the presigned upload URL; these calls only manage metadata and access.

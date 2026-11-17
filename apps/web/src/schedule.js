@@ -70,6 +70,22 @@ export function meetLink(raw = '') {
   return ok ? `https://meet.google.com/${code}` : null;
 }
 
+// Dated classes come from /api/{role}/classes, sorted, with cancellations and moves applied. A class's state
+// follows the timetable only: "live" means it is class time, not that anyone has joined the call.
+// Start class / Join class appear from JOIN_EARLY_MINUTES before the start until the end.
+export const JOIN_EARLY_MINUTES = 15;
+export function classState(k, today, clock) {
+  if (k.status === 'cancelled') return 'cancelled';
+  if (k.date !== today) return k.date < today ? 'finished' : 'scheduled';
+  if (k.end_time <= clock) return 'finished';
+  if (k.start_time <= clock) return 'live';
+  return toMinutes(k.start_time) - toMinutes(clock) <= JOIN_EARLY_MINUTES ? 'soon' : 'scheduled';
+}
+export const canJoin = (k, today, clock) => k.class_mode !== 'offline' && !!meetLink(k.meeting_url) && ['soon', 'live'].includes(classState(k, today, clock));
+// The class running now or next, skipping cancelled ones.
+export const nextOf = (classes, today, clock) => classes.find((k) => k.status !== 'cancelled' && (k.date > today || (k.date === today && k.end_time > clock))) || null;
+export const classKey = (k) => `${k.batch_id}:${k.original_date}`;
+
 export function batchFormErrors(form) {
   const errors = [];
   if (!form.name.trim()) errors.push('name');

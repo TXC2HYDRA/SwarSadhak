@@ -8,7 +8,7 @@ import { createApiClient, toApiSession } from '@swarsadhak/api-client';
 import { getTranslations, supportedLocales } from '@swarsadhak/localization';
 import { apiErrorKey, choosePortal, clearSession, loginErrorKey, readSession, writeSession } from '../apps/web/src/auth.js';
 import { ACCEPT, checkFile, fileErrorKey, fileType, formatSize, uploadFile } from '../apps/web/src/files.js';
-import { addDays, batchFormErrors, classesOn, formatTime, meetLink, mondayOf, nextClass, nowIn, slotForm, todayIn, visibleRange, weekDates, weekOccurrences } from '../apps/web/src/schedule.js';
+import { addDays, batchFormErrors, canJoin, classState, classesOn, formatTime, meetLink, nextOf, mondayOf, nextClass, nowIn, slotForm, todayIn, visibleRange, weekDates, weekOccurrences } from '../apps/web/src/schedule.js';
 
 const memoryStorage = () => { const values = new Map(); return { getItem: (k) => values.get(k) ?? null, setItem: (k, v) => values.set(k, String(v)), removeItem: (k) => values.delete(k) }; };
 
@@ -209,14 +209,37 @@ test('today and next class come from active batches in academy time', () => {
   assert.deepEqual([nextClass(all, '2026-11-18', '19:00').date, nextClass(all, '2026-11-18', '19:00').batch.id], ['2026-11-23', 'eve']); // next Monday
   assert.equal(nextClass([paused], '2026-11-18', '00:00'), null);
   assert.equal(nowIn('Asia/Kolkata', new Date('2026-11-18T12:45:00Z')), '18:15');
-  const t = getTranslations('en');
-  const html = renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', batches: all, today: '2026-11-18', clock: '07:30', onBatch() {} }));
+  const t = getTranslations('en'); const p = t.portal.teacher;
+  const k = (overrides) => ({ batch_id: 'eve', batch_name: 'Evening', original_date: '2026-11-18', date: '2026-11-18', start_time: '18:00', end_time: '19:00', status: 'scheduled', course_name: 'Vocal', class_mode: 'online', meeting_url: 'https://meet.google.com/abc-defg-hij', ...overrides });
+  const classes = [k({ batch_id: 'mor', batch_name: 'Morning', start_time: '07:00', end_time: '08:00' }), k({ batch_id: 'noon', batch_name: 'Noon', start_time: '12:00', end_time: '13:00', status: 'cancelled' }), k(), k({ date: '2026-11-23', original_date: '2026-11-23' })];
+  const html = renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', classes, today: '2026-11-18', clock: '07:30', onClass() {}, joinLabel: p.startClass }));
   assert.match(html, /class="is-live"/);
-  assert.match(html, /class="is-upNext"/);
-  assert.ok(html.includes(t.portal.teacher.live) && html.includes(t.portal.teacher.upNext));
-  const empty = renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', batches: [evening], today: '2026-11-17', clock: '09:00', onBatch() {} }));
-  assert.ok(empty.includes(t.portal.teacher.todayEmpty) && empty.includes(`${t.portal.teacher.nextClass}:`));
-  assert.ok(!renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', batches: null, today: '2026-11-17', clock: '09:00', onBatch() {} })).includes(t.portal.teacher.todayEmpty)); // nothing claimed before data loads
+  assert.match(html, /class="is-cancelled"/);
+  assert.match(html, /class="is-upNext"/); // the cancelled noon class is skipped
+  assert.ok(html.includes(p.live) && html.includes(p.upNext) && html.includes(p.cancelled));
+  assert.equal(html.match(/join-link/g).length, 1); // only the class running now
+  const empty = renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', classes: classes.slice(3), today: '2026-11-17', clock: '09:00', onClass() {} }));
+  assert.ok(empty.includes(p.todayEmpty) && empty.includes(`${p.nextClass}:`) && empty.includes('Monday'));
+  assert.ok(!renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', classes: null, today: '2026-11-17', clock: '09:00', onClass() {} })).includes(p.todayEmpty)); // nothing claimed before data loads
+});
+
+test('class states follow the timetable; Start and Join open from 15 minutes before until the end', () => {
+  const k = { date: '2026-11-18', start_time: '18:00', end_time: '19:00', status: 'scheduled', class_mode: 'online', meeting_url: 'https://meet.google.com/abc-defg-hij' };
+  const at = (clock, extra = {}, today = '2026-11-18') => [classState({ ...k, ...extra }, today, clock), canJoin({ ...k, ...extra }, today, clock)];
+  assert.deepEqual(at('17:44'), ['scheduled', false]);
+  assert.deepEqual(at('17:45'), ['soon', true]);
+  assert.deepEqual(at('18:30'), ['live', true]);
+  assert.deepEqual(at('19:00'), ['finished', false]);
+  assert.deepEqual(at('18:30', { status: 'cancelled' }), ['cancelled', false]);
+  assert.deepEqual(at('18:30', { class_mode: 'offline' }), ['live', false]);
+  assert.deepEqual(at('18:30', { meeting_url: null }), ['live', false]);
+  assert.deepEqual(at('18:30', {}, '2026-11-17'), ['scheduled', false]);
+  assert.deepEqual(at('10:00', {}, '2026-11-19'), ['finished', false]);
+  const list = [{ ...k, status: 'cancelled', start_time: '08:00', end_time: '09:00' }, k];
+  assert.equal(nextOf(list, '2026-11-18', '07:00'), list[1]);
+  assert.equal(nextOf(list, '2026-11-18', '19:00'), null);
+  const html = renderToStaticMarkup(React.createElement(web.TodayPanel, { t: getTranslations('en'), locale: 'en', classes: [{ ...k, batch_id: 'b', batch_name: 'Evening', original_date: '2026-11-16', status: 'rescheduled' }], today: '2026-11-18', clock: '17:50', onClass() {}, joinLabel: 'Join class' }));
+  assert.ok(html.includes('Starting soon') && html.includes('Moved from Mon, Nov 16') && html.includes('aria-label="Join class: Evening (opens in a new tab)"'), html);
 });
 
 test('owner attention lists only real exceptions, and owner tables search and open forms in sheets', () => {
@@ -300,6 +323,18 @@ test('API client builds batch and academy requests', async () => {
   await client.teacher.batches.remove('b1');
   await client.owner.batches();
   await client.academy();
+  await client.teacher.classes('2026-11-18', '2026-11-25');
+  await client.teacher.changeClass('b1', '2026-11-23', { status: 'cancelled' });
+  await client.teacher.restoreClass('b1', '2026-11-23');
+  await client.student.classes('2026-11-18', '2026-11-25');
+  await client.owner.classes('2026-11-18', '2026-11-25');
+  assert.deepEqual(calls.splice(6).map(([url, method, body]) => [url, method, body]), [
+    ['http://api.test/api/teacher/classes?from=2026-11-18&to=2026-11-25', 'GET', undefined],
+    ['http://api.test/api/teacher/batches/b1/classes/2026-11-23', 'PUT', '{"status":"cancelled"}'],
+    ['http://api.test/api/teacher/batches/b1/classes/2026-11-23', 'DELETE', undefined],
+    ['http://api.test/api/student/classes?from=2026-11-18&to=2026-11-25', 'GET', undefined],
+    ['http://api.test/api/owner/classes?from=2026-11-18&to=2026-11-25', 'GET', undefined],
+  ]);
   assert.deepEqual(calls, [
     ['http://api.test/api/teacher/batches', 'GET', undefined],
     ['http://api.test/api/teacher/batches', 'POST', '{"name":"A"}'],
@@ -315,13 +350,13 @@ test('student home shows today and work still to hand in; Home puts the next ste
   assert.deepEqual(web.openAssignments(items).map((item) => item.id), ['a1', 'a2']);
   const t = getTranslations('en');
   // Students get no member list, so the today panel shows course and teacher only.
-  const own = { id: 'b1', name: 'Evening', course_name: 'Vocal', teacher_name: 'Guru', start_time: '18:00', end_time: '19:00', days: ['wed'], status: 'active' };
-  const today = renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', batches: [own], today: '2026-11-18', clock: '09:00', onBatch() {} }));
-  assert.ok(today.includes('Vocal · Guru</small>'));
+  const own = { batch_id: 'b1', batch_name: 'Evening', course_name: 'Vocal', teacher_name: 'Guru', start_time: '18:00', end_time: '19:00', date: '2026-11-18', original_date: '2026-11-18', status: 'scheduled', class_mode: 'offline', location: '' };
+  const today = renderToStaticMarkup(React.createElement(web.TodayPanel, { t, locale: 'en', classes: [own], today: '2026-11-18', clock: '09:00', onClass() {} }));
+  assert.ok(today.includes('Vocal · Guru · Offline</small>'));
   for (const locale of supportedLocales) {
     const lt = getTranslations(locale);
     assert.ok(lt.portal.student.openWork && lt.portal.student.noOpenWork && lt.portal.student.allWork, locale);
-    const html = renderToStaticMarkup(React.createElement(web.StudentToday, { t: lt, locale, client: { student: { batches: pending, assignments: { list: pending } }, academy: pending } }));
+    const html = renderToStaticMarkup(React.createElement(web.StudentToday, { t: lt, locale, client: { student: { classes: pending, assignments: { list: pending } }, academy: pending } }));
     assert.ok(html.includes(lt.portal.student.openWork) && html.includes(lt.portal.teacher.classesToday), locale);
   }
   const home = renderToStaticMarkup(React.createElement(web.App, { account: { id: 'u1', roles: ['student'] }, home: () => React.createElement('p', null, 'ACADEMY-PANEL') }));
