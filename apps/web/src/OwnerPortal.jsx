@@ -4,7 +4,7 @@ import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, Sheet, TableSearch, Toast, matches, useApi } from './PortalShell.jsx';
 import { apiErrorKey } from './auth.js';
 import { TodayPanel, modeLabel, timeRange } from './ClassViews.jsx';
-import { addDays, nowIn, todayIn } from './schedule.js';
+import { addDays, classKey, formatDate, nowIn, todayIn } from './schedule.js';
 
 const ROLES = ['owner', 'teacher', 'student'];
 const emptyForm = { id: null, username: '', display_name: '', password: '', roles: [] };
@@ -294,13 +294,14 @@ export function UsersPage({ t, client, me }) {
   </div>;
 }
 
-export function BatchesPage({ t, locale = 'en', client }) {
+export function BatchesPage({ t, locale = 'en', client, now }) {
   const b = t.portal.batches;
   const batches = useApi(t, () => client.owner.batches());
   const [query, setQuery] = useState('');
   const rows = (batches.data || []).filter((batch) => matches(query, batch.name, batch.teacher_name, batch.course_name));
   return <div className="page portal-page">
     <h1>{b.ownerTitle}</h1><p className="page-lede">{b.ownerLede}</p>
+    {batches.data && <p className="calendar-note">{onlineSummary(b, batches.data)}</p>}
     <section className="table-section" aria-label={b.ownerTitle}>
       <TableSearch t={t} value={query} onChange={setQuery} />
       <LoadState t={t} state={batches} empty={b.empty} />
@@ -316,5 +317,46 @@ export function BatchesPage({ t, locale = 'en', client }) {
         </tr>)}</tbody>
       </table></div>}
     </section>
+    <OwnerClasses t={t} locale={locale} client={client} now={now} />
   </div>;
+}
+
+// "Online or hybrid batches: 3. Teachers teaching online: 2." Active batches only.
+export const onlineSummary = (b, batches) => {
+  const online = batches.filter((batch) => batch.status === 'active' && batch.class_mode && batch.class_mode !== 'offline');
+  return b.classes.onlineSummary.replace('{batches}', online.length).replace('{teachers}', new Set(online.map((batch) => batch.teacher_id)).size);
+};
+
+// Read-only: every dated class in the next 7 days, including teachers' one-off changes. Mode and status, never a link.
+export function OwnerClasses({ t, locale, client, now }) {
+  const b = t.portal.batches; const c = b.classes; const p = t.portal.teacher;
+  const academy = useApi(t, () => client.academy());
+  const today = todayIn(academy.data?.timezone || 'Asia/Kolkata', now);
+  const classes = useApi(t, () => client.owner.classes(today, addDays(today, 7)), [today]);
+  const [teacher, setTeacher] = useState('');
+  const [onlineOnly, setOnlineOnly] = useState(false);
+  const teachers = [...new Map((classes.data || []).map((k) => [k.teacher_id, k.teacher_name])).entries()].sort((x, y) => x[1].localeCompare(y[1]));
+  const rows = (classes.data || []).filter((k) => (!teacher || k.teacher_id === teacher) && (!onlineOnly || k.class_mode !== 'offline'));
+  const day = (iso) => formatDate(iso, locale, { weekday: 'short', day: 'numeric', month: 'short' });
+  return <section className="table-section owner-classes" aria-labelledby="owner-classes-title">
+    <h2 id="owner-classes-title">{c.ownerTitle}</h2><p className="calendar-note">{c.ownerLede}</p>
+    <div className="table-toolbar">
+      <label><span className="sr-only">{b.teacher}</span><select aria-label={b.teacher} value={teacher} onChange={(event) => setTeacher(event.target.value)}><option value="">{c.allTeachers}</option>{teachers.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+      <label className="check-filter"><input type="checkbox" checked={onlineOnly} onChange={(event) => setOnlineOnly(event.target.checked)} />{c.onlineOnly}</label>
+    </div>
+    <LoadState t={t} state={classes} empty={c.none} />
+    {classes.data?.length > 0 && !rows.length && <p>{t.portal.noMatches}</p>}
+    {rows.length > 0 && <div className="table-wrap"><table className="data-table">
+      <thead><tr><th scope="col">{c.date}</th><th scope="col">{b.name}</th><th scope="col">{b.teacher}</th><th scope="col">{b.mode}</th><th scope="col">{b.status}</th></tr></thead>
+      <tbody>{rows.map((k) => <tr key={classKey(k)}>
+        <td><span><strong>{day(k.date)}</strong><small>{timeRange(k, locale)}</small></span></td>
+        <td data-label={b.name}><span>{k.batch_name}<small>{k.course_name}</small></span></td>
+        <td data-label={b.teacher}>{k.teacher_name}</td>
+        <td data-label={b.mode}>{modeLabel(b, k)}</td>
+        <td data-label={b.status}><span className="status-cell">{k.status === 'cancelled' ? <span className="status-badge danger">{p.cancelled}</span>
+          : k.status === 'rescheduled' ? <span className="status-badge warning">{p.movedFrom.replace('{date}', day(k.original_date))}</span>
+            : <span className="status-badge neutral">{c.scheduled}</span>}{k.note && <small>{k.note}</small>}</span></td>
+      </tr>)}</tbody>
+    </table></div>}
+  </section>;
 }
