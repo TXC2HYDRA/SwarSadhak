@@ -220,7 +220,7 @@ export function TodayPanel({ t, locale, classes, today, clock, onClass, joinLabe
       const timing = classState(k, today, clock);
       const status = k === upNext ? 'upNext' : ['live', 'finished', 'cancelled'].includes(timing) ? timing : '';
       const details = [k.course_name, k.teacher_name, k.student_count != null && b.studentCount.replace('{count}', k.student_count), modeLabel(b, k),
-        k.status === 'rescheduled' && k.original_date !== k.date && p.movedFrom.replace('{date}', formatDate(k.original_date, locale, { weekday: 'short', day: 'numeric', month: 'short' }))];
+        k.status === 'rescheduled' && k.original_date !== k.date && p.movedFrom.replace('{date}', formatDate(k.original_date, locale, { weekday: 'short', day: 'numeric', month: 'short' })), k.note];
       return <li key={classKey(k)} className={status ? `is-${status}` : undefined}><button type="button" onClick={() => onClass(k)}>
         <span className="today-time">{timeRange(k, locale)}</span>
         <span className="today-name"><strong>{k.batch_name}</strong><small>{details.filter(Boolean).join(' · ')}</small></span>

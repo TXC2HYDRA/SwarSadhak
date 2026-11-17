@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { ArrowRight, CalendarPlus, ClipboardList, LayoutDashboard, Search, Video } from 'lucide-react';
 import { useUrlPage } from './router.js';
 import { LoadState, PortalShell, useApi } from './PortalShell.jsx';
-import { BatchCalendar, BatchDialog, timeRange } from './BatchCalendar.jsx';
+import { BatchCalendar, BatchDialog, modeLabel, timeRange } from './BatchCalendar.jsx';
 import { TeacherAssignments } from './Assignments.jsx';
 import { apiErrorKey } from './auth.js';
-import { addDays, canJoin, classState, formatDate, meetLink, nextOf, nowIn, slotForm, todayIn } from './schedule.js';
+import { addDays, canJoin, classKey, classState, formatDate, meetLink, nextOf, nowIn, slotForm, todayIn } from './schedule.js';
 
 export function TeacherPortal({ shell, client, user }) {
   const [page, setPage] = useUrlPage('teacher', ['dashboard', 'assignments'], 'dashboard');
@@ -108,6 +108,8 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
         {(notice.conflicts || []).map((item) => <li key={item.batch_id}>{item.name}: {item.days.map((day) => b.dayShort[day]).join(', ')} {timeRange(item, locale)}</li>)}</ul>}</span></div>}
     <LoadState t={t} state={batches} />
     {batches.data && <BatchCalendar t={t} locale={locale} batches={batches.data} timezone={timezone} today={today} now={clock} selected={selected} onSlot={openCreate} onBatch={openEdit} />}
+    <UpcomingClasses t={t} locale={locale} client={client} classes={classes.data} today={today} clock={clock}
+      onEdit={(k) => batchOf(k) && openEdit(batchOf(k))} onChanged={(text) => { setNotice({ text }); classes.reload(); }} />
     <BatchDialog t={t} locale={locale} state={dialog} courses={courseList} students={students.data || []} onClose={close} onSave={save} onRemove={remove} onToggle={toggle} />
     <section className="teacher-students" aria-labelledby="my-students-title">
       <h2 id="my-students-title">{p.students}</h2>
@@ -123,3 +125,71 @@ export function TeacherDashboard({ t, locale = 'en', client, now, onReviews }) {
 }
 
 // Today's classes in order, marking the one running now or next. Only real batches; nothing is shown before they load.
+
+// The next 7 days as dated classes. One class can be moved or cancelled (and restored) without touching the
+// weekly batch; the server checks the new time against the teacher's other classes.
+export function UpcomingClasses({ t, locale, client, classes, today, clock, onEdit, onChanged }) {
+  const p = t.portal.teacher; const b = t.portal.batches; const c = b.classes;
+  const [open, setOpen] = useState(null);
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const begin = (k, action) => { setError(null); setOpen({ key: classKey(k), action, new_date: k.date < today ? today : k.date, new_start_time: k.start_time, new_end_time: k.end_time, note: k.note || '' }); };
+  const set = (changes) => setOpen((form) => ({ ...form, ...changes }));
+  const fail = (key, result) => setError({ key, text: result.status === 409 ? c.overlaps : t.portal.errors[apiErrorKey(result)], conflicts: result.status === 409 ? result.data?.detail?.conflicts || [] : [] });
+  const submit = async (event, k) => {
+    event.preventDefault();
+    const move = open.action === 'move';
+    if (move && open.new_end_time <= open.new_start_time) return setError({ key: open.key, text: b.errors.endAfterStart, conflicts: [] });
+    setBusy(true);
+    const result = await client.teacher.changeClass(k.batch_id, k.original_date, move ? { status: 'rescheduled', new_date: open.new_date, new_start_time: open.new_start_time, new_end_time: open.new_end_time, note: open.note } : { status: 'cancelled', note: open.note });
+    setBusy(false);
+    if (!result.ok) return fail(open.key, result);
+    setOpen(null); onChanged(move ? c.moved : c.cancelled);
+  };
+  const restore = async (k) => {
+    setBusy(true);
+    const result = await client.teacher.restoreClass(k.batch_id, k.original_date);
+    setBusy(false);
+    if (!result.ok) return fail(classKey(k), result);
+    setOpen(null); onChanged(c.restored);
+  };
+  const day = (iso, weekday = 'short') => formatDate(iso, locale, { weekday, day: 'numeric', month: 'short' });
+  return <section className="panel upcoming-classes" aria-labelledby="upcoming-title">
+    <h2 id="upcoming-title">{c.title}</h2><p className="calendar-note">{c.lede}</p>
+    {classes && !classes.length && <p>{c.none}</p>}
+    {classes?.length > 0 && <ol className="class-list">{classes.map((k) => {
+      const key = classKey(k); const timing = classState(k, today, clock); const editing = open?.key === key;
+      return <li key={key} className={`is-${timing}`}>
+        <div className="class-row">
+          <span className="class-when"><strong>{day(k.date)}</strong><span>{timeRange(k, locale)}</span></span>
+          <span className="class-what"><strong>{k.batch_name}</strong>
+            <small>{[k.course_name, modeLabel(b, k), k.status === 'rescheduled' && p.movedFrom.replace('{date}', day(k.original_date)), k.note].filter(Boolean).join(' · ')}</small></span>
+          <span className="class-actions">
+            {k.status === 'cancelled' && <span className="status-badge danger">{p.cancelled}</span>}
+            {canJoin(k, today, clock) && <a className="button primary join-link" href={meetLink(k.meeting_url)} target="_blank" rel="noopener noreferrer" aria-label={`${p.startClass}: ${k.batch_name} (${b.newTab})`}><Video size={16} aria-hidden="true" />{p.startClass}</a>}
+            {timing !== 'finished' && !editing && <>
+              <button type="button" className="button quiet" onClick={() => begin(k, 'move')} aria-label={`${c.moveTitle}: ${k.batch_name}, ${day(k.date, 'long')}`}>{c.move}</button>
+              {k.status !== 'cancelled' && <button type="button" className="button quiet danger" onClick={() => begin(k, 'cancel')} aria-label={`${c.cancelTitle}: ${k.batch_name}, ${day(k.date, 'long')}`}>{c.cancel}</button>}
+              {k.status !== 'scheduled' && <button type="button" className="button quiet" disabled={busy} onClick={() => restore(k)}>{c.restore}</button>}
+            </>}
+            <button type="button" className="button quiet" onClick={() => onEdit(k)}>{c.editBatch}</button>
+          </span>
+        </div>
+        {editing && <form className="portal-form class-change" onSubmit={(event) => submit(event, k)}>
+          <fieldset><legend>{open.action === 'move' ? c.moveTitle : c.cancelTitle}</legend>
+            {open.action === 'move' && <div className="class-change-fields">
+              <label className="field-label">{c.newDate}<input type="date" required min={today} value={open.new_date} onChange={(event) => set({ new_date: event.target.value })} autoFocus /></label>
+              <label className="field-label">{b.start}<input type="time" required value={open.new_start_time} onChange={(event) => set({ new_start_time: event.target.value })} /></label>
+              <label className="field-label">{b.end}<input type="time" required value={open.new_end_time} onChange={(event) => set({ new_end_time: event.target.value })} /></label>
+            </div>}
+            <label className="field-label">{c.note}<input value={open.note} maxLength={200} onChange={(event) => set({ note: event.target.value })} autoFocus={open.action === 'cancel'} /></label>
+          </fieldset>
+          <div className="form-actions"><button type="submit" className={`button ${open.action === 'cancel' ? 'danger' : 'primary'}`} disabled={busy}>{open.action === 'cancel' ? c.cancel : c.save}</button>
+            <button type="button" className="button quiet" onClick={() => { setOpen(null); setError(null); }}>{c.close}</button></div>
+        </form>}
+        {error?.key === key && <div className="field-error" role="alert">{error.text}
+          {error.conflicts.length > 0 && <ul>{error.conflicts.map((x) => <li key={classKey(x)}>{x.batch_name}: {day(x.date)}, {timeRange(x, locale)}</li>)}</ul>}</div>}
+      </li>;
+    })}</ol>}
+  </section>;
+}

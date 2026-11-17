@@ -324,3 +324,27 @@ textarea.portal-input { resize: vertical; min-height: 88px; }
 .today-list .is-cancelled button { color: var(--text-muted); }
 .today-list .is-cancelled .today-time { text-decoration: line-through; }
 .next-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* Upcoming classes (teacher): one row per dated class with its one-off actions; the change form opens in place. */
+.upcoming-classes { margin-top: 24px; container-type: inline-size; }
+.class-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.class-list > li { display: grid; gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-control); }
+.class-row { display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; align-items: center; gap: 14px; }
+.class-when { display: grid; gap: 2px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.class-when span, .class-what small { color: var(--text-muted); }
+.class-what { display: grid; gap: 2px; min-width: 0; }
+.class-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 4px; }
+.class-actions .button { min-height: 38px; padding: 6px 10px; }
+.class-list .is-finished { color: var(--text-muted); }
+.class-list .is-cancelled .class-when > * { text-decoration: line-through; }
+.class-change, .class-change fieldset { display: grid; gap: 12px; margin: 0; padding: 0; border: 0; }
+.class-change legend { margin-bottom: 4px; font-weight: 650; }
+.class-change-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.class-list .field-error { margin: 0; }
+.class-list .field-error ul { margin: 6px 0 0; padding-left: 18px; }
+@container (max-width: 640px) {
+  .class-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .class-actions { justify-content: flex-start; margin-left: -10px; }
+  .class-change-fields { grid-template-columns: 1fr 1fr; }
+  .class-change-fields label:first-child { grid-column: 1 / -1; }
+}
