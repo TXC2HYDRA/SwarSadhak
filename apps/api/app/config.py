@@ -32,3 +32,5 @@ R2_BUCKET = os.getenv("R2_BUCKET", "")
 STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "r2" if all((R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET)) else "local")
 STORAGE_DIR = os.getenv("STORAGE_DIR", "data/storage")  # relative paths resolve against apps/, like DATABASE_URL
 API_PUBLIC_URL = os.getenv("API_PUBLIC_URL", f"http://localhost:{API_PORT}")  # base URL browsers use to reach this API
+# Where the Google sign-in callback sends the teacher back to (the web app). Google settings live in app/google.py.
+WEB_APP_URL = os.getenv("WEB_APP_URL", CORS_ORIGINS[0] if CORS_ORIGINS else "http://localhost:5173").rstrip("/")

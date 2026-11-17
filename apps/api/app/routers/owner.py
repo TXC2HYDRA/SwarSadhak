@@ -1,11 +1,12 @@
 import sqlite3, uuid
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
-from ..accounts import ROLES, create_user, now, public_user
+from ..accounts import ROLES, academy_settings, create_user, now, public_user
 from ..db import connect
 from ..schedule import check_range, expand, load_exceptions
 from ..dependencies import require_role, user_roles
-from ..schemas import CourseCreate, CourseTeachers, CourseUpdate, EnrollmentCreate, EnrollmentUpdate, OwnerUserCreate, OwnerUserUpdate
+from ..schemas import CourseCreate, CourseTeachers, CourseUpdate, EnrollmentCreate, EnrollmentUpdate, IntegrationsUpdate, OwnerUserCreate, OwnerUserUpdate
+from .. import google
 from ..security import hash_password
 from .teacher import mask_days
 
@@ -167,3 +168,21 @@ def all_classes(start: date = Query(alias="from"), end: date = Query(alias="to")
         classes = expand(batches.values(), load_exceptions(c, list(batches), start, end), start, end)
     return [{**k, **{f: batches[k["batch_id"]][f] for f in ("teacher_id", "teacher_name", "course_name", "student_count", "class_mode", "location")},
              "has_meeting_link": bool(batches[k["batch_id"]]["meeting_url"])} for k in classes]
+
+@router.get("/integrations")
+def integrations():
+    """Whether the server has Google credentials (environment only; never entered here), whether the Owner allows
+    teachers to connect, and how many are connected."""
+    with connect() as c:
+        row = c.execute("SELECT google_connect_enabled FROM academy WHERE id=1").fetchone()
+        count = c.execute("SELECT COUNT(*) FROM google_connections WHERE status='connected'").fetchone()[0]
+    return {"google": {"configured": google.configured(), "enabled": bool(row and row[0]), "connected_teachers": count}}
+
+@router.patch("/integrations")
+def update_integrations(data: IntegrationsUpdate):
+    if data.google_enabled and not google.configured(): raise HTTPException(409, "set the Google environment variables on the server first")
+    with connect() as c:
+        s = academy_settings(c)
+        c.execute("""INSERT INTO academy (id, name, timezone, google_connect_enabled) VALUES (1, ?, ?, ?)
+            ON CONFLICT (id) DO UPDATE SET google_connect_enabled=excluded.google_connect_enabled""", (s["name"], s["timezone"], int(data.google_enabled)))
+    return integrations()
