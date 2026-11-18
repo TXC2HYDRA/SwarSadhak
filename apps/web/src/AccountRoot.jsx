@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { Component, Fragment, Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ClipboardList, Eye, EyeOff, LogIn } from 'lucide-react';
 import { createApiClient } from '@swarsadhak/api-client';
 import { getTranslations } from '@swarsadhak/localization';
@@ -72,9 +72,26 @@ export function AccountRoot({ apiUrl = import.meta.env.VITE_API_URL || '' }) {
     { key: 'assignments', Icon: ClipboardList, label: (appT) => appT.portal.assignments.nav, render: (appT, appLocale) => <Suspense fallback={<p className="page" role="status">{appT.portal.users.loading}</p>}><StudentAssignments t={appT} locale={appLocale} client={client} user={session.user} /></Suspense> },
   ]} />;
   const loading = <p className="page" role="status">{t.portal.users.loading}</p>;
-  if (portal === 'owner') return <Suspense fallback={loading}><OwnerPortal shell={shell} client={client} user={session.user} /></Suspense>;
-  if (portal === 'teacher') return <Suspense fallback={loading}><TeacherPortal shell={shell} client={client} user={session.user} /></Suspense>;
+  const failed = <div className="page"><p className="notice error" role="alert">{t.portal.errors.generic}</p><a className="button primary" href={`/${portal}`}>{t.portal.users.retry}</a></div>;
+  if (portal === 'owner') return <PortalBoundary role="owner" fallback={failed}><Suspense fallback={loading}><OwnerPortal shell={shell} client={client} user={session.user} /></Suspense></PortalBoundary>;
+  if (portal === 'teacher') return <PortalBoundary role="teacher" fallback={failed}><Suspense fallback={loading}><TeacherPortal shell={shell} client={client} user={session.user} /></Suspense></PortalBoundary>;
   return <PortalShell {...shell} nav={[]}><div className="page"><h1>{t.portal.account}</h1><p className="notice" role="status">{t.portal.noAccess}</p></div></PortalShell>;
+}
+
+// A crash inside a portal reopens its overview (/owner, /teacher) instead of leaving a blank page.
+// A second crash within 3 seconds of recovering shows the fallback, so a broken overview cannot loop.
+export class PortalBoundary extends Component {
+  constructor(props) { super(props); this.state = { failed: false, attempt: 0 }; this.recoveredAt = 0; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  componentDidCatch(error) {
+    console.error(error);
+    const now = Date.now();
+    if (now - this.recoveredAt < 3000) return;
+    this.recoveredAt = now;
+    globalThis.history?.replaceState(null, '', `/${this.props.role}`);
+    this.setState((state) => ({ failed: false, attempt: state.attempt + 1 }));
+  }
+  render() { return this.state.failed ? this.props.fallback : <Fragment key={this.state.attempt}>{this.props.children}</Fragment>; }
 }
 
 export function LoginPage({ t, locale, onLocale, notice, onSubmit, onGuest }) {

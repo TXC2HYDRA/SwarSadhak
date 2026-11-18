@@ -130,7 +130,8 @@ export function BatchDialog({ t, locale, state, canGenerate = false, courses, st
     if (state && !dialog.open) dialog.showModal?.();
     if (!state && dialog.open) dialog.close();
   }, [state]);
-  if (!form) return <dialog ref={ref} className="sheet-dialog" />;
+  // Closing sets state to null one render before the effect clears the form; reading state.batch then crashed the page.
+  if (!form || !state) return <dialog ref={ref} className="sheet-dialog" />;
   const courseStudents = students.filter((student) => student.courses.some((course) => course.id === form.course_id));
   const needle = query.trim().toLocaleLowerCase();
   const shown = courseStudents.filter((student) => !needle || student.display_name.toLocaleLowerCase().includes(needle) || student.username.toLocaleLowerCase().includes(needle));
