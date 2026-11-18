@@ -44,6 +44,8 @@
 .portal-stats { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
 textarea.portal-input { resize: vertical; min-height: 88px; }
 .data-table select { width: auto; min-width: 120px; padding: 6px 10px; }
+/* Owner, Teacher and student portal pages use the full width beside the sidebar; headings and ledes keep their own reading widths. */
+.page.portal-page { width: 100%; }
 .portal-page .filter-controls { margin: 14px 0; }
 .student-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .student-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-control); }
