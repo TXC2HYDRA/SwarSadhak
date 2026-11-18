@@ -318,6 +318,21 @@ test('owner batches page and teacher create button render in every locale', () =
   }
 });
 
+test('a portal crash reopens the overview once, then shows the fallback instead of looping', () => {
+  const boundary = new web.PortalBoundary({ role: 'teacher' });
+  const urls = []; let state = boundary.state;
+  const saved = globalThis.history; const savedError = console.error;
+  globalThis.history = { replaceState: (_, __, url) => urls.push(url) }; console.error = () => {};
+  boundary.setState = (update) => { state = { ...state, ...update(state) }; };
+  try {
+    assert.deepEqual(web.PortalBoundary.getDerivedStateFromError(), { failed: true });
+    boundary.componentDidCatch(new Error('boom'));
+    assert.deepEqual(urls, ['/teacher']); assert.deepEqual(state, { failed: false, attempt: 1 });
+    boundary.componentDidCatch(new Error('boom again'));  // straight after recovering: no second redirect
+    assert.deepEqual(urls, ['/teacher']); assert.equal(state.attempt, 1);
+  } finally { globalThis.history = saved; console.error = savedError; }
+});
+
 test('API client builds Google account and integration requests', async () => {
   const calls = [];
   const client = createApiClient({ baseUrl: 'http://api.test', token: 't', fetchImpl: async (url, options) => { calls.push([url, options.method || 'GET', options.body]); return new Response('{}'); } });
